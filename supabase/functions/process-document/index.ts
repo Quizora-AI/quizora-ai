@@ -36,8 +36,8 @@ serve(async (req) => {
     
     if (fileType === 'application/pdf' || fileType.startsWith('image/')) {
       const promptText = fileType === 'application/pdf' 
-        ? "Extract all multiple choice questions from this PDF content."
-        : "Extract all multiple choice questions from this image.";
+        ? "Extract all multiple choice questions from this PDF content. Return ONLY a valid JSON array with no additional text."
+        : "Extract all multiple choice questions from this image. Return ONLY a valid JSON array with no additional text.";
         
       const contentType = fileType === 'application/pdf' ? 'application/pdf' : fileType;
       
@@ -54,7 +54,7 @@ serve(async (req) => {
           messages: [
             {
               role: "system",
-              content: "You are an expert at extracting multiple choice questions from medical texts. Extract all multiple choice questions from the content I'll provide. Format each question with its options and correct answer as a JSON array with this structure: [{\"question\": \"question text\", \"options\": [\"option A\", \"option B\", \"option C\", \"option D\"], \"correctAnswer\": 0, \"explanation\": \"explanation if available\"}]. The correctAnswer should be the index (0-based) of the correct option. If you cannot extract any questions, respond with an empty array []."
+              content: "You are an expert at extracting multiple choice questions from medical texts. Extract all multiple choice questions from the content I'll provide. Format each question with its options and correct answer as a clean JSON array with this structure: [{\"question\": \"question text\", \"options\": [\"option A\", \"option B\", \"option C\", \"option D\"], \"correctAnswer\": 0, \"explanation\": \"explanation if available\"}]. The correctAnswer should be the index (0-based) of the correct option. If you cannot extract any questions, respond with an empty array []."
             },
             {
               role: "user",
@@ -72,15 +72,15 @@ serve(async (req) => {
               ]
             }
           ],
-          temperature: 0.2,
+          temperature: 0.1,
           max_tokens: 4000
         }),
       });
       
       if (!response.ok) {
-        const error = await response.text();
-        console.error(`API Error: ${response.status}`, error);
-        throw new Error(`Deepseek API error: ${response.status}`);
+        const errorData = await response.text();
+        console.error(`Deepseek API Error: ${response.status}`, errorData);
+        throw new Error(`Deepseek API error: ${response.status} - ${errorData.slice(0, 100)}...`);
       }
       
       const data = await response.json();
@@ -91,26 +91,40 @@ serve(async (req) => {
       }
       
       const extractedContent = data.choices[0].message.content;
-      console.log("Extracted content:", extractedContent);
+      console.log("Raw extracted content:", extractedContent.slice(0, 200) + "...");
       
-      // Parse the AI response to extract valid JSON
+      // More robust JSON parsing
       try {
-        // Find the JSON array in the response
-        const jsonMatch = extractedContent.match(/\[\s*\{[\s\S]*\}\s*\]/);
-        if (jsonMatch) {
-          const parsedQuestions = JSON.parse(jsonMatch[0]);
-          console.log(`Successfully parsed ${parsedQuestions.length} questions`);
-          
-          return new Response(
-            JSON.stringify({ questions: parsedQuestions }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        } else {
-          throw new Error('No valid JSON found in the AI response');
+        // First try to parse directly - the AI might have returned clean JSON
+        let parsedQuestions = [];
+        try {
+          parsedQuestions = JSON.parse(extractedContent);
+        } catch (directParseError) {
+          // If that fails, try to extract JSON from text response
+          console.log("Direct parse failed, trying to extract JSON from text");
+          const jsonMatch = extractedContent.match(/\[\s*\{[\s\S]*\}\s*\]/);
+          if (jsonMatch) {
+            parsedQuestions = JSON.parse(jsonMatch[0]);
+          } else {
+            throw new Error('No valid JSON found in the AI response');
+          }
         }
+        
+        // Validate parsed questions
+        if (!Array.isArray(parsedQuestions)) {
+          throw new Error('Parsed result is not an array');
+        }
+        
+        console.log(`Successfully parsed ${parsedQuestions.length} questions`);
+        
+        return new Response(
+          JSON.stringify({ questions: parsedQuestions }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       } catch (error) {
         console.error('Failed to parse questions:', error);
-        throw new Error('Failed to parse questions from the AI response');
+        console.error('Raw content was:', extractedContent);
+        throw new Error(`Failed to parse questions from the AI response: ${error.message}`);
       }
     } else {
       throw new Error(`Unsupported file type: ${fileType}`);
@@ -118,7 +132,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Processing error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        success: false
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }

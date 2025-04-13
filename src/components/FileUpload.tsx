@@ -1,11 +1,12 @@
 
 import { useState, useRef } from "react";
-import { Upload, File, X, Check, Loader2 } from "lucide-react";
+import { Upload, File, X, Check, Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { motion } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 
 interface FileUploadProps {
   onFileProcessed: (questions: Question[]) => void;
@@ -25,6 +26,8 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [isUsingMockData, setIsUsingMockData] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [apiErrorDetails, setApiErrorDetails] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -54,6 +57,8 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
 
     setFile(selectedFile);
     setIsUsingMockData(false);
+    setErrorMessage(null);
+    setApiErrorDetails(null);
 
     if (selectedFile.type.includes('image')) {
       const reader = new FileReader();
@@ -84,6 +89,8 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
 
     setFile(droppedFile);
     setIsUsingMockData(false);
+    setErrorMessage(null);
+    setApiErrorDetails(null);
 
     if (droppedFile.type.includes('image')) {
       const reader = new FileReader();
@@ -105,6 +112,8 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
     setFile(null);
     setFilePreview(null);
     setIsUsingMockData(false);
+    setErrorMessage(null);
+    setApiErrorDetails(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -130,6 +139,8 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
     setIsProcessing(true);
     setProcessingProgress(0);
     setIsUsingMockData(false);
+    setErrorMessage(null);
+    setApiErrorDetails(null);
     
     const clearProgressSimulation = simulateProgress();
     
@@ -147,13 +158,12 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       clearProgressSimulation();
       setProcessingProgress(100);
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to process document');
-      }
-
       const data = await response.json();
       console.log("API Response:", data);
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to process document');
+      }
       
       if (data.questions && data.questions.length > 0) {
         const questionsWithIds = data.questions.map((q: Omit<Question, 'id'>, index: number) => ({
@@ -180,84 +190,95 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       console.error('Error processing document:', error);
       
       clearProgressSimulation();
-      setProcessingProgress(100);
+      setProcessingProgress(0);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Failed to process document';
+      setErrorMessage(errorMessage);
+      
+      if (errorMessage.includes('Deepseek API key is not configured')) {
+        setApiErrorDetails('The Deepseek API key is not configured in the server. Please contact the administrator.');
+      }
       
       toast({
         title: "Processing error",
-        description: `${error instanceof Error ? error.message : 'Failed to process document'}. Using demo data instead.`,
+        description: errorMessage,
         variant: "destructive"
       });
       
-      // Fallback to mock data only when there's an error
-      setTimeout(() => {
-        const mockQuestions: Question[] = [
-          {
-            id: "q1",
-            question: "Which of the following is NOT a primary treatment for acute myocardial infarction?",
-            options: [
-              "Aspirin",
-              "Anticoagulation with heparin",
-              "Primary percutaneous coronary intervention",
-              "Calcium channel blockers"
-            ],
-            correctAnswer: 3,
-            explanation: "Calcium channel blockers are not recommended as first-line therapy in acute MI. They may worsen outcomes in certain patients."
-          },
-          {
-            id: "q2",
-            question: "The most common cause of community-acquired pneumonia is:",
-            options: [
-              "Streptococcus pneumoniae",
-              "Haemophilus influenzae",
-              "Mycoplasma pneumoniae",
-              "Klebsiella pneumoniae"
-            ],
-            correctAnswer: 0,
-            explanation: "Streptococcus pneumoniae remains the most common cause of community-acquired pneumonia across most age groups."
-          },
-          {
-            id: "q3",
-            question: "Which antibody is most associated with the diagnosis of rheumatoid arthritis?",
-            options: [
-              "Anti-dsDNA",
-              "Anti-CCP",
-              "Anti-Smith",
-              "Anti-Ro"
-            ],
-            correctAnswer: 1,
-            explanation: "Anti-CCP (anti-cyclic citrullinated peptide) antibodies are highly specific for rheumatoid arthritis."
-          },
-          {
-            id: "q4",
-            question: "Which of the following is the first-line treatment for uncomplicated urinary tract infection?",
-            options: [
-              "Amoxicillin",
-              "Ciprofloxacin",
-              "Trimethoprim-sulfamethoxazole",
-              "Nitrofurantoin"
-            ],
-            correctAnswer: 3,
-            explanation: "Nitrofurantoin is recommended as first-line therapy for uncomplicated UTIs due to lower resistance rates."
-          },
-          {
-            id: "q5",
-            question: "The gold standard for diagnosis of pulmonary embolism is:",
-            options: [
-              "D-dimer test",
-              "CT pulmonary angiography",
-              "Ventilation-perfusion scan",
-              "Chest X-ray"
-            ],
-            correctAnswer: 1,
-            explanation: "CT pulmonary angiography is currently considered the gold standard for diagnosing pulmonary embolism."
-          },
-        ];
+      // Only fall back to mock data if specifically requested or if it's a critical error
+      if (errorMessage.includes('API key') || errorMessage.includes('No questions could be extracted')) {
+        // Fallback to mock data
+        setTimeout(() => {
+          const mockQuestions: Question[] = [
+            {
+              id: "q1",
+              question: "Which of the following is NOT a primary treatment for acute myocardial infarction?",
+              options: [
+                "Aspirin",
+                "Anticoagulation with heparin",
+                "Primary percutaneous coronary intervention",
+                "Calcium channel blockers"
+              ],
+              correctAnswer: 3,
+              explanation: "Calcium channel blockers are not recommended as first-line therapy in acute MI. They may worsen outcomes in certain patients."
+            },
+            {
+              id: "q2",
+              question: "The most common cause of community-acquired pneumonia is:",
+              options: [
+                "Streptococcus pneumoniae",
+                "Haemophilus influenzae",
+                "Mycoplasma pneumoniae",
+                "Klebsiella pneumoniae"
+              ],
+              correctAnswer: 0,
+              explanation: "Streptococcus pneumoniae remains the most common cause of community-acquired pneumonia across most age groups."
+            },
+            {
+              id: "q3",
+              question: "Which antibody is most associated with the diagnosis of rheumatoid arthritis?",
+              options: [
+                "Anti-dsDNA",
+                "Anti-CCP",
+                "Anti-Smith",
+                "Anti-Ro"
+              ],
+              correctAnswer: 1,
+              explanation: "Anti-CCP (anti-cyclic citrullinated peptide) antibodies are highly specific for rheumatoid arthritis."
+            },
+            {
+              id: "q4",
+              question: "Which of the following is the first-line treatment for uncomplicated urinary tract infection?",
+              options: [
+                "Amoxicillin",
+                "Ciprofloxacin",
+                "Trimethoprim-sulfamethoxazole",
+                "Nitrofurantoin"
+              ],
+              correctAnswer: 3,
+              explanation: "Nitrofurantoin is recommended as first-line therapy for uncomplicated UTIs due to lower resistance rates."
+            },
+            {
+              id: "q5",
+              question: "The gold standard for diagnosis of pulmonary embolism is:",
+              options: [
+                "D-dimer test",
+                "CT pulmonary angiography",
+                "Ventilation-perfusion scan",
+                "Chest X-ray"
+              ],
+              correctAnswer: 1,
+              explanation: "CT pulmonary angiography is currently considered the gold standard for diagnosing pulmonary embolism."
+            },
+          ];
 
-        onFileProcessed(mockQuestions);
-        setIsUsingMockData(true);
+          onFileProcessed(mockQuestions);
+          setIsUsingMockData(true);
+          setIsProcessing(false);
+        }, 1000);
+      } else {
         setIsProcessing(false);
-        setProcessingProgress(0);
-      }, 1000);
+      }
     }
   };
 
@@ -329,6 +350,25 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
                 </p>
               </div>
             </div>
+          </motion.div>
+        )}
+        
+        {errorMessage && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-4"
+          >
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Error processing document</AlertTitle>
+              <AlertDescription>
+                {errorMessage}
+                {apiErrorDetails && (
+                  <p className="text-sm mt-2">{apiErrorDetails}</p>
+                )}
+              </AlertDescription>
+            </Alert>
           </motion.div>
         )}
         
