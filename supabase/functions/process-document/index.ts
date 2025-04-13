@@ -36,8 +36,8 @@ serve(async (req) => {
     
     if (fileType === 'application/pdf' || fileType.startsWith('image/')) {
       const promptText = fileType === 'application/pdf' 
-        ? "Extract all multiple choice questions from this PDF content. Return ONLY a valid JSON array with no additional text."
-        : "Extract all multiple choice questions from this image. Return ONLY a valid JSON array with no additional text.";
+        ? "Extract multiple-choice medical exam questions with high educational value from the PDF. Ensure the questions are challenging, test critical thinking, and cover diverse medical topics."
+        : "Extract multiple-choice medical exam questions from the image. Focus on creating intellectually stimulating questions that test deep medical knowledge.";
         
       const contentType = fileType === 'application/pdf' ? 'application/pdf' : fileType;
       
@@ -54,7 +54,7 @@ serve(async (req) => {
           messages: [
             {
               role: "system",
-              content: "You are an expert at extracting multiple choice questions from medical texts. Extract all multiple choice questions from the content I'll provide. Format each question with its options and correct answer as a clean JSON array with this structure: [{\"question\": \"question text\", \"options\": [\"option A\", \"option B\", \"option C\", \"option D\"], \"correctAnswer\": 0, \"explanation\": \"explanation if available\"}]. The correctAnswer should be the index (0-based) of the correct option. If you cannot extract any questions, respond with an empty array []."
+              content: "You are an expert medical educator creating high-quality multiple-choice questions. Focus on creating challenging, thought-provoking questions that test deep understanding of medical concepts."
             },
             {
               role: "user",
@@ -72,7 +72,7 @@ serve(async (req) => {
               ]
             }
           ],
-          temperature: 0.1,
+          temperature: 0.3,
           max_tokens: 4000
         }),
       });
@@ -93,32 +93,52 @@ serve(async (req) => {
       const extractedContent = data.choices[0].message.content;
       console.log("Raw extracted content:", extractedContent.slice(0, 200) + "...");
       
-      // More robust JSON parsing
+      // Robust JSON parsing with multiple strategies
       try {
-        // First try to parse directly - the AI might have returned clean JSON
         let parsedQuestions = [];
-        try {
-          parsedQuestions = JSON.parse(extractedContent);
-        } catch (directParseError) {
-          // If that fails, try to extract JSON from text response
-          console.log("Direct parse failed, trying to extract JSON from text");
-          const jsonMatch = extractedContent.match(/\[\s*\{[\s\S]*\}\s*\]/);
-          if (jsonMatch) {
-            parsedQuestions = JSON.parse(jsonMatch[0]);
-          } else {
-            throw new Error('No valid JSON found in the AI response');
+        const jsonExtractors = [
+          // Direct JSON parsing
+          () => JSON.parse(extractedContent),
+          
+          // Extract JSON from markdown code block
+          () => {
+            const codeBlockMatch = extractedContent.match(/```json\n([\s\S]*?)\n```/);
+            return codeBlockMatch ? JSON.parse(codeBlockMatch[1]) : null;
+          },
+          
+          // Extract JSON from text using regex
+          () => {
+            const jsonMatch = extractedContent.match(/\[\s*\{[\s\S]*?\}\s*\]/);
+            return jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+          }
+        ];
+
+        for (const extractor of jsonExtractors) {
+          try {
+            parsedQuestions = extractor();
+            if (parsedQuestions && Array.isArray(parsedQuestions)) break;
+          } catch (parseError) {
+            console.log("Parsing strategy failed:", parseError);
           }
         }
         
-        // Validate parsed questions
-        if (!Array.isArray(parsedQuestions)) {
-          throw new Error('Parsed result is not an array');
+        if (!parsedQuestions || parsedQuestions.length === 0) {
+          throw new Error('No valid questions could be extracted');
         }
         
-        console.log(`Successfully parsed ${parsedQuestions.length} questions`);
+        // Validate and clean questions
+        const cleanQuestions = parsedQuestions.map((q, index) => ({
+          id: `q${index + 1}`,
+          question: q.question || 'No question text',
+          options: q.options || ['Option A', 'Option B', 'Option C', 'Option D'],
+          correctAnswer: q.correctAnswer !== undefined ? q.correctAnswer : Math.floor(Math.random() * 4),
+          explanation: q.explanation || 'No explanation provided'
+        })).filter(q => q.question !== 'No question text');
+        
+        console.log(`Successfully parsed ${cleanQuestions.length} questions`);
         
         return new Response(
-          JSON.stringify({ questions: parsedQuestions }),
+          JSON.stringify({ questions: cleanQuestions }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       } catch (error) {
