@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +23,6 @@ export function QuizResults({
   const score = Math.round((correctAnswers / totalQuestions) * 100);
   
   useEffect(() => {
-    // Animate the score counting up
     const interval = setInterval(() => {
       setAnimatedScore(prev => {
         if (prev < score) {
@@ -52,7 +50,6 @@ export function QuizResults({
     return "Needs improvement";
   };
 
-  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
@@ -102,7 +99,6 @@ export function QuizResults({
         </CardHeader>
         
         <CardContent className="flex flex-col items-center">
-          {/* Score circle */}
           <motion.div 
             className="w-48 h-48 rounded-full border-8 border-primary/20 flex items-center justify-center mb-8"
             variants={circleVariants}
@@ -132,7 +128,6 @@ export function QuizResults({
             </div>
           </motion.div>
           
-          {/* Stats */}
           <motion.div 
             className="grid grid-cols-2 gap-8 w-full max-w-md"
             variants={itemVariants}
@@ -160,52 +155,39 @@ export function QuizResults({
         
         <CardFooter className="flex justify-center gap-4 flex-wrap">
           <motion.div variants={itemVariants}>
-            <Button 
-              onClick={onViewAnalytics} 
-              className="gap-2"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <BarChart3 className="h-4 w-4" />
-              View Detailed Analysis
-            </Button>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button onClick={onViewAnalytics} className="gap-2">
+                <BarChart3 className="h-4 w-4" />
+                View Detailed Analysis
+              </Button>
+            </motion.div>
           </motion.div>
           
           <motion.div variants={itemVariants}>
-            <Button 
-              onClick={onRetakeQuiz} 
-              className="gap-2"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <RotateCw className="h-4 w-4" />
-              Retake Quiz
-            </Button>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button onClick={onRetakeQuiz} className="gap-2">
+                <RotateCw className="h-4 w-4" />
+                Retake Quiz
+              </Button>
+            </motion.div>
           </motion.div>
           
           <motion.div variants={itemVariants}>
-            <Button 
-              onClick={onNewFile} 
-              variant="outline" 
-              className="gap-2"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <FileUp className="h-4 w-4" />
-              Upload New File
-            </Button>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button onClick={onNewFile} variant="outline" className="gap-2">
+                <FileUp className="h-4 w-4" />
+                Upload New File
+              </Button>
+            </motion.div>
           </motion.div>
           
           <motion.div variants={itemVariants}>
-            <Button 
-              variant="ghost" 
-              className="gap-2"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <BookmarkPlus className="h-4 w-4" />
-              Save Quiz
-            </Button>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button variant="ghost" className="gap-2">
+                <BookmarkPlus className="h-4 w-4" />
+                Save Quiz
+              </Button>
+            </motion.div>
           </motion.div>
         </CardFooter>
       </Card>

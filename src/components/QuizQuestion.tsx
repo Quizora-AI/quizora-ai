@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -30,7 +29,6 @@ export function QuizQuestion({
   const optionLabels = ["A", "B", "C", "D"];
   const timerProgressRef = useRef<HTMLDivElement>(null);
 
-  // Timer effect
   useEffect(() => {
     if (!isTimerRunning) return;
     
@@ -44,7 +42,6 @@ export function QuizQuestion({
       setTimeLeft(timeLeft - 1);
     }, 1000);
     
-    // Apply animation to timer bar
     if (timerProgressRef.current) {
       timerProgressRef.current.style.transition = "width 1s linear";
       timerProgressRef.current.style.width = `${(timeLeft / defaultTimePerQuestion) * 100}%`;
@@ -53,7 +50,6 @@ export function QuizQuestion({
     return () => clearTimeout(timer);
   }, [timeLeft, isTimerRunning, defaultTimePerQuestion]);
 
-  // Animate options on mount
   useEffect(() => {
     setAnimateOptions(true);
   }, []);
@@ -89,7 +85,6 @@ export function QuizQuestion({
   const isCorrect = selectedOption === question.correctAnswer;
   const progress = ((currentQuestionNumber) / totalQuestions) * 100;
   
-  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
@@ -257,20 +252,20 @@ export function QuizQuestion({
                     </>
                   )}
                 </div>
-                <Button 
-                  onClick={handleNextQuestion} 
-                  className="relative overflow-hidden"
+                <motion.div
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <motion.span
-                    initial={{ x: 20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                  >
-                    Next Question
-                  </motion.span>
-                </Button>
+                  <Button onClick={handleNextQuestion} className="relative overflow-hidden">
+                    <motion.span
+                      initial={{ x: 20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.2 }}
+                    >
+                      Next Question
+                    </motion.span>
+                  </Button>
+                </motion.div>
               </motion.div>
             )}
           </CardFooter>

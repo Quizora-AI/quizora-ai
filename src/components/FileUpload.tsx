@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Upload, File, X, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,7 +26,6 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  // Animation variants
   const dropAreaVariants = {
     idle: { 
       scale: 1,
@@ -43,7 +41,6 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
     const selectedFile = event.target.files?.[0];
     if (!selectedFile) return;
 
-    // Validate file type
     if (!['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'].includes(selectedFile.type)) {
       toast({
         title: "Invalid file type",
@@ -55,7 +52,6 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
 
     setFile(selectedFile);
 
-    // Create preview for image files
     if (selectedFile.type.includes('image')) {
       const reader = new FileReader();
       reader.onload = () => {
@@ -63,7 +59,6 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       };
       reader.readAsDataURL(selectedFile);
     } else {
-      // For PDFs, just show an icon
       setFilePreview(null);
     }
   };
@@ -75,7 +70,6 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
     const droppedFile = event.dataTransfer.files?.[0];
     if (!droppedFile) return;
 
-    // Validate file type
     if (!['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'].includes(droppedFile.type)) {
       toast({
         title: "Invalid file type",
@@ -87,7 +81,6 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
 
     setFile(droppedFile);
 
-    // Create preview for image files
     if (droppedFile.type.includes('image')) {
       const reader = new FileReader();
       reader.onload = () => {
@@ -95,7 +88,6 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       };
       reader.readAsDataURL(droppedFile);
     } else {
-      // For PDFs, just show an icon
       setFilePreview(null);
     }
   };
@@ -114,7 +106,6 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
   };
 
   const simulateProgress = () => {
-    // Simulate processing progress for better UX
     const interval = setInterval(() => {
       setProcessingProgress((prev) => {
         if (prev >= 90) {
@@ -134,22 +125,12 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
     setIsProcessing(true);
     setProcessingProgress(0);
     
-    // Start simulating progress for better UX
     const clearProgressSimulation = simulateProgress();
     
     try {
-      // Create a FormData object to send the file to the edge function
       const formData = new FormData();
       formData.append('file', file);
 
-      // Get the URL for the Supabase edge function
-      const { data: { host } } = await supabase.functions.invoke('process-document', {
-        body: formData,
-        bodyParser: 'none'
-      });
-
-      // The above will fail because we need to use direct fetch for file uploads
-      // Use regular fetch for file upload to the edge function
       const response = await fetch('https://ltteeavnkygcgbwlblof.supabase.co/functions/v1/process-document', {
         method: 'POST',
         body: formData,
@@ -165,13 +146,10 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
 
       const data = await response.json();
       
-      // Stop the progress simulation
       clearProgressSimulation();
       setProcessingProgress(100);
 
-      // Process the extracted questions
       if (data.questions && data.questions.length > 0) {
-        // Add unique IDs to questions if they don't have them
         const questionsWithIds = data.questions.map((q: Omit<Question, 'id'>, index: number) => ({
           ...q,
           id: `q${index + 1}`
@@ -195,7 +173,6 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
     } catch (error) {
       console.error('Error processing document:', error);
       
-      // For now, let's fall back to the mock data if there's an error
       clearProgressSimulation();
       setProcessingProgress(100);
       
@@ -210,7 +187,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
               "Primary percutaneous coronary intervention",
               "Calcium channel blockers"
             ],
-            correctAnswer: 3, // Index of the correct answer (0-based)
+            correctAnswer: 3,
             explanation: "Calcium channel blockers are not recommended as first-line therapy in acute MI. They may worsen outcomes in certain patients."
           },
           {
