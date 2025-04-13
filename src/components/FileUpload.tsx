@@ -1,3 +1,4 @@
+
 import { useState, useRef } from "react";
 import { Upload, File, X, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
+  const [isUsingMockData, setIsUsingMockData] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -51,6 +53,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
     }
 
     setFile(selectedFile);
+    setIsUsingMockData(false);
 
     if (selectedFile.type.includes('image')) {
       const reader = new FileReader();
@@ -80,6 +83,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
     }
 
     setFile(droppedFile);
+    setIsUsingMockData(false);
 
     if (droppedFile.type.includes('image')) {
       const reader = new FileReader();
@@ -100,6 +104,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
   const removeFile = () => {
     setFile(null);
     setFilePreview(null);
+    setIsUsingMockData(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -124,6 +129,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
     
     setIsProcessing(true);
     setProcessingProgress(0);
+    setIsUsingMockData(false);
     
     const clearProgressSimulation = simulateProgress();
     
@@ -131,24 +137,24 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       const formData = new FormData();
       formData.append('file', file);
 
+      console.log(`Sending ${file.name} (${file.type}) for processing`);
+      
       const response = await fetch('https://ltteeavnkygcgbwlblof.supabase.co/functions/v1/process-document', {
         method: 'POST',
-        body: formData,
-        headers: {
-          'Authorization': `Bearer ${supabase.auth.getSession()}`
-        }
+        body: formData
       });
 
+      clearProgressSimulation();
+      setProcessingProgress(100);
+      
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to process document');
       }
 
       const data = await response.json();
+      console.log("API Response:", data);
       
-      clearProgressSimulation();
-      setProcessingProgress(100);
-
       if (data.questions && data.questions.length > 0) {
         const questionsWithIds = data.questions.map((q: Omit<Question, 'id'>, index: number) => ({
           ...q,
@@ -176,6 +182,13 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       clearProgressSimulation();
       setProcessingProgress(100);
       
+      toast({
+        title: "Processing error",
+        description: `${error instanceof Error ? error.message : 'Failed to process document'}. Using demo data instead.`,
+        variant: "destructive"
+      });
+      
+      // Fallback to mock data only when there's an error
       setTimeout(() => {
         const mockQuestions: Question[] = [
           {
@@ -241,13 +254,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
         ];
 
         onFileProcessed(mockQuestions);
-        
-        toast({
-          title: "Note: Using sample data",
-          description: "We're showing sample questions while we fix API integration issues.",
-          variant: "default"
-        });
-        
+        setIsUsingMockData(true);
         setIsProcessing(false);
         setProcessingProgress(0);
       }, 1000);
@@ -341,6 +348,18 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
                 style={{ width: `${processingProgress}%` }}
               />
             </div>
+          </motion.div>
+        )}
+        
+        {isUsingMockData && !isProcessing && (
+          <motion.div 
+            className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-800"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <p className="text-sm">
+              <strong>Note:</strong> Currently showing demo questions. Please check if your Deepseek API key is configured correctly.
+            </p>
           </motion.div>
         )}
       </CardContent>
