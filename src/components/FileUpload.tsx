@@ -73,7 +73,8 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       toast({
         title: "Large PDF detected",
         description: "For better results, only the first few pages will be processed. Consider using a smaller, more focused document.",
-        variant: "warning"
+        // Fix: Changed 'warning' to 'default' as the toast component only accepts 'default' or 'destructive'
+        variant: "default"
       });
     }
 
@@ -127,7 +128,8 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       toast({
         title: "Large PDF detected",
         description: "For better results, only the first few pages will be processed. Consider using a smaller, more focused document.",
-        variant: "warning"
+        // Fix: Changed 'warning' to 'default' as the toast component only accepts 'default' or 'destructive'
+        variant: "default"
       });
     }
 
@@ -234,11 +236,13 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
           toast({
             title: "Large document detected",
             description: "Only the first portion of your document was processed. Results may be incomplete.",
-            variant: "warning"
+            // Fix: Changed 'warning' to 'default' as the toast component only accepts 'default' or 'destructive'
+            variant: "default"
           });
         }
 
-        const questionsWithIds = data.questions.map((q: Omit<Question, 'id'>, index: number) => ({
+        // Fix: Ensure each question has an id by providing a default one if it's missing
+        const questionsWithIds = data.questions.map((q: Partial<Question>, index: number) => ({
           ...q,
           id: q.id || `q${index + 1}`
         }));
