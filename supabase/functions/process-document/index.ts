@@ -26,47 +26,68 @@ serve(async (req) => {
     
     console.log(`Processing file of type: ${fileType}, size: ${(fileSize/1024/1024).toFixed(2)}MB`);
     
-    // Hard file size limit to prevent stack overflow
+    // Absolute maximum file size - this prevents large files from even being attempted
     const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB absolute limit
     if (fileSize > MAX_FILE_SIZE) {
       throw new Error(`File too large (${(fileSize/1024/1024).toFixed(2)}MB). Maximum file size is 8MB. Please split or compress your document.`);
     }
     
-    // For PDF processing, use a more conservative approach to avoid stack issues
-    let processableSize = fileSize;
+    // For PDF processing, determine how much of the file we'll process
+    let processSize = fileSize;
     let truncated = false;
     
-    // More aggressive size limits for PDFs
-    if (fileType === 'application/pdf' && fileSize > 2 * 1024 * 1024) {
-      // Reduce to 2MB limit for PDFs to prevent stack overflow
-      processableSize = 2 * 1024 * 1024; 
-      truncated = true;
-      console.log(`Large PDF detected, limiting to first ${(processableSize/1024/1024).toFixed(2)}MB for processing`);
+    // Special handling for PDFs based on size
+    if (fileType === 'application/pdf') {
+      // Size tiers for PDF processing
+      if (fileSize > 5 * 1024 * 1024) {
+        // Very large PDFs (5MB+): process first 1MB only
+        processSize = 1 * 1024 * 1024;
+        truncated = true;
+        console.log(`Very large PDF (${(fileSize/1024/1024).toFixed(2)}MB), limiting to first 1MB`);
+      } 
+      else if (fileSize > 3 * 1024 * 1024) {
+        // Large PDFs (3-5MB): process first 1.5MB
+        processSize = 1.5 * 1024 * 1024;
+        truncated = true;
+        console.log(`Large PDF (${(fileSize/1024/1024).toFixed(2)}MB), limiting to first 1.5MB`);
+      }
+      else if (fileSize > 1 * 1024 * 1024) {
+        // Medium PDFs (1-3MB): process first 2MB
+        processSize = Math.min(fileSize, 2 * 1024 * 1024);
+        truncated = true;
+        console.log(`Medium PDF (${(fileSize/1024/1024).toFixed(2)}MB), limiting to first 2MB`);
+      }
     }
     
-    // Read the file in chunks instead of all at once
-    let fileBase64;
+    // Read and convert file to base64 in small chunks to prevent stack overflow
+    console.log(`Processing ${truncated ? 'partial' : 'full'} file: ${(processSize/1024/1024).toFixed(2)}MB`);
     
-    if (truncated) {
-      // Process only part of the file for large PDFs
-      const buffer = await file.slice(0, processableSize).arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      fileBase64 = btoa(String.fromCharCode.apply(null, bytes.slice(0, 500000))); // Further limit to avoid stack issues
-    } else {
-      // For smaller files, process normally but still be careful
-      const buffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      
-      // Convert to base64 in chunks to avoid stack overflow
-      const chunkSize = 100000;
-      let binary = '';
-      for (let i = 0; i < bytes.length; i += chunkSize) {
-        const chunk = bytes.slice(i, i + chunkSize);
-        for (let j = 0; j < chunk.length; j++) {
-          binary += String.fromCharCode(chunk[j]);
-        }
+    // Process file bytes in chunks
+    let fileBase64 = '';
+    const buffer = await file.slice(0, processSize).arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    
+    // Convert to base64 in chunks to avoid stack overflow
+    const chunkSize = 10000; // Smaller chunk size to avoid call stack issues
+    let binary = '';
+    
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      const chunk = bytes.slice(i, i + chunkSize);
+      for (let j = 0; j < chunk.length; j++) {
+        binary += String.fromCharCode(chunk[j]);
       }
-      fileBase64 = btoa(binary);
+      
+      // For very large files, batch the base64 conversion to prevent memory pressure
+      if (i > 0 && i % (chunkSize * 10) === 0) {
+        const partialBase64 = btoa(binary);
+        fileBase64 += partialBase64;
+        binary = '';
+      }
+    }
+    
+    // Convert any remaining binary data
+    if (binary.length > 0) {
+      fileBase64 += btoa(binary);
     }
     
     // Check for API key before proceeding
@@ -80,14 +101,14 @@ serve(async (req) => {
     
     if (fileType === 'application/pdf') {
       promptText = truncated 
-        ? "Extract multiple-choice medical exam questions from the first portion of this PDF. Format the result as JSON with this structure: [{question: \"text\", options: [\"A\", \"B\", \"C\", \"D\"], correctAnswer: 0, explanation: \"text\"}]. Focus on quality rather than quantity, extract 3-5 clear questions from the visible content."
-        : "Extract multiple-choice medical exam questions from this PDF. Format the result as JSON with this structure: [{question: \"text\", options: [\"A\", \"B\", \"C\", \"D\"], correctAnswer: 0, explanation: \"text\"}]. Make sure to extract 3-5 high-quality questions.";
+        ? "Extract multiple-choice medical exam questions from this partial PDF. Format the result as JSON with this structure: [{question: \"text\", options: [\"A\", \"B\", \"C\", \"D\"], correctAnswer: 0, explanation: \"text\"}]. Extract 3-5 clear questions from the visible content. IMPORTANT: Your response MUST be valid JSON."
+        : "Extract multiple-choice medical exam questions from this PDF. Format the result as JSON with this structure: [{question: \"text\", options: [\"A\", \"B\", \"C\", \"D\"], correctAnswer: 0, explanation: \"text\"}]. Extract 3-5 clear questions from the content. IMPORTANT: Your response MUST be valid JSON.";
     } else {
-      promptText = "Extract multiple-choice medical exam questions from this image. Format the result as JSON with this structure: [{question: \"text\", options: [\"A\", \"B\", \"C\", \"D\"], correctAnswer: 0, explanation: \"text\"}]. Make sure to extract 3-5 high-quality questions.";
+      promptText = "Extract multiple-choice medical exam questions from this image. Format the result as JSON with this structure: [{question: \"text\", options: [\"A\", \"B\", \"C\", \"D\"], correctAnswer: 0, explanation: \"text\"}]. Extract 3-5 clear questions from the content. IMPORTANT: Your response MUST be valid JSON.";
     }
     
     const contentType = fileType === 'application/pdf' ? 'application/pdf' : fileType;
-    console.log(`Sending request to Deepseek API for ${contentType}`);
+    console.log(`Sending request to Deepseek API for ${contentType}${truncated ? ' (truncated)' : ''}`);
     
     // Set reduced tokens for large files to avoid overflowing the response
     const maxTokens = truncated ? 1500 : 2500;
@@ -124,7 +145,7 @@ serve(async (req) => {
             ]
           }
         ],
-        temperature: 0.1, // Lower temperature for more deterministic outputs
+        temperature: 0.1, // Low temperature for more consistent JSON
         max_tokens: maxTokens
       }),
     });
@@ -240,7 +261,7 @@ serve(async (req) => {
         name: file.name,
         type: file.type,
         size: file.size,
-        processedSize: processableSize,
+        processedSize: processSize,
         truncated
       },
       processingStats: {

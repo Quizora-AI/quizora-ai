@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Upload, File, X, Check, Loader2, AlertTriangle, FileWarning } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -57,7 +56,6 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       return;
     }
 
-    // Stricter file size limit
     const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB
     if (selectedFile.size > MAX_FILE_SIZE) {
       toast({
@@ -68,12 +66,10 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       return;
     }
 
-    // Show warning for large PDFs
     if (selectedFile.type === 'application/pdf' && selectedFile.size > 3 * 1024 * 1024) {
       toast({
         title: "Large PDF detected",
-        description: "For better results, only the first few pages will be processed. Consider using a smaller, more focused document.",
-        // Fix: Changed 'warning' to 'default' as the toast component only accepts 'default' or 'destructive'
+        description: "For better results, only the first portion will be processed. Consider using a smaller, more focused document.",
         variant: "default"
       });
     }
@@ -112,7 +108,6 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       return;
     }
 
-    // Stricter file size limit
     const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB
     if (droppedFile.size > MAX_FILE_SIZE) {
       toast({
@@ -123,12 +118,10 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       return;
     }
 
-    // Show warning for large PDFs
     if (droppedFile.type === 'application/pdf' && droppedFile.size > 3 * 1024 * 1024) {
       toast({
         title: "Large PDF detected",
-        description: "For better results, only the first few pages will be processed. Consider using a smaller, more focused document.",
-        // Fix: Changed 'warning' to 'default' as the toast component only accepts 'default' or 'destructive'
+        description: "For better results, only the first portion will be processed. Consider using a smaller, more focused document.",
         variant: "default"
       });
     }
@@ -201,8 +194,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
 
       console.log(`Sending ${file.name} (${file.type}, ${(file.size/1024/1024).toFixed(2)}MB) for processing`);
       
-      // Set a longer timeout for large files
-      const timeoutMs = Math.min(60000, 15000 + (file.size / (1024 * 1024)) * 5000);
+      const timeoutMs = Math.min(120000, 20000 + (file.size / (1024 * 1024)) * 10000);
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -230,19 +222,16 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       }
       
       if (data.questions && data.questions.length > 0) {
-        // Check if document was truncated
         if (data.metadata?.fileInfo?.truncated) {
           setWasTruncated(true);
           toast({
             title: "Large document detected",
             description: "Only the first portion of your document was processed. Results may be incomplete.",
-            // Fix: Changed 'warning' to 'default' as the toast component only accepts 'default' or 'destructive'
             variant: "default"
           });
         }
 
-        // Fix: Ensure each question has an id by providing a default one if it's missing
-        const questionsWithIds = data.questions.map((q: Partial<Question>, index: number) => ({
+        const questionsWithIds = data.questions.map((q: Question, index: number) => ({
           ...q,
           id: q.id || `q${index + 1}`
         }));
@@ -272,7 +261,6 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       setErrorMessage(errorMessage);
       setRetryCount(prev => prev + 1);
       
-      // Specific error messages for common issues
       if (errorMessage.includes('Maximum call stack size exceeded') || errorMessage.includes('too large')) {
         setApiErrorDetails('Try uploading a smaller portion of your document or splitting it into multiple parts.');
       } else if (errorMessage.includes('timed out') || errorMessage.includes('aborted')) {
@@ -289,14 +277,12 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
         variant: "destructive"
       });
       
-      // Fall back to mock data if there are repeated failures or certain critical errors
       const useMock = retryCount > 0 || 
         errorMessage.includes('API key') || 
         errorMessage.includes('Maximum call stack') ||
         errorMessage.includes('No questions could be extracted');
         
       if (useMock) {
-        // Fallback to mock data
         setTimeout(() => {
           const mockQuestions: Question[] = [
             {
