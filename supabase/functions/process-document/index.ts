@@ -22,42 +22,58 @@ serve(async (req) => {
     }
 
     const fileBytes = await file.arrayBuffer();
-    const fileBase64 = btoa(String.fromCharCode(...new Uint8Array(fileBytes)));
+    const fileSize = file.size;
+    const fileType = file.type;
     
-    // Extract content from PDF/Image using Deepseek AI
+    console.log(`Processing file of type: ${fileType}, size: ${(fileSize/1024/1024).toFixed(2)}MB`);
+    
+    // Hard file size limit to prevent stack overflow
+    const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB absolute limit
+    if (fileSize > MAX_FILE_SIZE) {
+      throw new Error(`File too large (${(fileSize/1024/1024).toFixed(2)}MB). Maximum file size is 8MB. Please split or compress your document.`);
+    }
+    
+    // For PDF processing, use a more conservative approach to avoid stack issues
+    let processableFileSize = fileSize;
+    let truncated = false;
+    
+    // More aggressive size limits for PDFs
+    if (fileType === 'application/pdf' && fileSize > 3 * 1024 * 1024) {
+      processableFileSize = 3 * 1024 * 1024; // 3MB limit for PDFs
+      truncated = true;
+      console.log(`Large PDF detected, limiting to first ${(processableFileSize/1024/1024).toFixed(2)}MB for processing`);
+    }
+    
+    // Only process the safe portion of the file
+    const safeBytes = fileBytes.slice(0, processableFileSize);
+    const fileBase64 = btoa(String.fromCharCode(...new Uint8Array(safeBytes)));
+    
+    // Check for API key before proceeding
     const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
     if (!deepseekApiKey) {
-      throw new Error('Deepseek API key is not configured');
-    }
-
-    // Process content based on file type
-    const fileType = file.type;
-    const fileSize = file.size;
-    console.log(`Processing file of type: ${fileType}, size: ${fileSize} bytes`);
-    
-    // Check file size (prevent processing extremely large files)
-    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
-    if (fileSize > MAX_FILE_SIZE) {
-      throw new Error(`File too large (${Math.round(fileSize/1024/1024)}MB). Maximum file size is 10MB.`);
+      throw new Error('Deepseek API key is not configured. Please contact the administrator.');
     }
     
     if (fileType === 'application/pdf' || fileType.startsWith('image/')) {
-      const promptText = fileType === 'application/pdf' 
-        ? "Extract multiple-choice medical exam questions from the PDF. Format the result as JSON with this structure: [{question: \"text\", options: [\"A\", \"B\", \"C\", \"D\"], correctAnswer: 0, explanation: \"text\"}]. Make sure to extract at least 3-5 high-quality questions."
-        : "Extract multiple-choice medical exam questions from the image. Format the result as JSON with this structure: [{question: \"text\", options: [\"A\", \"B\", \"C\", \"D\"], correctAnswer: 0, explanation: \"text\"}]. Make sure to extract at least 3-5 high-quality questions.";
-        
-      const contentType = fileType === 'application/pdf' ? 'application/pdf' : fileType;
+      // Use different prompts based on file type and whether it was truncated
+      let promptText = '';
       
+      if (fileType === 'application/pdf') {
+        promptText = truncated 
+          ? "Extract multiple-choice medical exam questions from the first portion of this PDF. Format the result as JSON with this structure: [{question: \"text\", options: [\"A\", \"B\", \"C\", \"D\"], correctAnswer: 0, explanation: \"text\"}]. Focus on quality rather than quantity, extract 3-5 clear questions from the visible content."
+          : "Extract multiple-choice medical exam questions from this PDF. Format the result as JSON with this structure: [{question: \"text\", options: [\"A\", \"B\", \"C\", \"D\"], correctAnswer: 0, explanation: \"text\"}]. Make sure to extract 3-5 high-quality questions.";
+      } else {
+        promptText = "Extract multiple-choice medical exam questions from this image. Format the result as JSON with this structure: [{question: \"text\", options: [\"A\", \"B\", \"C\", \"D\"], correctAnswer: 0, explanation: \"text\"}]. Make sure to extract 3-5 high-quality questions.";
+      }
+      
+      const contentType = fileType === 'application/pdf' ? 'application/pdf' : fileType;
       console.log(`Sending request to Deepseek API for ${contentType}`);
       
-      // Only process a reasonable portion of large PDF files
-      let processedBase64 = fileBase64;
-      if (fileType === 'application/pdf' && fileSize > 5 * 1024 * 1024) {
-        // For large PDFs, take first portion to avoid stack overflow
-        const safeSize = 4 * 1024 * 1024; // 4MB is generally safe
-        console.log(`Large PDF detected, processing only first ${Math.round(safeSize/1024/1024)}MB`);
-        processedBase64 = fileBase64.substring(0, safeSize);
-      }
+      // Set reduced tokens for large files to avoid overflowing the response
+      const maxTokens = truncated ? 2000 : 3000;
+      
+      // Modified system prompt for more reliable JSON output
+      const systemPrompt = "You are an expert medical educator extracting multiple-choice questions from documents. ALWAYS output your response as valid JSON in the exact format: [{\"question\": \"Question text?\", \"options\": [\"Option A\", \"Option B\", \"Option C\", \"Option D\"], \"correctAnswer\": 0, \"explanation\": \"Explanation text\"}]. DO NOT include any text outside of the JSON array. Use numbers (0-3) for the correctAnswer field where 0=first option, 1=second option, etc.";
       
       const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method: 'POST',
@@ -70,7 +86,7 @@ serve(async (req) => {
           messages: [
             {
               role: "system",
-              content: "You are an expert medical educator creating high-quality multiple-choice questions. Focus on creating challenging, thought-provoking questions that test deep understanding of medical concepts. ALWAYS return your output in valid JSON format."
+              content: systemPrompt
             },
             {
               role: "user",
@@ -82,14 +98,14 @@ serve(async (req) => {
                 {
                   type: "image_url",
                   image_url: {
-                    url: `data:${contentType};base64,${processedBase64}`
+                    url: `data:${contentType};base64,${fileBase64}`
                   }
                 }
               ]
             }
           ],
-          temperature: 0.3,
-          max_tokens: 3000
+          temperature: 0.1, // Lower temperature for more deterministic outputs
+          max_tokens: maxTokens
         }),
       });
       
@@ -109,102 +125,118 @@ serve(async (req) => {
       const extractedContent = data.choices[0].message.content;
       console.log("Raw extracted content (first 200 chars):", extractedContent.slice(0, 200) + "...");
       
-      // More robust JSON parsing with multiple fallback strategies and safeguards
-      let parsedQuestions = [];
+      // Upgraded JSON parsing with multiple fallback strategies
+      let parsedQuestions;
       try {
-        // Strategy 1: Direct JSON parsing
+        // First attempt: Direct parsing of the entire response
+        parsedQuestions = JSON.parse(extractedContent.trim());
+        console.log("Successfully parsed JSON directly");
+      } catch (e1) {
+        console.log("Direct JSON parsing failed, trying alternatives:", e1.message);
+        
         try {
-          const possibleJson = extractedContent.trim();
-          parsedQuestions = JSON.parse(possibleJson);
-          console.log("Successfully parsed JSON directly");
-        } catch (e) {
-          console.log("Direct JSON parsing failed, trying alternatives");
-          
-          // Strategy 2: Extract JSON from markdown code block
-          const codeBlockMatch = extractedContent.match(/```(?:json)?\n([\s\S]*?)\n```/);
+          // Second attempt: Extract JSON array from markdown code block
+          const codeBlockMatch = extractedContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
           if (codeBlockMatch) {
-            try {
-              parsedQuestions = JSON.parse(codeBlockMatch[1].trim());
-              console.log("Successfully parsed JSON from code block");
-            } catch (e2) {
-              console.log("Code block JSON parsing failed");
-            }
-          }
-          
-          // Strategy 3: Extract JSON from text using regex
-          if (!parsedQuestions || !Array.isArray(parsedQuestions) || parsedQuestions.length === 0) {
-            const jsonMatch = extractedContent.match(/\[[\s\S]*?\{[\s\S]*?\}[\s\S]*?\]/);
-            if (jsonMatch) {
-              try {
-                parsedQuestions = JSON.parse(jsonMatch[0].trim());
-                console.log("Successfully parsed JSON using regex");
-              } catch (e3) {
-                console.log("Regex JSON parsing failed");
-              }
-            }
-          }
-          
-          // Strategy 4: Try to fix common JSON errors
-          if (!parsedQuestions || !Array.isArray(parsedQuestions) || parsedQuestions.length === 0) {
-            try {
-              // Replace single quotes with double quotes
+            parsedQuestions = JSON.parse(codeBlockMatch[1].trim());
+            console.log("Successfully parsed JSON from code block");
+          } else {
+            // Third attempt: Look for anything that looks like a JSON array
+            const jsonArrayMatch = extractedContent.match(/\[\s*\{[\s\S]*\}\s*\]/);
+            if (jsonArrayMatch) {
+              parsedQuestions = JSON.parse(jsonArrayMatch[0].trim());
+              console.log("Successfully parsed JSON using array regex");
+            } else {
+              // Fourth attempt: Fix common JSON issues and try again
               const fixedJson = extractedContent
                 .replace(/'/g, '"')
-                .replace(/(\w+):/g, '"$1":');
+                .replace(/(\w+):/g, '"$1":')
+                .replace(/\n/g, ' ');
               
-              // Try to extract array portion
-              const arrayMatch = fixedJson.match(/\[([\s\S]*?)\]/);
-              if (arrayMatch) {
-                parsedQuestions = JSON.parse(`[${arrayMatch[1]}]`);
-                console.log("Successfully parsed JSON after fixing quotes");
+              const fixedArrayMatch = fixedJson.match(/\[\s*\{[\s\S]*?\}\s*\]/);
+              if (fixedArrayMatch) {
+                parsedQuestions = JSON.parse(fixedArrayMatch[0]);
+                console.log("Successfully parsed JSON after fixing quotes/formatting");
+              } else {
+                throw new Error("Could not locate valid JSON array in response");
               }
-            } catch (e4) {
-              console.log("Fixed quotes JSON parsing failed");
             }
           }
+        } catch (e2) {
+          console.error("All JSON parsing attempts failed:", e2.message);
+          console.error("Raw content sample:", extractedContent.substring(0, 500));
+          throw new Error(`Failed to parse questions: ${e2.message}`);
         }
-        
-        if (!parsedQuestions || !Array.isArray(parsedQuestions) || parsedQuestions.length === 0) {
-          throw new Error('Failed to parse valid questions array from AI response');
-        }
-        
-        // Validate and clean questions
-        const cleanQuestions = parsedQuestions.map((q, index) => ({
-          id: `q${index + 1}`,
-          question: q.question || 'No question text',
-          options: q.options && Array.isArray(q.options) 
-            ? q.options.map(opt => String(opt).trim()).filter(opt => opt) 
-            : ['Option A', 'Option B', 'Option C', 'Option D'],
-          correctAnswer: typeof q.correctAnswer === 'number' && q.correctAnswer >= 0 
-            ? q.correctAnswer 
-            : Math.floor(Math.random() * 4),
-          explanation: q.explanation || 'No explanation provided'
-        })).filter(q => q.question !== 'No question text' && q.options.length >= 2);
-        
-        console.log(`Successfully parsed ${cleanQuestions.length} questions`);
-        
-        if (cleanQuestions.length === 0) {
-          throw new Error('No valid questions could be extracted');
-        }
-        
-        return new Response(
-          JSON.stringify({ 
-            questions: cleanQuestions,
-            fileInfo: {
-              name: file.name,
-              type: file.type,
-              size: file.size
-            }
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      } catch (error) {
-        console.error('Failed to parse questions:', error);
-        console.error('Raw content was (first 500 chars):', extractedContent.slice(0, 500));
-        throw new Error(`Failed to parse questions from the AI response: ${error.message}`);
       }
+      
+      if (!Array.isArray(parsedQuestions) || parsedQuestions.length === 0) {
+        throw new Error('No valid questions array found in AI response');
+      }
+      
+      // Improved question validation and sanitization
+      const cleanQuestions = parsedQuestions
+        .filter(q => q && typeof q === 'object')
+        .map((q, index) => {
+          // Ensure question text exists and is a string
+          const questionText = typeof q.question === 'string' ? q.question.trim() : `Question ${index + 1}`;
+          
+          // Ensure options array exists and has valid items
+          let options = Array.isArray(q.options) ? q.options : [];
+          options = options.map(opt => typeof opt === 'string' ? opt.trim() : String(opt)).filter(Boolean);
+          
+          // If options array is empty or too short, generate placeholders
+          if (options.length < 2) {
+            options = ['Option A', 'Option B', 'Option C', 'Option D'];
+          }
+          
+          // Ensure correctAnswer is a valid number within range
+          let correctAnswer = typeof q.correctAnswer === 'number' ? q.correctAnswer : null;
+          if (correctAnswer === null || correctAnswer < 0 || correctAnswer >= options.length) {
+            correctAnswer = 0; // Default to first option if invalid
+          }
+          
+          // Sanitize explanation
+          const explanation = typeof q.explanation === 'string' ? q.explanation.trim() : '';
+          
+          return {
+            id: `q${index + 1}`,
+            question: questionText,
+            options,
+            correctAnswer,
+            explanation
+          };
+        })
+        .filter(q => q.question.length > 10 && q.options.length >= 2); // Filter out questions that are too short
+      
+      console.log(`Successfully extracted and validated ${cleanQuestions.length} questions`);
+      
+      if (cleanQuestions.length === 0) {
+        throw new Error('No valid questions could be extracted from the document. Try uploading a different portion or format.');
+      }
+      
+      // Include metadata about processing
+      const metadata = {
+        fileInfo: {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          processedSize: processableFileSize,
+          truncated
+        },
+        processingStats: {
+          questionCount: cleanQuestions.length
+        }
+      };
+      
+      return new Response(
+        JSON.stringify({ 
+          questions: cleanQuestions,
+          metadata
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     } else {
-      throw new Error(`Unsupported file type: ${fileType}`);
+      throw new Error(`Unsupported file type: ${fileType}. Please upload a PDF or image file.`);
     }
   } catch (error) {
     console.error('Processing error:', error);

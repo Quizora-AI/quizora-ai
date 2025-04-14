@@ -1,6 +1,6 @@
 
 import { useState, useRef } from "react";
-import { Upload, File, X, Check, Loader2, AlertTriangle } from "lucide-react";
+import { Upload, File, X, Check, Loader2, AlertTriangle, FileWarning } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
@@ -28,6 +28,8 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
   const [isUsingMockData, setIsUsingMockData] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [apiErrorDetails, setApiErrorDetails] = useState<string | null>(null);
+  const [wasTruncated, setWasTruncated] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -55,21 +57,32 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       return;
     }
 
-    // Check file size (10MB limit)
-    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    // Stricter file size limit
+    const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB
     if (selectedFile.size > MAX_FILE_SIZE) {
       toast({
         title: "File too large",
-        description: `Maximum file size is 10MB. Your file is ${(selectedFile.size / 1024 / 1024).toFixed(2)}MB.`,
+        description: `Maximum file size is 8MB. Your file is ${(selectedFile.size / 1024 / 1024).toFixed(2)}MB. Please split or compress your document.`,
         variant: "destructive"
       });
       return;
+    }
+
+    // Show warning for large PDFs
+    if (selectedFile.type === 'application/pdf' && selectedFile.size > 3 * 1024 * 1024) {
+      toast({
+        title: "Large PDF detected",
+        description: "For better results, only the first few pages will be processed. Consider using a smaller, more focused document.",
+        variant: "warning"
+      });
     }
 
     setFile(selectedFile);
     setIsUsingMockData(false);
     setErrorMessage(null);
     setApiErrorDetails(null);
+    setWasTruncated(false);
+    setRetryCount(0);
 
     if (selectedFile.type.includes('image')) {
       const reader = new FileReader();
@@ -98,21 +111,32 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       return;
     }
 
-    // Check file size (10MB limit)
-    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    // Stricter file size limit
+    const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB
     if (droppedFile.size > MAX_FILE_SIZE) {
       toast({
         title: "File too large",
-        description: `Maximum file size is 10MB. Your file is ${(droppedFile.size / 1024 / 1024).toFixed(2)}MB.`,
+        description: `Maximum file size is 8MB. Your file is ${(droppedFile.size / 1024 / 1024).toFixed(2)}MB. Please split or compress your document.`,
         variant: "destructive"
       });
       return;
+    }
+
+    // Show warning for large PDFs
+    if (droppedFile.type === 'application/pdf' && droppedFile.size > 3 * 1024 * 1024) {
+      toast({
+        title: "Large PDF detected",
+        description: "For better results, only the first few pages will be processed. Consider using a smaller, more focused document.",
+        variant: "warning"
+      });
     }
 
     setFile(droppedFile);
     setIsUsingMockData(false);
     setErrorMessage(null);
     setApiErrorDetails(null);
+    setWasTruncated(false);
+    setRetryCount(0);
 
     if (droppedFile.type.includes('image')) {
       const reader = new FileReader();
@@ -136,6 +160,8 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
     setIsUsingMockData(false);
     setErrorMessage(null);
     setApiErrorDetails(null);
+    setWasTruncated(false);
+    setRetryCount(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -148,7 +174,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
           clearInterval(interval);
           return prev;
         }
-        return prev + 5;
+        return prev + 4;
       });
     }, 500);
 
@@ -163,6 +189,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
     setIsUsingMockData(false);
     setErrorMessage(null);
     setApiErrorDetails(null);
+    setWasTruncated(false);
     
     const clearProgressSimulation = simulateProgress();
     
@@ -172,11 +199,24 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
 
       console.log(`Sending ${file.name} (${file.type}, ${(file.size/1024/1024).toFixed(2)}MB) for processing`);
       
+      // Set a longer timeout for large files
+      const timeoutMs = Math.min(60000, 15000 + (file.size / (1024 * 1024)) * 5000);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      
       const response = await fetch('https://ltteeavnkygcgbwlblof.supabase.co/functions/v1/process-document', {
         method: 'POST',
-        body: formData
+        body: formData,
+        signal: controller.signal
+      }).catch(err => {
+        if (err.name === 'AbortError') {
+          throw new Error('Request timed out. The document may be too large or complex to process.');
+        }
+        throw err;
       });
-
+      
+      clearTimeout(timeoutId);
       clearProgressSimulation();
       setProcessingProgress(100);
       
@@ -188,9 +228,19 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       }
       
       if (data.questions && data.questions.length > 0) {
+        // Check if document was truncated
+        if (data.metadata?.fileInfo?.truncated) {
+          setWasTruncated(true);
+          toast({
+            title: "Large document detected",
+            description: "Only the first portion of your document was processed. Results may be incomplete.",
+            variant: "warning"
+          });
+        }
+
         const questionsWithIds = data.questions.map((q: Omit<Question, 'id'>, index: number) => ({
           ...q,
-          id: `q${index + 1}`
+          id: q.id || `q${index + 1}`
         }));
 
         setTimeout(() => {
@@ -216,14 +266,17 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       
       const errorMessage = error instanceof Error ? error.message : 'Failed to process document';
       setErrorMessage(errorMessage);
+      setRetryCount(prev => prev + 1);
       
       // Specific error messages for common issues
-      if (errorMessage.includes('Maximum call stack size exceeded')) {
-        setApiErrorDetails('The file is too complex or large to process. Try a smaller or simpler document.');
-      } else if (errorMessage.includes('Deepseek API key is not configured')) {
-        setApiErrorDetails('The Deepseek API key is not configured in the server. Please contact the administrator.');
-      } else if (errorMessage.includes('File too large')) {
-        setApiErrorDetails('Please upload a smaller file (under 10MB).');
+      if (errorMessage.includes('Maximum call stack size exceeded') || errorMessage.includes('too large')) {
+        setApiErrorDetails('Try uploading a smaller portion of your document or splitting it into multiple parts.');
+      } else if (errorMessage.includes('timed out') || errorMessage.includes('aborted')) {
+        setApiErrorDetails('The request took too long. Try with a smaller document or a different section.');
+      } else if (errorMessage.includes('Deepseek API key')) {
+        setApiErrorDetails('The API key required for processing is not properly configured.');
+      } else if (errorMessage.includes('No questions could be extracted')) {
+        setApiErrorDetails('The document format may not be suitable. Try a document with clearer question/answer structures.');
       }
       
       toast({
@@ -232,9 +285,13 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
         variant: "destructive"
       });
       
-      // Only fall back to mock data if specifically requested or if it's a critical error
-      if (errorMessage.includes('API key') || errorMessage.includes('No questions could be extracted') || 
-          errorMessage.includes('Maximum call stack')) {
+      // Fall back to mock data if there are repeated failures or certain critical errors
+      const useMock = retryCount > 0 || 
+        errorMessage.includes('API key') || 
+        errorMessage.includes('Maximum call stack') ||
+        errorMessage.includes('No questions could be extracted');
+        
+      if (useMock) {
         // Fallback to mock data
         setTimeout(() => {
           const mockQuestions: Question[] = [
@@ -343,7 +400,8 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
               <Upload className="h-12 w-12 text-primary mb-4" />
               <p className="text-lg font-medium mb-2">Drag & Drop your file here</p>
               <p className="text-sm text-muted-foreground mb-4">or click to browse</p>
-              <p className="text-xs text-muted-foreground">Supported formats: PDF, JPEG, PNG (under 10MB)</p>
+              <p className="text-xs text-muted-foreground mb-1">Supported formats: PDF, JPEG, PNG</p>
+              <p className="text-xs text-muted-foreground">Maximum file size: <strong>8MB</strong></p>
             </motion.div>
           </motion.div>
         ) : (
@@ -376,6 +434,12 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
                 <p className="text-sm text-muted-foreground">
                   {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type}
                 </p>
+                {file.type === 'application/pdf' && file.size > 3 * 1024 * 1024 && (
+                  <p className="text-xs text-amber-500 flex items-center mt-1">
+                    <FileWarning className="h-3 w-3 mr-1" />
+                    Large PDF - only first portion will be processed
+                  </p>
+                )}
               </div>
             </div>
           </motion.div>
@@ -411,6 +475,26 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
               <span className="font-medium">Processing your document...</span>
             </div>
             <Progress value={processingProgress} className="w-full h-2" />
+            {processingProgress > 70 && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Extracting questions from document... This may take a moment.
+              </p>
+            )}
+          </motion.div>
+        )}
+        
+        {wasTruncated && !isProcessing && (
+          <motion.div 
+            className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md text-amber-800"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <p className="text-sm flex items-center">
+              <AlertTriangle className="h-4 w-4 mr-2 flex-shrink-0" />
+              <span>
+                <strong>Note:</strong> Only the first portion of your document was processed due to size limitations. For complete results, try splitting your document into smaller parts.
+              </span>
+            </p>
           </motion.div>
         )}
         
