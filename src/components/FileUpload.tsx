@@ -55,6 +55,17 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       return;
     }
 
+    // Check file size (10MB limit)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    if (selectedFile.size > MAX_FILE_SIZE) {
+      toast({
+        title: "File too large",
+        description: `Maximum file size is 10MB. Your file is ${(selectedFile.size / 1024 / 1024).toFixed(2)}MB.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
     setFile(selectedFile);
     setIsUsingMockData(false);
     setErrorMessage(null);
@@ -82,6 +93,17 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       toast({
         title: "Invalid file type",
         description: "Please upload a PDF or image file (JPEG, PNG)",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check file size (10MB limit)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    if (droppedFile.size > MAX_FILE_SIZE) {
+      toast({
+        title: "File too large",
+        description: `Maximum file size is 10MB. Your file is ${(droppedFile.size / 1024 / 1024).toFixed(2)}MB.`,
         variant: "destructive"
       });
       return;
@@ -126,7 +148,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
           clearInterval(interval);
           return prev;
         }
-        return prev + 10;
+        return prev + 5;
       });
     }, 500);
 
@@ -148,7 +170,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       const formData = new FormData();
       formData.append('file', file);
 
-      console.log(`Sending ${file.name} (${file.type}) for processing`);
+      console.log(`Sending ${file.name} (${file.type}, ${(file.size/1024/1024).toFixed(2)}MB) for processing`);
       
       const response = await fetch('https://ltteeavnkygcgbwlblof.supabase.co/functions/v1/process-document', {
         method: 'POST',
@@ -195,8 +217,13 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to process document';
       setErrorMessage(errorMessage);
       
-      if (errorMessage.includes('Deepseek API key is not configured')) {
+      // Specific error messages for common issues
+      if (errorMessage.includes('Maximum call stack size exceeded')) {
+        setApiErrorDetails('The file is too complex or large to process. Try a smaller or simpler document.');
+      } else if (errorMessage.includes('Deepseek API key is not configured')) {
         setApiErrorDetails('The Deepseek API key is not configured in the server. Please contact the administrator.');
+      } else if (errorMessage.includes('File too large')) {
+        setApiErrorDetails('Please upload a smaller file (under 10MB).');
       }
       
       toast({
@@ -206,7 +233,8 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       });
       
       // Only fall back to mock data if specifically requested or if it's a critical error
-      if (errorMessage.includes('API key') || errorMessage.includes('No questions could be extracted')) {
+      if (errorMessage.includes('API key') || errorMessage.includes('No questions could be extracted') || 
+          errorMessage.includes('Maximum call stack')) {
         // Fallback to mock data
         setTimeout(() => {
           const mockQuestions: Question[] = [
@@ -315,7 +343,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
               <Upload className="h-12 w-12 text-primary mb-4" />
               <p className="text-lg font-medium mb-2">Drag & Drop your file here</p>
               <p className="text-sm text-muted-foreground mb-4">or click to browse</p>
-              <p className="text-xs text-muted-foreground">Supported formats: PDF, JPEG, PNG</p>
+              <p className="text-xs text-muted-foreground">Supported formats: PDF, JPEG, PNG (under 10MB)</p>
             </motion.div>
           </motion.div>
         ) : (
@@ -382,12 +410,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
               <span className="font-medium">Processing your document...</span>
             </div>
-            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-primary"
-                style={{ width: `${processingProgress}%` }}
-              />
-            </div>
+            <Progress value={processingProgress} className="w-full h-2" />
           </motion.div>
         )}
         
@@ -398,7 +421,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
             animate={{ opacity: 1 }}
           >
             <p className="text-sm">
-              <strong>Note:</strong> Currently showing demo questions. Please check if your Deepseek API key is configured correctly.
+              <strong>Note:</strong> Currently showing demo questions. The original document couldn't be processed due to technical limitations.
             </p>
           </motion.div>
         )}
