@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
@@ -26,6 +25,13 @@ serve(async (req) => {
     
     console.log(`Processing file of type: ${fileType}, size: ${(fileSize/1024/1024).toFixed(2)}MB`);
     
+    // Validate Deepseek API key
+    const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
+    if (!deepseekApiKey) {
+      console.error('Deepseek API key is missing');
+      throw new Error('Deepseek API key is not configured. Please add the API key in project secrets.');
+    }
+
     // Absolute maximum file size - this prevents large files from even being attempted
     const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB absolute limit
     if (fileSize > MAX_FILE_SIZE) {
@@ -88,12 +94,6 @@ serve(async (req) => {
     // Convert any remaining binary data
     if (binary.length > 0) {
       fileBase64 += btoa(binary);
-    }
-    
-    // Check for API key before proceeding
-    const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
-    if (!deepseekApiKey) {
-      throw new Error('Deepseek API key is not configured. Please contact the administrator.');
     }
     
     // Use different prompts based on file type and whether it was truncated
