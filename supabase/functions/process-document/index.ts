@@ -14,34 +14,36 @@ serve(async (req) => {
   }
 
   try {
-    // Validate Deepseek API key early
-    const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
-    if (!deepseekApiKey) {
-      console.error('Deepseek API key is missing');
-      throw new Error('Deepseek API key is not configured. Please add the API key in project secrets.');
+    // Validate OpenRouter API key early
+    const openRouterApiKey = Deno.env.get('OPENROUTER_API_KEY');
+    if (!openRouterApiKey) {
+      console.error('OpenRouter API key is missing');
+      throw new Error('OpenRouter API key is not configured. Please add the API key in project secrets.');
     }
     
-    console.log('Deepseek API key validation - Starting API key check');
+    console.log('API key validation - Starting OpenRouter API key check');
     
     // Check if the API key is valid with a simple test request
     try {
-      const testResponse = await fetch('https://api.deepseek.com/v1/models', {
+      const testResponse = await fetch('https://openrouter.ai/api/v1/models', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${deepseekApiKey}`,
+          'Authorization': `Bearer ${openRouterApiKey}`,
+          'HTTP-Referer': 'https://medquiz.lovable.app', // Use your app's domain
+          'X-Title': 'MedQuiz Document Processor'
         },
       });
       
       if (!testResponse.ok) {
         const errorText = await testResponse.text();
         console.error('API key validation failed:', errorText);
-        throw new Error(`Invalid Deepseek API key or insufficient credits. Status: ${testResponse.status}`);
+        throw new Error(`Invalid OpenRouter API key or insufficient credits. Status: ${testResponse.status}`);
       }
       
-      console.log('Deepseek API key validated successfully');
+      console.log('OpenRouter API key validated successfully');
     } catch (apiKeyError) {
       console.error('Error during API key validation:', apiKeyError);
-      throw new Error('Failed to validate Deepseek API key. Please check your key and credit balance.');
+      throw new Error('Failed to validate OpenRouter API key. Please check your key and credit balance.');
     }
     
     const formData = await req.formData();
@@ -123,40 +125,34 @@ serve(async (req) => {
     console.log('File successfully converted to base64');
     
     // Use different prompts based on file type and whether it was truncated
-    let promptText = '';
+    let userPrompt = '';
     
     if (fileType === 'application/pdf') {
-      promptText = truncated 
-        ? "Extract multiple-choice medical exam questions from this partial PDF. Format the result as JSON with this structure: [{question: \"text\", options: [\"A\", \"B\", \"C\", \"D\"], correctAnswer: 0, explanation: \"text\"}]. Extract 3-5 clear questions from the visible content. IMPORTANT: Your response MUST be valid JSON."
-        : "Extract multiple-choice medical exam questions from this PDF. Format the result as JSON with this structure: [{question: \"text\", options: [\"A\", \"B\", \"C\", \"D\"], correctAnswer: 0, explanation: \"text\"}]. Extract 3-5 clear questions from the content. IMPORTANT: Your response MUST be valid JSON.";
+      userPrompt = truncated 
+        ? "Extract multiple-choice medical exam questions from this partial PDF. For each question, include the question text, options (A, B, C, D), correct answer, and explanation."
+        : "Extract multiple-choice medical exam questions from this PDF. For each question, include the question text, options (A, B, C, D), correct answer, and explanation.";
     } else {
-      promptText = "Extract multiple-choice medical exam questions from this image. Format the result as JSON with this structure: [{question: \"text\", options: [\"A\", \"B\", \"C\", \"D\"], correctAnswer: 0, explanation: \"text\"}]. Extract 3-5 clear questions from the content. IMPORTANT: Your response MUST be valid JSON.";
+      userPrompt = "Extract multiple-choice medical exam questions from this image. For each question, include the question text, options (A, B, C, D), correct answer, and explanation.";
     }
     
     const contentType = fileType === 'application/pdf' ? 'application/pdf' : fileType;
-    console.log(`Sending request to Deepseek API for ${contentType}${truncated ? ' (truncated)' : ''}`);
-    
-    // Set reduced tokens for large files to avoid overflowing the response
-    const maxTokens = truncated ? 1500 : 2500;
-    
-    // Modified system prompt for more reliable JSON output
-    const systemPrompt = "You are an expert medical educator extracting multiple-choice questions from documents. ALWAYS output your response as valid JSON in the exact format: [{\"question\": \"Question text?\", \"options\": [\"Option A\", \"Option B\", \"Option C\", \"Option D\"], \"correctAnswer\": 0, \"explanation\": \"Explanation text\"}]. DO NOT include any text outside of the JSON array. Use numbers (0-3) for the correctAnswer field where 0=first option, 1=second option, etc.";
+    console.log(`Sending request to OpenRouter API for ${contentType}${truncated ? ' (truncated)' : ''}`);
     
     try {
-      // Properly formatted payload for Deepseek API multimodal input
+      // Prepare payload for OpenRouter API with JSON schema
       const payload = {
-        model: "deepseek-chat",
+        model: "openai/gpt-4",
         messages: [
           {
             role: "system",
-            content: systemPrompt
+            content: "You are an expert medical educator that extracts multiple-choice questions from documents. Your response must follow the exact JSON schema provided."
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: promptText
+                text: userPrompt
               },
               {
                 type: "image_url",
@@ -167,24 +163,55 @@ serve(async (req) => {
             ]
           }
         ],
-        temperature: 0.1, // Low temperature for more consistent JSON
-        max_tokens: maxTokens
+        response_format: {
+          type: "json_schema",
+          schema: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                question: {
+                  type: "string",
+                  description: "Question text"
+                },
+                options: {
+                  type: "array",
+                  items: { 
+                    type: "string" 
+                  },
+                  description: "Array of answer options"
+                },
+                correctAnswer: {
+                  type: "integer",
+                  description: "Index of the correct answer (0-based)"
+                },
+                explanation: {
+                  type: "string",
+                  description: "Explanation of the correct answer"
+                }
+              },
+              required: ["question", "options", "correctAnswer", "explanation"]
+            }
+          }
+        }
       };
       
-      console.log('Sending request to Deepseek API with proper multimodal format');
+      console.log('Sending request to OpenRouter API with proper format');
       
-      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${deepseekApiKey}`,
+          'Authorization': `Bearer ${openRouterApiKey}`,
           'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://medquiz.lovable.app', // Use your app's domain
+          'X-Title': 'MedQuiz Document Processor'
         },
         body: JSON.stringify(payload),
       });
       
       if (!response.ok) {
         const errorData = await response.text();
-        console.error(`Deepseek API Error: ${response.status}`, errorData);
+        console.error(`OpenRouter API Error: ${response.status}`, errorData);
         
         // If we're seeing a credit or API key issue, fall back to mock data
         if (response.status === 402 || response.status === 401 || response.status === 422) {
@@ -192,20 +219,31 @@ serve(async (req) => {
           return handleMockDataFallback();
         }
         
-        throw new Error(`Deepseek API error: ${response.status} - ${errorData.slice(0, 100)}...`);
+        throw new Error(`OpenRouter API error: ${response.status} - ${errorData.slice(0, 100)}...`);
       }
       
       const data = await response.json();
-      console.log("Received response from Deepseek API");
+      console.log("Received response from OpenRouter API");
       
       if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-        throw new Error('Invalid response from Deepseek API');
+        throw new Error('Invalid response from OpenRouter API');
       }
       
-      const extractedContent = data.choices[0].message.content;
+      // Extract the content from the response
+      let extractedContent = data.choices[0].message.content;
       console.log("Raw extracted content (first 200 chars):", extractedContent.slice(0, 200) + "...");
       
-      return processExtractedQuestions(extractedContent, file, fileSize, processSize, truncated);
+      // Parse the JSON content
+      let parsedQuestions;
+      try {
+        parsedQuestions = JSON.parse(extractedContent);
+        console.log("Successfully parsed JSON");
+      } catch (parseError) {
+        console.error("JSON parsing failed:", parseError);
+        throw new Error("Failed to parse the extracted questions");
+      }
+      
+      return processExtractedQuestions(parsedQuestions, file, fileSize, processSize, truncated);
       
     } catch (apiError) {
       console.error("API processing error:", apiError);
@@ -227,51 +265,7 @@ serve(async (req) => {
   }
   
   // Helper function to process extracted questions
-  async function processExtractedQuestions(extractedContent, file, fileSize, processSize, truncated) {
-    // Upgraded JSON parsing with multiple fallback strategies
-    let parsedQuestions;
-    try {
-      // First attempt: Direct parsing of the entire response
-      parsedQuestions = JSON.parse(extractedContent.trim());
-      console.log("Successfully parsed JSON directly");
-    } catch (e1) {
-      console.log("Direct JSON parsing failed, trying alternatives:", e1.message);
-      
-      try {
-        // Second attempt: Extract JSON array from markdown code block
-        const codeBlockMatch = extractedContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-        if (codeBlockMatch) {
-          parsedQuestions = JSON.parse(codeBlockMatch[1].trim());
-          console.log("Successfully parsed JSON from code block");
-        } else {
-          // Third attempt: Look for anything that looks like a JSON array
-          const jsonArrayMatch = extractedContent.match(/\[\s*\{[\s\S]*\}\s*\]/);
-          if (jsonArrayMatch) {
-            parsedQuestions = JSON.parse(jsonArrayMatch[0].trim());
-            console.log("Successfully parsed JSON using array regex");
-          } else {
-            // Fourth attempt: Fix common JSON issues and try again
-            const fixedJson = extractedContent
-              .replace(/'/g, '"')
-              .replace(/(\w+):/g, '"$1":')
-              .replace(/\n/g, ' ');
-            
-            const fixedArrayMatch = fixedJson.match(/\[\s*\{[\s\S]*?\}\s*\]/);
-            if (fixedArrayMatch) {
-              parsedQuestions = JSON.parse(fixedArrayMatch[0]);
-              console.log("Successfully parsed JSON after fixing quotes/formatting");
-            } else {
-              throw new Error("Could not locate valid JSON array in response");
-            }
-          }
-        }
-      } catch (e2) {
-        console.error("All JSON parsing attempts failed:", e2.message);
-        console.error("Raw content sample:", extractedContent.substring(0, 500));
-        throw new Error(`Failed to parse questions: ${e2.message}`);
-      }
-    }
-    
+  async function processExtractedQuestions(parsedQuestions, file, fileSize, processSize, truncated) {
     if (!Array.isArray(parsedQuestions) || parsedQuestions.length === 0) {
       throw new Error('No valid questions array found in AI response');
     }
