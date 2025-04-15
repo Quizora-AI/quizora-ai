@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
@@ -13,6 +14,15 @@ serve(async (req) => {
   }
 
   try {
+    // Validate Deepseek API key early
+    const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
+    if (!deepseekApiKey) {
+      console.error('Deepseek API key is missing');
+      throw new Error('Deepseek API key is not configured. Please add the API key in project secrets.');
+    }
+    
+    console.log('Deepseek API key found and validated');
+    
     const formData = await req.formData();
     const file = formData.get('file');
     
@@ -24,13 +34,6 @@ serve(async (req) => {
     const fileType = file.type;
     
     console.log(`Processing file of type: ${fileType}, size: ${(fileSize/1024/1024).toFixed(2)}MB`);
-    
-    // Validate Deepseek API key
-    const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
-    if (!deepseekApiKey) {
-      console.error('Deepseek API key is missing');
-      throw new Error('Deepseek API key is not configured. Please add the API key in project secrets.');
-    }
 
     // Absolute maximum file size - this prevents large files from even being attempted
     const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB absolute limit
@@ -96,6 +99,8 @@ serve(async (req) => {
       fileBase64 += btoa(binary);
     }
     
+    console.log('File successfully converted to base64');
+    
     // Use different prompts based on file type and whether it was truncated
     let promptText = '';
     
@@ -116,38 +121,43 @@ serve(async (req) => {
     // Modified system prompt for more reliable JSON output
     const systemPrompt = "You are an expert medical educator extracting multiple-choice questions from documents. ALWAYS output your response as valid JSON in the exact format: [{\"question\": \"Question text?\", \"options\": [\"Option A\", \"Option B\", \"Option C\", \"Option D\"], \"correctAnswer\": 0, \"explanation\": \"Explanation text\"}]. DO NOT include any text outside of the JSON array. Use numbers (0-3) for the correctAnswer field where 0=first option, 1=second option, etc.";
     
+    // *** FIX: Correcting the payload structure for the Deepseek API ***
+    const payload = {
+      model: "deepseek-chat",
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: promptText
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${contentType};base64,${fileBase64}`
+              }
+            }
+          ]
+        }
+      ],
+      temperature: 0.1, // Low temperature for more consistent JSON
+      max_tokens: maxTokens
+    };
+    
+    console.log('Sending request payload to Deepseek API');
+    
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${deepseekApiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: "deepseek-chat",
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: promptText
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:${contentType};base64,${fileBase64}`
-                }
-              }
-            ]
-          }
-        ],
-        temperature: 0.1, // Low temperature for more consistent JSON
-        max_tokens: maxTokens
-      }),
+      body: JSON.stringify(payload),
     });
     
     if (!response.ok) {
