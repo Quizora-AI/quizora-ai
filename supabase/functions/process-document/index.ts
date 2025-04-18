@@ -46,20 +46,37 @@ serve(async (req) => {
     const bytes = new Uint8Array(buffer);
     const fileBase64 = btoa(String.fromCharCode(...Array.from(bytes)));
     
-    // Prepare payload for OpenRouter API with JSON schema
+    // Improved system prompt for more reliable question extraction
+    const systemPrompt = `You are an expert medical educator specializing in extracting and formatting multiple-choice questions from medical documents. Your task is to carefully analyze the provided document, identify all question-answer patterns, and convert them into a structured format.
+
+IMPORTANT INSTRUCTIONS:
+1. Extract REAL multiple-choice questions directly from the document. DO NOT create new questions unless absolutely necessary.
+2. If the document contains numbered questions with lettered options (A, B, C, D), extract them EXACTLY as they appear.
+3. For each question, include:
+   - The complete question text
+   - All available options (A, B, C, D, etc.) exactly as written
+   - Identify the correct answer (if marked in the document with a symbol, highlight, etc.)
+   - Provide a detailed explanation (if available in the document)
+4. If correct answers are not marked, make your best assessment based on context clues or expert knowledge.
+5. Ensure your response follows the exact JSON schema provided.
+6. Be thorough - extract ALL questions present in the document, even if there are many.
+
+Your output MUST strictly follow the specified JSON schema format with no deviations.`;
+    
+    // Prepare payload for OpenRouter API with improved JSON schema
     const payload = {
       model: "anthropic/claude-3-opus:beta",
       messages: [
         {
           role: "system",
-          content: "You are an expert medical educator specializing in extracting and formatting multiple-choice questions from medical documents. Your task is to carefully analyze the provided document, identify all question-answer patterns, and convert them into a structured format. Follow these guidelines:\n\n1. Extract all multiple-choice questions completely and accurately\n2. Include the question text, all available options (A, B, C, D, etc.), identify the correct answer, and provide a detailed explanation\n3. Ensure your response follows the exact JSON schema provided\n4. If the document doesn't contain obvious questions, create high-quality multiple-choice questions based on the key medical concepts presented\n5. For each question, provide a comprehensive explanation of why the correct answer is right and why other options are wrong\n\nYour output must strictly follow the specified JSON schema format."
+          content: systemPrompt
         },
         {
           role: "user",
           content: [
             {
               type: "text",
-              text: "Extract multiple-choice medical exam questions from this document. For each question, include the question text, options (A, B, C, D, etc.), correct answer, and explanation. If the document doesn't contain clear questions, create high-quality questions based on the key medical concepts presented."
+              text: "Extract all multiple-choice questions from this medical document. Include the question text, all options (A, B, C, D, etc.), correct answer, and explanation if available. Follow the schema exactly."
             },
             {
               type: "image_url",
@@ -79,14 +96,15 @@ serve(async (req) => {
             properties: {
               question: {
                 type: "string",
-                description: "Question text"
+                description: "Full question text exactly as it appears in document"
               },
               options: {
                 type: "array",
                 items: { 
-                  type: "string" 
+                  type: "string",
+                  description: "Full text of each answer option" 
                 },
-                description: "Array of answer options"
+                description: "Array of answer options in order (A, B, C, D, etc.)"
               },
               correctAnswer: {
                 type: "integer",
@@ -94,14 +112,14 @@ serve(async (req) => {
               },
               explanation: {
                 type: "string",
-                description: "Explanation of the correct answer"
+                description: "Explanation of why the correct answer is right (if available in document)"
               }
             },
             required: ["question", "options", "correctAnswer", "explanation"]
           }
         }
       },
-      temperature: 0.3,
+      temperature: 0.1,
       max_tokens: 4000
     };
     
@@ -148,7 +166,7 @@ serve(async (req) => {
     // Validate the parsed questions
     if (!Array.isArray(parsedQuestions) || parsedQuestions.length === 0) {
       console.error('No valid questions in response:', parsedQuestions);
-      throw new Error('No questions could be extracted from the document');
+      throw new Error('No questions could be extracted from the document. Please make sure your document contains clear multiple-choice questions.');
     }
     
     // Add IDs to questions if they don't have them

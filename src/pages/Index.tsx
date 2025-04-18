@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Question } from "@/components/FileUpload";
 import { QuizQuestion } from "@/components/QuizQuestion";
@@ -119,6 +118,11 @@ const Index = () => {
         // Add new entry to history and save back to localStorage
         const updatedHistory = [newQuizEntry, ...existingHistory];
         localStorage.setItem("quizHistory", JSON.stringify(updatedHistory));
+        
+        toast({
+          title: "Quiz saved",
+          description: `Your quiz has been saved to history.`
+        });
       }
     }
   }, [appState, questions, userAnswers, quizTitle]);
