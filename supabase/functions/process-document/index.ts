@@ -73,6 +73,9 @@ Your output MUST strictly follow the specified JSON schema format with no deviat
     
     console.log('Preparing payload for OpenRouter API with improved JSON schema');
     
+    // IMPORTANT CHANGE: Reduced max_tokens to stay within free tier limits
+    const MAX_TOKENS = 500;
+    
     // Prepare payload for OpenRouter API with improved JSON schema
     const payload = {
       model: "anthropic/claude-3-opus:beta",
@@ -130,10 +133,10 @@ Your output MUST strictly follow the specified JSON schema format with no deviat
         }
       },
       temperature: 0.1,
-      max_tokens: 4000
+      max_tokens: MAX_TOKENS
     };
     
-    console.log('Sending request to OpenRouter API');
+    console.log(`Sending request to OpenRouter API with max_tokens=${MAX_TOKENS}`);
     
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -147,16 +150,26 @@ Your output MUST strictly follow the specified JSON schema format with no deviat
     });
     
     const responseData = await response.json();
-    console.log("Received response from OpenRouter API", JSON.stringify(responseData).slice(0, 200) + "...");
     
+    // Detailed error logging for easier debugging
     if (!response.ok) {
-      console.error('OpenRouter API Error:', responseData);
-      throw new Error(`OpenRouter API error: ${response.status} - ${JSON.stringify(responseData)}`);
+      console.error('OpenRouter API Error:', JSON.stringify(responseData));
+      
+      // Handle specific error cases
+      if (responseData.error?.code === 402) {
+        throw new Error('OpenRouter API credit limit reached. Please upgrade your OpenRouter account or reduce max_tokens.');
+      } else if (responseData.error?.message) {
+        throw new Error(`OpenRouter API error: ${responseData.error.message}`);
+      } else {
+        throw new Error(`OpenRouter API error: ${response.status} - ${JSON.stringify(responseData)}`);
+      }
     }
     
+    console.log("Received response from OpenRouter API");
+    
     if (!responseData.choices || !responseData.choices[0]?.message) {
-      console.error('Invalid response structure from OpenRouter API:', responseData);
-      throw new Error('Invalid response from OpenRouter API');
+      console.error('Invalid response structure from OpenRouter API:', JSON.stringify(responseData));
+      throw new Error('Invalid response from OpenRouter API. Please try again with a smaller document or different file.');
     }
     
     // Extract the content from the response
@@ -170,7 +183,7 @@ Your output MUST strictly follow the specified JSON schema format with no deviat
       console.log(`Successfully parsed ${parsedQuestions.length} questions`);
     } catch (parseError) {
       console.error("JSON parse error:", parseError);
-      throw new Error(`Failed to parse questions from API response: ${parseError.message}`);
+      throw new Error(`Failed to extract questions from document. The API returned an invalid response.`);
     }
     
     // Validate the parsed questions
@@ -199,7 +212,8 @@ Your output MUST strictly follow the specified JSON schema format with no deviat
           },
           processingStats: {
             questionCount: questionsWithIds.length,
-            processingTime: new Date().toISOString()
+            processingTime: new Date().toISOString(),
+            tokensUsed: MAX_TOKENS
           }
         }
       }),

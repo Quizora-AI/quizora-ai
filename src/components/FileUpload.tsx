@@ -1,12 +1,13 @@
 
 import { useState, useRef } from "react";
-import { Upload, File, X, Check, Loader2, AlertTriangle, FileWarning } from "lucide-react";
+import { Upload, File, X, Check, Loader2, AlertTriangle, FileWarning, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
+import { Link } from "react-router-dom";
 
 interface FileUploadProps {
   onFileProcessed: (questions: Question[]) => void;
@@ -66,10 +67,12 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       return;
     }
 
-    if (selectedFile.type === 'application/pdf' && selectedFile.size > 5 * 1024 * 1024) {
+    // Smaller file size recommendation for better processing
+    const RECOMMENDED_SIZE = 2 * 1024 * 1024; // 2MB
+    if (selectedFile.size > RECOMMENDED_SIZE) {
       toast({
-        title: "Large PDF detected",
-        description: "Large PDFs may take longer to process. Please be patient.",
+        title: "Large file detected",
+        description: "For optimal results, consider using files under 2MB. Larger files may encounter API limitations.",
         variant: "default"
       });
     }
@@ -117,10 +120,12 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       return;
     }
 
-    if (droppedFile.type === 'application/pdf' && droppedFile.size > 5 * 1024 * 1024) {
+    // Smaller file size recommendation for better processing
+    const RECOMMENDED_SIZE = 2 * 1024 * 1024; // 2MB
+    if (droppedFile.size > RECOMMENDED_SIZE) {
       toast({
-        title: "Large PDF detected",
-        description: "Large PDFs may take longer to process. Please be patient.",
+        title: "Large file detected",
+        description: "For optimal results, consider using files under 2MB. Larger files may encounter API limitations.",
         variant: "default"
       });
     }
@@ -190,11 +195,8 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
 
       console.log(`Sending ${file.name} (${file.type}, ${(file.size/1024/1024).toFixed(2)}MB) for processing`);
       
-      // Set a longer timeout for larger files
-      const baseTimeoutMs = 60000; // 1 minute base
-      const additionalTimePerMB = 2000; // 2 second per MB
-      const fileSizeMB = file.size / (1024 * 1024);
-      const timeoutMs = Math.min(300000, baseTimeoutMs + (fileSizeMB * additionalTimePerMB)); // Cap at 5 minutes
+      // Set a shorter timeout for API limitations
+      const timeoutMs = 60000; // 60 seconds timeout
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -261,6 +263,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       setErrorMessage(errorMessage);
       setRetryCount(prev => prev + 1);
       
+      // Improved error handling for specific OpenRouter errors
       if (errorMessage.includes('Maximum call stack size exceeded') || errorMessage.includes('too large')) {
         setApiErrorDetails('Try uploading a smaller document or splitting it into multiple parts.');
       } else if (errorMessage.includes('timed out') || errorMessage.includes('aborted')) {
@@ -269,6 +272,10 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
         setApiErrorDetails('There was an issue with the API connection. Please try again later or contact support.');
       } else if (errorMessage.includes('No questions could be extracted')) {
         setApiErrorDetails('Make sure your document contains text that can be processed. Try a clearer document with question/answer structures.');
+      } else if (errorMessage.includes('OpenRouter API credit limit')) {
+        setApiErrorDetails('The API credit limit has been reached. Try using a smaller document, or try again later.');
+      } else if (errorMessage.includes('Invalid response from OpenRouter')) {
+        setApiErrorDetails('The API encountered an issue processing your document. Try using a smaller or simpler document.');
       }
       
       toast({
@@ -316,6 +323,9 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
               <p className="text-sm text-muted-foreground mb-4">or click to browse</p>
               <p className="text-xs text-muted-foreground mb-1">Supported formats: PDF, JPEG, PNG</p>
               <p className="text-xs text-muted-foreground">Maximum file size: <strong>20MB</strong></p>
+              <p className="text-xs text-muted-foreground mt-2">
+                <strong>For best results:</strong> Use files under 2MB with clear text
+              </p>
             </motion.div>
           </motion.div>
         ) : (
@@ -348,10 +358,10 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
                 <p className="text-sm text-muted-foreground">
                   {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type}
                 </p>
-                {file.type === 'application/pdf' && file.size > 5 * 1024 * 1024 && (
+                {file.size > 2 * 1024 * 1024 && (
                   <p className="text-xs text-amber-500 flex items-center mt-1">
-                    <FileWarning className="h-3 w-3 mr-1" />
-                    Large PDF - may take longer to process
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    Large file - may encounter API limitations
                   </p>
                 )}
               </div>
@@ -372,6 +382,16 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
                 {errorMessage}
                 {apiErrorDetails && (
                   <p className="text-sm mt-2">{apiErrorDetails}</p>
+                )}
+                {errorMessage.includes('credit limit') && (
+                  <div className="mt-3 text-sm">
+                    <p className="font-medium">Suggestions:</p>
+                    <ul className="list-disc pl-5 mt-1 space-y-1">
+                      <li>Try using a smaller document (under 2MB)</li>
+                      <li>Use images with clearer text</li>
+                      <li>Process documents with fewer pages</li>
+                    </ul>
+                  </div>
                 )}
               </AlertDescription>
             </Alert>
@@ -412,7 +432,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
           </motion.div>
         )}
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex flex-col space-y-4">
         <Button 
           className="w-full"
           disabled={!file || isProcessing}
@@ -420,6 +440,13 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
         >
           {isProcessing ? "Processing..." : "Process Document"}
         </Button>
+        
+        {errorMessage?.includes('credit limit') && (
+          <p className="text-xs text-center text-muted-foreground">
+            API credit limitations affect processing of larger documents.
+            <br />Try using a smaller document with clearer text.
+          </p>
+        )}
       </CardFooter>
     </Card>
   );
