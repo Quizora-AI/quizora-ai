@@ -5,83 +5,61 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
+    --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
-
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 213.6 100% 57.5%;
+    --primary: 221.2 83.2% 53.3%;
     --primary-foreground: 210 40% 98%;
-
-    --secondary: 187 100% 42.2%;
-    --secondary-foreground: 210 40% 98%;
-
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 187 100% 42.2%;
-    --accent-foreground: 210 40% 98%;
-
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 213.6 100% 57.5%;
-
-    --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.75rem;
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 355.7 100% 97.3%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 48 96% 89%;
+    --medical: 200 70% 50%;
+    --medical-foreground: 0 0% 100%;
+    --medical-teal: 174 100% 29%;
+    --error: 0 84% 60%;
   }
 
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
-
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-
-    --primary: 213.6 100% 57.5%;
+    --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 187 86% 42.2%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 187 86% 42.2%;
+    --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
-
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 213.6 100% 57.5%;
-    
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --ring: 224.3 76.3% 48%;
+    --success: 142.1 70.6% 45.3%;
+    --warning: 48 96% 89%;
+    --medical: 199 98% 48%;
+    --medical-teal: 174 100% 29%;
+    --error: 0 84% 60%;
   }
 }
 
@@ -89,34 +67,77 @@
   * {
     @apply border-border;
   }
-
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
-@layer utilities {
-  .quiz-container {
-    @apply max-w-4xl mx-auto p-6 rounded-lg shadow-lg bg-white;
-  }
+.animate-slide-up {
+  animation: slide-up 0.6s ease-out forwards;
+}
 
-  .option-btn {
-    @apply flex items-center w-full p-4 my-2 transition-all rounded-md hover:bg-primary/10 border border-border;
+@keyframes slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
   }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
-  .option-btn.selected {
-    @apply border-primary bg-primary/10;
-  }
+.file-drop-area {
+  @apply p-8 border-2 border-dashed border-primary/30 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer transition-all;
+  min-height: 240px;
+}
 
-  .option-btn.correct {
-    @apply border-success bg-success/10;
-  }
+/* Progress bar animation */
+.progress-animate {
+  transition: width 0.4s ease;
+}
 
-  .option-btn.incorrect {
-    @apply border-error bg-error/10;
+/* Card hover effect */
+.card-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Pulse animation for processing state */
+.animate-pulse-slow {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
   }
-  
-  .file-drop-area {
-    @apply border-2 border-dashed border-primary/40 rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer hover:border-primary/70 transition-colors;
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Staggered fade in effect for list items */
+.stagger-fade-in > * {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.stagger-fade-in > *:nth-child(1) { animation: fade-in-up 0.5s 0.1s forwards; }
+.stagger-fade-in > *:nth-child(2) { animation: fade-in-up 0.5s 0.2s forwards; }
+.stagger-fade-in > *:nth-child(3) { animation: fade-in-up 0.5s 0.3s forwards; }
+.stagger-fade-in > *:nth-child(4) { animation: fade-in-up 0.5s 0.4s forwards; }
+.stagger-fade-in > *:nth-child(5) { animation: fade-in-up 0.5s 0.5s forwards; }
+.stagger-fade-in > *:nth-child(6) { animation: fade-in-up 0.5s 0.6s forwards; }
+
+@keyframes fade-in-up {
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

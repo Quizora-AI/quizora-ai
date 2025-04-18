@@ -1,8 +1,9 @@
+
 import { useState, useRef } from "react";
 import { Upload, File, X, Check, Loader2, AlertTriangle, FileWarning } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
@@ -24,7 +25,6 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
-  const [isUsingMockData, setIsUsingMockData] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [apiErrorDetails, setApiErrorDetails] = useState<string | null>(null);
   const [wasTruncated, setWasTruncated] = useState(false);
@@ -56,26 +56,25 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       return;
     }
 
-    const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB
+    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
     if (selectedFile.size > MAX_FILE_SIZE) {
       toast({
         title: "File too large",
-        description: `Maximum file size is 8MB. Your file is ${(selectedFile.size / 1024 / 1024).toFixed(2)}MB. Please split or compress your document.`,
+        description: `Maximum file size is 20MB. Your file is ${(selectedFile.size / 1024 / 1024).toFixed(2)}MB. Please split or compress your document.`,
         variant: "destructive"
       });
       return;
     }
 
-    if (selectedFile.type === 'application/pdf' && selectedFile.size > 3 * 1024 * 1024) {
+    if (selectedFile.type === 'application/pdf' && selectedFile.size > 5 * 1024 * 1024) {
       toast({
         title: "Large PDF detected",
-        description: "For better results, only the first portion will be processed. Consider using a smaller, more focused document.",
+        description: "Large PDFs may take longer to process. Please be patient.",
         variant: "default"
       });
     }
 
     setFile(selectedFile);
-    setIsUsingMockData(false);
     setErrorMessage(null);
     setApiErrorDetails(null);
     setWasTruncated(false);
@@ -108,26 +107,25 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       return;
     }
 
-    const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB
+    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
     if (droppedFile.size > MAX_FILE_SIZE) {
       toast({
         title: "File too large",
-        description: `Maximum file size is 8MB. Your file is ${(droppedFile.size / 1024 / 1024).toFixed(2)}MB. Please split or compress your document.`,
+        description: `Maximum file size is 20MB. Your file is ${(droppedFile.size / 1024 / 1024).toFixed(2)}MB. Please split or compress your document.`,
         variant: "destructive"
       });
       return;
     }
 
-    if (droppedFile.type === 'application/pdf' && droppedFile.size > 3 * 1024 * 1024) {
+    if (droppedFile.type === 'application/pdf' && droppedFile.size > 5 * 1024 * 1024) {
       toast({
         title: "Large PDF detected",
-        description: "For better results, only the first portion will be processed. Consider using a smaller, more focused document.",
+        description: "Large PDFs may take longer to process. Please be patient.",
         variant: "default"
       });
     }
 
     setFile(droppedFile);
-    setIsUsingMockData(false);
     setErrorMessage(null);
     setApiErrorDetails(null);
     setWasTruncated(false);
@@ -152,7 +150,6 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
   const removeFile = () => {
     setFile(null);
     setFilePreview(null);
-    setIsUsingMockData(false);
     setErrorMessage(null);
     setApiErrorDetails(null);
     setWasTruncated(false);
@@ -169,9 +166,9 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
           clearInterval(interval);
           return prev;
         }
-        return prev + 4;
+        return prev + 2;
       });
-    }, 500);
+    }, 1000);
 
     return () => clearInterval(interval);
   };
@@ -181,7 +178,6 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
     
     setIsProcessing(true);
     setProcessingProgress(0);
-    setIsUsingMockData(false);
     setErrorMessage(null);
     setApiErrorDetails(null);
     setWasTruncated(false);
@@ -194,7 +190,11 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
 
       console.log(`Sending ${file.name} (${file.type}, ${(file.size/1024/1024).toFixed(2)}MB) for processing`);
       
-      const timeoutMs = Math.min(120000, 20000 + (file.size / (1024 * 1024)) * 10000);
+      // Set a longer timeout for larger files
+      const baseTimeoutMs = 60000; // 1 minute base
+      const additionalTimePerMB = 2000; // 2 second per MB
+      const fileSizeMB = file.size / (1024 * 1024);
+      const timeoutMs = Math.min(300000, baseTimeoutMs + (fileSizeMB * additionalTimePerMB)); // Cap at 5 minutes
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -249,7 +249,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
           setProcessingProgress(0);
         }, 500);
       } else {
-        throw new Error('No questions could be extracted from the document');
+        throw new Error('No questions could be extracted from the document. Try a different file or format.');
       }
     } catch (error) {
       console.error('Error processing document:', error);
@@ -262,13 +262,13 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       setRetryCount(prev => prev + 1);
       
       if (errorMessage.includes('Maximum call stack size exceeded') || errorMessage.includes('too large')) {
-        setApiErrorDetails('Try uploading a smaller portion of your document or splitting it into multiple parts.');
+        setApiErrorDetails('Try uploading a smaller document or splitting it into multiple parts.');
       } else if (errorMessage.includes('timed out') || errorMessage.includes('aborted')) {
         setApiErrorDetails('The request took too long. Try with a smaller document or a different section.');
-      } else if (errorMessage.includes('Deepseek API key')) {
-        setApiErrorDetails('The API key required for processing is not properly configured.');
+      } else if (errorMessage.includes('API key')) {
+        setApiErrorDetails('There was an issue with the API connection. Please try again later or contact support.');
       } else if (errorMessage.includes('No questions could be extracted')) {
-        setApiErrorDetails('The document format may not be suitable. Try a document with clearer question/answer structures.');
+        setApiErrorDetails('Make sure your document contains text that can be processed. Try a clearer document with question/answer structures.');
       }
       
       toast({
@@ -277,83 +277,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
         variant: "destructive"
       });
       
-      const useMock = retryCount > 0 || 
-        errorMessage.includes('API key') || 
-        errorMessage.includes('Maximum call stack') ||
-        errorMessage.includes('No questions could be extracted');
-        
-      if (useMock) {
-        setTimeout(() => {
-          const mockQuestions: Question[] = [
-            {
-              id: "q1",
-              question: "Which of the following is NOT a primary treatment for acute myocardial infarction?",
-              options: [
-                "Aspirin",
-                "Anticoagulation with heparin",
-                "Primary percutaneous coronary intervention",
-                "Calcium channel blockers"
-              ],
-              correctAnswer: 3,
-              explanation: "Calcium channel blockers are not recommended as first-line therapy in acute MI. They may worsen outcomes in certain patients."
-            },
-            {
-              id: "q2",
-              question: "The most common cause of community-acquired pneumonia is:",
-              options: [
-                "Streptococcus pneumoniae",
-                "Haemophilus influenzae",
-                "Mycoplasma pneumoniae",
-                "Klebsiella pneumoniae"
-              ],
-              correctAnswer: 0,
-              explanation: "Streptococcus pneumoniae remains the most common cause of community-acquired pneumonia across most age groups."
-            },
-            {
-              id: "q3",
-              question: "Which antibody is most associated with the diagnosis of rheumatoid arthritis?",
-              options: [
-                "Anti-dsDNA",
-                "Anti-CCP",
-                "Anti-Smith",
-                "Anti-Ro"
-              ],
-              correctAnswer: 1,
-              explanation: "Anti-CCP (anti-cyclic citrullinated peptide) antibodies are highly specific for rheumatoid arthritis."
-            },
-            {
-              id: "q4",
-              question: "Which of the following is the first-line treatment for uncomplicated urinary tract infection?",
-              options: [
-                "Amoxicillin",
-                "Ciprofloxacin",
-                "Trimethoprim-sulfamethoxazole",
-                "Nitrofurantoin"
-              ],
-              correctAnswer: 3,
-              explanation: "Nitrofurantoin is recommended as first-line therapy for uncomplicated UTIs due to lower resistance rates."
-            },
-            {
-              id: "q5",
-              question: "The gold standard for diagnosis of pulmonary embolism is:",
-              options: [
-                "D-dimer test",
-                "CT pulmonary angiography",
-                "Ventilation-perfusion scan",
-                "Chest X-ray"
-              ],
-              correctAnswer: 1,
-              explanation: "CT pulmonary angiography is currently considered the gold standard for diagnosing pulmonary embolism."
-            },
-          ];
-
-          onFileProcessed(mockQuestions);
-          setIsUsingMockData(true);
-          setIsProcessing(false);
-        }, 1000);
-      } else {
-        setIsProcessing(false);
-      }
+      setIsProcessing(false);
     }
   };
 
@@ -391,7 +315,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
               <p className="text-lg font-medium mb-2">Drag & Drop your file here</p>
               <p className="text-sm text-muted-foreground mb-4">or click to browse</p>
               <p className="text-xs text-muted-foreground mb-1">Supported formats: PDF, JPEG, PNG</p>
-              <p className="text-xs text-muted-foreground">Maximum file size: <strong>8MB</strong></p>
+              <p className="text-xs text-muted-foreground">Maximum file size: <strong>20MB</strong></p>
             </motion.div>
           </motion.div>
         ) : (
@@ -424,10 +348,10 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
                 <p className="text-sm text-muted-foreground">
                   {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type}
                 </p>
-                {file.type === 'application/pdf' && file.size > 3 * 1024 * 1024 && (
+                {file.type === 'application/pdf' && file.size > 5 * 1024 * 1024 && (
                   <p className="text-xs text-amber-500 flex items-center mt-1">
                     <FileWarning className="h-3 w-3 mr-1" />
-                    Large PDF - only first portion will be processed
+                    Large PDF - may take longer to process
                   </p>
                 )}
               </div>
@@ -484,18 +408,6 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
               <span>
                 <strong>Note:</strong> Only the first portion of your document was processed due to size limitations. For complete results, try splitting your document into smaller parts.
               </span>
-            </p>
-          </motion.div>
-        )}
-        
-        {isUsingMockData && !isProcessing && (
-          <motion.div 
-            className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-800"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            <p className="text-sm">
-              <strong>Note:</strong> Currently showing demo questions. The original document couldn't be processed due to technical limitations.
             </p>
           </motion.div>
         )}
