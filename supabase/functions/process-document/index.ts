@@ -41,10 +41,18 @@ serve(async (req) => {
       throw new Error(`File too large. Maximum size is 20MB. Your file is ${(fileSize/1024/1024).toFixed(2)}MB`);
     }
 
-    // Read and convert file to base64
-    const buffer = await file.arrayBuffer();
-    const bytes = new Uint8Array(buffer);
-    const fileBase64 = btoa(String.fromCharCode(...Array.from(bytes)));
+    // Read file data without using recursive functions
+    const arrayBuffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    
+    // Convert to base64 in chunks to avoid call stack issues
+    let fileBase64 = '';
+    const chunkSize = 32768; // Process in 32KB chunks
+    
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      const chunk = bytes.slice(i, Math.min(i + chunkSize, bytes.length));
+      fileBase64 += btoa(String.fromCharCode.apply(null, Array.from(chunk)));
+    }
     
     // Improved system prompt for more reliable question extraction
     const systemPrompt = `You are an expert medical educator specializing in extracting and formatting multiple-choice questions from medical documents. Your task is to carefully analyze the provided document, identify all question-answer patterns, and convert them into a structured format.
@@ -62,6 +70,8 @@ IMPORTANT INSTRUCTIONS:
 6. Be thorough - extract ALL questions present in the document, even if there are many.
 
 Your output MUST strictly follow the specified JSON schema format with no deviations.`;
+    
+    console.log('Preparing payload for OpenRouter API with improved JSON schema');
     
     // Prepare payload for OpenRouter API with improved JSON schema
     const payload = {
@@ -115,7 +125,7 @@ Your output MUST strictly follow the specified JSON schema format with no deviat
                 description: "Explanation of why the correct answer is right (if available in document)"
               }
             },
-            required: ["question", "options", "correctAnswer", "explanation"]
+            required: ["question", "options", "correctAnswer"]
           }
         }
       },
@@ -172,7 +182,8 @@ Your output MUST strictly follow the specified JSON schema format with no deviat
     // Add IDs to questions if they don't have them
     const questionsWithIds = parsedQuestions.map((q, index) => ({
       ...q,
-      id: q.id || `q${index + 1}`
+      id: q.id || `q${index + 1}`,
+      explanation: q.explanation || "No explanation provided."
     }));
     
     console.log(`Successfully processed document with ${questionsWithIds.length} questions`);
