@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Question } from "@/components/FileUpload";
 import { QuizQuestion } from "@/components/QuizQuestion";
@@ -5,12 +6,13 @@ import { QuizResults } from "@/components/QuizResults";
 import { QuizAnalytics } from "@/components/QuizAnalytics";
 import { Header } from "@/components/Header";
 import { TabNavigation } from "@/components/TabNavigation";
+import { QuizGenerator } from "@/components/QuizGenerator";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from "uuid";
 
 enum AppState {
-  UPLOAD,
+  CREATE,
   QUIZ,
   RESULTS,
   ANALYTICS
@@ -26,7 +28,7 @@ interface QuizHistory {
 }
 
 const Index = () => {
-  const [appState, setAppState] = useState<AppState>(AppState.UPLOAD);
+  const [appState, setAppState] = useState<AppState>(AppState.CREATE);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<number[]>([]);
@@ -35,8 +37,8 @@ const Index = () => {
   const [quizTitle, setQuizTitle] = useState<string>("Medical Quiz");
   const { toast } = useToast();
   
-  const handleFileProcessed = (extractedQuestions: Question[]) => {
-    setQuestions(extractedQuestions);
+  const handleQuizGenerated = (generatedQuestions: Question[]) => {
+    setQuestions(generatedQuestions);
     setCurrentQuestionIndex(0);
     setUserAnswers([]);
     setStartTime(new Date());
@@ -75,13 +77,13 @@ const Index = () => {
     setAppState(AppState.QUIZ);
   };
   
-  const handleNewFile = () => {
+  const handleNewQuiz = () => {
     setQuestions([]);
     setCurrentQuestionIndex(0);
     setUserAnswers([]);
     setStartTime(null);
     setEndTime(null);
-    setAppState(AppState.UPLOAD);
+    setAppState(AppState.CREATE);
   };
   
   const getCorrectAnswersCount = () => {
@@ -141,7 +143,7 @@ const Index = () => {
   
   const renderContent = () => {
     switch (appState) {
-      case AppState.UPLOAD:
+      case AppState.CREATE:
         return (
           <motion.div
             initial="initial"
@@ -149,8 +151,9 @@ const Index = () => {
             exit="out"
             variants={pageVariants}
             transition={pageTransition}
+            className="w-full"
           >
-            <TabNavigation onFileProcessed={handleFileProcessed} />
+            <TabNavigation onQuizGenerated={handleQuizGenerated} />
           </motion.div>
         );
         
@@ -186,7 +189,7 @@ const Index = () => {
               totalQuestions={questions.length}
               correctAnswers={correctAnswers}
               onRetakeQuiz={handleRetakeQuiz}
-              onNewFile={handleNewFile}
+              onNewFile={handleNewQuiz}
               onViewAnalytics={handleViewAnalytics}
             />
           </motion.div>
@@ -217,7 +220,7 @@ const Index = () => {
   };
   
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-background to-background/90 flex flex-col">
       <Header />
       <main className="flex-1 px-4 py-8">
         <AnimatePresence mode="wait">

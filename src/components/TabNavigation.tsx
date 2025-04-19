@@ -1,9 +1,9 @@
 
 import { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { FileUpload } from "@/components/FileUpload";
+import { QuizGenerator } from "@/components/QuizGenerator";
 import { motion } from "framer-motion";
-import { FileUp, History, BarChart, Settings, Trash2, Clock } from "lucide-react";
+import { History, BarChart, Settings, Trash2, Clock, Sparkles, Brain } from "lucide-react";
 import { Question } from "@/components/FileUpload";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
 interface TabNavigationProps {
-  onFileProcessed: (questions: Question[]) => void;
+  onQuizGenerated: (questions: Question[]) => void;
 }
 
 interface QuizHistory {
@@ -34,8 +34,8 @@ interface QuizHistory {
   questions: Question[];
 }
 
-export function TabNavigation({ onFileProcessed }: TabNavigationProps) {
-  const [activeTab, setActiveTab] = useState("upload");
+export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
+  const [activeTab, setActiveTab] = useState("create");
   const [quizHistory, setQuizHistory] = useState<QuizHistory[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [quizToDelete, setQuizToDelete] = useState<string | null>(null);
@@ -69,7 +69,7 @@ export function TabNavigation({ onFileProcessed }: TabNavigationProps) {
   };
 
   const handleStartFromHistory = (quiz: QuizHistory) => {
-    onFileProcessed(quiz.questions);
+    onQuizGenerated(quiz.questions);
     toast({
       title: "Quiz loaded",
       description: `Loaded ${quiz.title} with ${quiz.questionsCount} questions.`
@@ -135,23 +135,19 @@ export function TabNavigation({ onFileProcessed }: TabNavigationProps) {
   return (
     <>
       <Tabs
-        defaultValue="upload"
+        defaultValue="create"
         value={activeTab}
         onValueChange={handleTabChange}
         className="w-full max-w-4xl mx-auto"
       >
-        <TabsList className="grid grid-cols-4 mb-8">
-          <TabsTrigger value="upload" className="flex items-center gap-2">
-            <FileUp className="h-4 w-4" />
-            <span>Upload</span>
+        <TabsList className="grid grid-cols-3 mb-8">
+          <TabsTrigger value="create" className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4" />
+            <span>Create Quiz</span>
           </TabsTrigger>
           <TabsTrigger value="history" className="flex items-center gap-2">
             <History className="h-4 w-4" />
             <span>History</span>
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center gap-2">
-            <BarChart className="h-4 w-4" />
-            <span>Analytics</span>
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
@@ -166,14 +162,19 @@ export function TabNavigation({ onFileProcessed }: TabNavigationProps) {
           key={activeTab}
           className="w-full"
         >
-          <TabsContent value="upload" className="mt-0">
-            <FileUpload onFileProcessed={onFileProcessed} />
+          <TabsContent value="create" className="mt-0">
+            <QuizGenerator onQuizGenerated={onQuizGenerated} />
           </TabsContent>
           
           <TabsContent value="history" className="mt-0">
-            <Card>
+            <Card className="shadow-lg border border-primary/10 bg-card/50 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-2xl font-bold">Quiz History</CardTitle>
+                <div className="flex items-center gap-3">
+                  <div className="bg-primary/10 p-2 rounded-full">
+                    <History className="h-5 w-5 text-primary" />
+                  </div>
+                  <CardTitle className="text-2xl font-bold">Quiz History</CardTitle>
+                </div>
                 {quizHistory.length > 0 && (
                   <Button
                     variant="outline"
@@ -190,9 +191,13 @@ export function TabNavigation({ onFileProcessed }: TabNavigationProps) {
                 {quizHistory.length > 0 ? (
                   <div className="space-y-4">
                     {quizHistory.map((quiz) => (
-                      <div
+                      <motion.div
                         key={quiz.id}
-                        className="flex items-center justify-between p-4 rounded-lg border hover:bg-accent/50 transition-colors"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        className="flex items-center justify-between p-4 rounded-lg border border-primary/10 hover:border-primary/30 hover:bg-accent/50 transition-all"
+                        whileHover={{ scale: 1.01, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}
                       >
                         <div className="flex items-center gap-4">
                           <div className="bg-primary/10 p-3 rounded-full">
@@ -210,7 +215,9 @@ export function TabNavigation({ onFileProcessed }: TabNavigationProps) {
                             variant="outline"
                             size="sm"
                             onClick={() => handleStartFromHistory(quiz)}
+                            className="border-primary/20 hover:border-primary/80"
                           >
+                            <Sparkles className="h-4 w-4 mr-1" />
                             Retake
                           </Button>
                           <Button
@@ -221,93 +228,52 @@ export function TabNavigation({ onFileProcessed }: TabNavigationProps) {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <div className="mx-auto bg-muted/30 p-4 rounded-full w-16 h-16 flex items-center justify-center mb-4">
-                      <History className="h-8 w-8 text-muted-foreground" />
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="text-center py-8"
+                  >
+                    <div className="mx-auto bg-primary/10 p-4 rounded-full w-16 h-16 flex items-center justify-center mb-4">
+                      <History className="h-8 w-8 text-primary" />
                     </div>
                     <h3 className="text-lg font-medium mb-1">No quiz history yet</h3>
                     <p className="text-muted-foreground">
                       Complete a quiz to see your history here
                     </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="analytics" className="mt-0">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-2xl font-bold">Performance Analytics</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {quizHistory.length > 0 ? (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-3 gap-4">
-                      <Card className="p-4 bg-muted/50">
-                        <p className="text-3xl font-bold text-center">
-                          {quizHistory.length}
-                        </p>
-                        <p className="text-sm text-center text-muted-foreground">
-                          Total Quizzes Taken
-                        </p>
-                      </Card>
-                      <Card className="p-4 bg-muted/50">
-                        <p className="text-3xl font-bold text-center">
-                          {Math.round(
-                            quizHistory.reduce((acc, quiz) => acc + quiz.score, 0) / quizHistory.length
-                          )}%
-                        </p>
-                        <p className="text-sm text-center text-muted-foreground">
-                          Average Score
-                        </p>
-                      </Card>
-                      <Card className="p-4 bg-muted/50">
-                        <p className="text-3xl font-bold text-center">
-                          {quizHistory.reduce((acc, quiz) => acc + quiz.questionsCount, 0)}
-                        </p>
-                        <p className="text-sm text-center text-muted-foreground">
-                          Total Questions
-                        </p>
-                      </Card>
-                    </div>
-
-                    <Card className="p-4">
-                      <CardTitle className="text-xl mb-4">Recent Performance</CardTitle>
-                      <div className="h-64 flex items-center justify-center">
-                        <p className="text-muted-foreground">
-                          Detailed charts will appear here as you take more quizzes
-                        </p>
-                      </div>
-                    </Card>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="mx-auto bg-muted/30 p-4 rounded-full w-16 h-16 flex items-center justify-center mb-4">
-                      <BarChart className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <h3 className="text-lg font-medium mb-1">No analytics available</h3>
-                    <p className="text-muted-foreground">
-                      Complete some quizzes to see your performance analytics
-                    </p>
-                  </div>
+                  </motion.div>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
           
           <TabsContent value="settings" className="mt-0">
-            <Card>
+            <Card className="shadow-lg border border-primary/10 bg-card/50 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-2xl font-bold">Settings</CardTitle>
+                <div className="flex items-center gap-3">
+                  <div className="bg-primary/10 p-2 rounded-full">
+                    <Settings className="h-5 w-5 text-primary" />
+                  </div>
+                  <CardTitle className="text-2xl font-bold">Settings</CardTitle>
+                </div>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Appearance</h3>
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1, type: "spring" }}
+                  className="space-y-4"
+                >
+                  <h3 className="text-lg font-medium flex items-center gap-2">
+                    <span className="bg-primary/10 p-1 rounded">
+                      <Settings className="h-4 w-4 text-primary" />
+                    </span>
+                    Appearance
+                  </h3>
                   <div className="flex items-center justify-between">
                     <div>
                       <Label htmlFor="dark-mode">Dark Mode</Label>
@@ -321,10 +287,20 @@ export function TabNavigation({ onFileProcessed }: TabNavigationProps) {
                       onCheckedChange={handleDarkModeToggle}
                     />
                   </div>
-                </div>
+                </motion.div>
                 
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Data & Privacy</h3>
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2, type: "spring" }}
+                  className="space-y-4"
+                >
+                  <h3 className="text-lg font-medium flex items-center gap-2">
+                    <span className="bg-primary/10 p-1 rounded">
+                      <Brain className="h-4 w-4 text-primary" />
+                    </span>
+                    Data & Privacy
+                  </h3>
                   <div className="flex items-center justify-between">
                     <div>
                       <Label htmlFor="auto-save">Auto-save Results</Label>
@@ -349,14 +325,24 @@ export function TabNavigation({ onFileProcessed }: TabNavigationProps) {
                       Clear All Data
                     </Button>
                   </div>
-                </div>
+                </motion.div>
                 
-                <div className="space-y-2">
-                  <h3 className="text-lg font-medium">About</h3>
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3, type: "spring" }}
+                  className="space-y-2"
+                >
+                  <h3 className="text-lg font-medium flex items-center gap-2">
+                    <span className="bg-primary/10 p-1 rounded">
+                      <BarChart className="h-4 w-4 text-primary" />
+                    </span>
+                    About
+                  </h3>
                   <p className="text-sm text-muted-foreground">
-                    MedQuiz v1.0.0 - An AI-powered medical quiz application
+                    MedQuiz v2.0.0 - An AI-powered medical quiz application
                   </p>
-                </div>
+                </motion.div>
               </CardContent>
               <CardFooter className="flex justify-end">
                 <p className="text-xs text-muted-foreground">
@@ -369,7 +355,7 @@ export function TabNavigation({ onFileProcessed }: TabNavigationProps) {
       </Tabs>
       
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="border border-primary/10">
           <AlertDialogHeader>
             <AlertDialogTitle>
               {quizToDelete ? "Delete this quiz?" : "Clear all quiz history?"}
