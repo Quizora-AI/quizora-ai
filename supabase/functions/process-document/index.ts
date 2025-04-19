@@ -55,7 +55,7 @@ serve(async (req) => {
     }
     
     // Improved system prompt for more reliable question extraction
-    const systemPrompt = `You are an expert medical educator specializing in extracting and formatting multiple-choice questions from medical documents. Your task is to carefully analyze the provided document, identify all question-answer patterns, and convert them into a structured format.
+    const systemPrompt = `You are an expert medical educator specializing in extracting and formatting multiple-choice questions from medical documents. Your task is to carefully analyze the provided document, identify all question-answer patterns, and convert them into a structured JSON format.
 
 IMPORTANT INSTRUCTIONS:
 1. Extract REAL multiple-choice questions directly from the document. DO NOT create new questions unless absolutely necessary.
@@ -66,15 +66,19 @@ IMPORTANT INSTRUCTIONS:
    - Identify the correct answer (if marked in the document with a symbol, highlight, etc.)
    - Provide a detailed explanation (if available in the document)
 4. If correct answers are not marked, make your best assessment based on context clues or expert knowledge.
-5. Ensure your response follows the exact JSON schema provided.
-6. Be thorough - extract ALL questions present in the document, even if there are many.
-
-Your output MUST strictly follow the specified JSON schema format with no deviations.`;
+5. Ensure your response follows the exact JSON schema: 
+   [
+     {
+       "id": "q1",
+       "question": "Question text here",
+       "options": ["A) Option A", "B) Option B", "C) Option C", "D) Option D"],
+       "correctAnswer": 0, // Index of the correct answer
+       "explanation": "Detailed explanation of the correct answer"
+     }
+   ]
+6. Be thorough - extract ALL questions present in the document, even if there are many.`;
     
     console.log('Preparing payload for AIMLAPI with improved JSON schema');
-    
-    // IMPORTANT: Reduced max_tokens to stay within limits
-    const MAX_TOKENS = 500;
     
     // Prepare payload for AIMLAPI
     const response = await fetch('https://api.aimlapi.com/v1/chat/completions', {
@@ -95,7 +99,7 @@ Your output MUST strictly follow the specified JSON schema format with no deviat
             content: [
               {
                 type: "text",
-                text: "Extract all multiple-choice questions from this medical document. Include the question text, all options (A, B, C, D, etc.), correct answer, and explanation if available. Follow the schema exactly."
+                text: "Extract all multiple-choice questions from this medical document. Provide a detailed JSON response following the specified schema."
               },
               {
                 type: "image_url",
@@ -107,7 +111,7 @@ Your output MUST strictly follow the specified JSON schema format with no deviat
           }
         ],
         temperature: 0.1,
-        max_tokens: MAX_TOKENS
+        max_tokens: 500 // Reduced to stay within API limits
       }),
     });
     
@@ -165,8 +169,7 @@ Your output MUST strictly follow the specified JSON schema format with no deviat
           },
           processingStats: {
             questionCount: questionsWithIds.length,
-            processingTime: new Date().toISOString(),
-            tokensUsed: MAX_TOKENS
+            processingTime: new Date().toISOString()
           }
         }
       }),
@@ -184,3 +187,4 @@ Your output MUST strictly follow the specified JSON schema format with no deviat
     );
   }
 });
+
