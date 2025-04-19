@@ -5,15 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useForm, FormProvider } from "react-hook-form";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { BookOpen, BrainCircuit, Clock, Gauge, Sparkles, CheckCircle2 } from "lucide-react";
+import { BookOpen, BrainCircuit, Clock, Gauge, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Question } from "@/components/FileUpload";
+import { supabase } from "@/integrations/supabase/client";
 
 interface QuizSettingsFormData {
   course: string;
@@ -33,6 +32,7 @@ const difficulties = [
 export function QuizGenerator({ onQuizGenerated }: { onQuizGenerated: (questions: Question[]) => void }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
   const form = useForm<QuizSettingsFormData>({
@@ -49,58 +49,72 @@ export function QuizGenerator({ onQuizGenerated }: { onQuizGenerated: (questions
   const generateQuiz = async (data: QuizSettingsFormData) => {
     setIsGenerating(true);
     setGenerationProgress(0);
+    setError(null);
     
-    // Simulate progress
+    // Simulate initial progress
     const interval = setInterval(() => {
       setGenerationProgress(prev => {
         if (prev >= 95) {
           clearInterval(interval);
           return prev;
         }
-        return prev + Math.random() * 15;
+        return prev + Math.random() * 8;
       });
     }, 600);
 
     try {
-      // In a real implementation, this would call an AI service
-      // For now, we'll simulate the API call with a timeout
-      const response = await new Promise<Question[]>((resolve) => {
-        setTimeout(() => {
-          // Generate mock questions based on the form data
-          const mockQuestions = Array.from({ length: data.numQuestions }, (_, i) => ({
-            id: `q${i + 1}`,
-            question: `Sample ${data.topic} question ${i + 1} (${data.difficulty} level)`,
-            options: [
-              `Option A for ${data.subject}`,
-              `Option B for ${data.subject}`,
-              `Option C for ${data.subject}`,
-              `Option D for ${data.subject}`,
-            ],
-            correctAnswer: Math.floor(Math.random() * 4),
-            explanation: `This is the explanation for this ${data.subject} question about ${data.topic}.`
-          }));
-          
-          resolve(mockQuestions);
-        }, 2500);
+      // Create a prompt based on the form data
+      const prompt = `
+Create a medical quiz with ${data.numQuestions} multiple-choice questions about ${data.topic} in ${data.subject} 
+for ${data.course} students. The difficulty level should be ${data.difficulty}. 
+Each question should have 4 options (A, B, C, D) with one correct answer.
+For each question, provide a detailed explanation of why the correct answer is right and why the others are wrong.
+Format the response as multiple-choice questions with lettered options.
+      `;
+
+      // Call the edge function to generate quiz with AI
+      const { data: responseData, error: functionError } = await supabase.functions.invoke('process-document', {
+        body: {
+          promptText: prompt,
+          difficulty: data.difficulty,
+          numQuestions: data.numQuestions,
+          subject: data.subject,
+          topic: data.topic
+        }
       });
+      
+      if (functionError) {
+        throw new Error(`Error calling AI: ${functionError.message}`);
+      }
+      
+      if (!responseData?.questions || responseData.questions.length === 0) {
+        throw new Error('No questions were generated. Please try again with different parameters.');
+      }
       
       clearInterval(interval);
       setGenerationProgress(100);
       
       toast({
         title: "Quiz generated successfully!",
-        description: `Created ${response.length} ${data.difficulty} questions about ${data.topic}`,
+        description: `Created ${responseData.questions.length} ${data.difficulty} questions about ${data.topic}`,
       });
       
+      // Apply the specified time per question to the questions
+      const questionsWithTime = responseData.questions.map((q: Question) => ({
+        ...q,
+        timeLimit: data.timePerQuestion
+      }));
+      
       setTimeout(() => {
-        onQuizGenerated(response);
+        onQuizGenerated(questionsWithTime);
         setIsGenerating(false);
       }, 800);
       
-    } catch (error) {
+    } catch (err) {
       clearInterval(interval);
-      console.error("Error generating quiz:", error);
+      console.error("Error generating quiz:", err);
       setIsGenerating(false);
+      setError(err instanceof Error ? err.message : "Unknown error occurred");
       
       toast({
         title: "Failed to generate quiz",
@@ -328,6 +342,21 @@ export function QuizGenerator({ onQuizGenerated }: { onQuizGenerated: (questions
                   )}
                 />
               </motion.div>
+              
+              {error && (
+                <motion.div 
+                  variants={itemVariants}
+                  className="bg-destructive/10 p-4 rounded-md border border-destructive/20"
+                >
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-destructive">Error generating quiz</p>
+                      <p className="text-sm text-muted-foreground">{error}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
               
               <motion.div
                 variants={itemVariants}
