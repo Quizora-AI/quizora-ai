@@ -1,6 +1,6 @@
 
 import { useState, useRef } from "react";
-import { Upload, File, X, Check, Loader2, AlertTriangle, FileWarning, AlertCircle } from "lucide-react";
+import { Upload, File, X, Check, Loader2, AlertTriangle, FileWarning, AlertCircle, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -48,10 +48,11 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
     const selectedFile = event.target.files?.[0];
     if (!selectedFile) return;
 
-    if (!['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'].includes(selectedFile.type)) {
+    // AIMLAPI only supports image formats
+    if (!selectedFile.type.startsWith('image/')) {
       toast({
-        title: "Invalid file type",
-        description: "Please upload a PDF or image file (JPEG, PNG)",
+        title: "Unsupported file type",
+        description: "Currently only image files (JPEG, PNG) are supported due to API limitations. Please convert your document to images before uploading.",
         variant: "destructive"
       });
       return;
@@ -83,7 +84,8 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
     setWasTruncated(false);
     setRetryCount(0);
 
-    if (selectedFile.type.includes('image')) {
+    // Create preview for image files
+    if (selectedFile.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = () => {
         setFilePreview(reader.result as string);
@@ -101,10 +103,11 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
     const droppedFile = event.dataTransfer.files?.[0];
     if (!droppedFile) return;
 
-    if (!['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'].includes(droppedFile.type)) {
+    // AIMLAPI only supports image formats
+    if (!droppedFile.type.startsWith('image/')) {
       toast({
-        title: "Invalid file type",
-        description: "Please upload a PDF or image file (JPEG, PNG)",
+        title: "Unsupported file type",
+        description: "Currently only image files (JPEG, PNG) are supported due to API limitations. Please convert your document to images before uploading.",
         variant: "destructive"
       });
       return;
@@ -136,7 +139,8 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
     setWasTruncated(false);
     setRetryCount(0);
 
-    if (droppedFile.type.includes('image')) {
+    // Create preview for image files
+    if (droppedFile.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = () => {
         setFilePreview(reader.result as string);
@@ -263,8 +267,10 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       setErrorMessage(errorMessage);
       setRetryCount(prev => prev + 1);
       
-      // Improved error handling for specific OpenRouter errors
-      if (errorMessage.includes('Maximum call stack size exceeded') || errorMessage.includes('too large')) {
+      // Improved error handling for specific errors
+      if (errorMessage.includes('Unsupported file type') || errorMessage.includes('Invalid MIME type')) {
+        setApiErrorDetails('Currently only image files (JPEG, PNG) are supported. Please convert your PDF or document to images before uploading.');
+      } else if (errorMessage.includes('Maximum call stack size exceeded') || errorMessage.includes('too large')) {
         setApiErrorDetails('Try uploading a smaller document or splitting it into multiple parts.');
       } else if (errorMessage.includes('timed out') || errorMessage.includes('aborted')) {
         setApiErrorDetails('The request took too long. Try with a smaller document or a different section.');
@@ -272,9 +278,9 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
         setApiErrorDetails('There was an issue with the API connection. Please try again later or contact support.');
       } else if (errorMessage.includes('No questions could be extracted')) {
         setApiErrorDetails('Make sure your document contains text that can be processed. Try a clearer document with question/answer structures.');
-      } else if (errorMessage.includes('OpenRouter API credit limit')) {
+      } else if (errorMessage.includes('AIMLAPI credit limit')) {
         setApiErrorDetails('The API credit limit has been reached. Try using a smaller document, or try again later.');
-      } else if (errorMessage.includes('Invalid response from OpenRouter')) {
+      } else if (errorMessage.includes('Invalid response from AIMLAPI')) {
         setApiErrorDetails('The API encountered an issue processing your document. Try using a smaller or simpler document.');
       }
       
@@ -299,7 +305,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
           ref={fileInputRef}
           className="hidden"
           onChange={handleFileChange}
-          accept=".pdf,.jpg,.jpeg,.png"
+          accept=".jpg,.jpeg,.png"
         />
         
         {!file ? (
@@ -318,13 +324,13 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: "spring", stiffness: 260, damping: 20 }}
             >
-              <Upload className="h-12 w-12 text-primary mb-4" />
-              <p className="text-lg font-medium mb-2">Drag & Drop your file here</p>
+              <ImageIcon className="h-12 w-12 text-primary mb-4" />
+              <p className="text-lg font-medium mb-2">Drag & Drop your image file here</p>
               <p className="text-sm text-muted-foreground mb-4">or click to browse</p>
-              <p className="text-xs text-muted-foreground mb-1">Supported formats: PDF, JPEG, PNG</p>
+              <p className="text-xs text-muted-foreground mb-1 font-medium">Supported formats: JPEG, PNG</p>
               <p className="text-xs text-muted-foreground">Maximum file size: <strong>20MB</strong></p>
               <p className="text-xs text-muted-foreground mt-2">
-                <strong>For best results:</strong> Use files under 2MB with clear text
+                <strong>Important:</strong> PDFs are not supported. Please convert your documents to images before uploading.
               </p>
             </motion.div>
           </motion.div>
@@ -383,13 +389,13 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
                 {apiErrorDetails && (
                   <p className="text-sm mt-2">{apiErrorDetails}</p>
                 )}
-                {errorMessage.includes('credit limit') && (
+                {errorMessage.includes('Unsupported file type') && (
                   <div className="mt-3 text-sm">
-                    <p className="font-medium">Suggestions:</p>
+                    <p className="font-medium">How to convert documents to images:</p>
                     <ul className="list-disc pl-5 mt-1 space-y-1">
-                      <li>Try using a smaller document (under 2MB)</li>
-                      <li>Use images with clearer text</li>
-                      <li>Process documents with fewer pages</li>
+                      <li>Take screenshots of your document</li>
+                      <li>Use online PDF to JPG/PNG converters</li>
+                      <li>Export as images from your document software</li>
                     </ul>
                   </div>
                 )}
@@ -441,12 +447,10 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
           {isProcessing ? "Processing..." : "Process Document"}
         </Button>
         
-        {errorMessage?.includes('credit limit') && (
-          <p className="text-xs text-center text-muted-foreground">
-            API credit limitations affect processing of larger documents.
-            <br />Try using a smaller document with clearer text.
-          </p>
-        )}
+        <p className="text-xs text-center text-muted-foreground">
+          Due to API limitations, currently only image files (JPEG, PNG) are supported.
+          <br />If you have a PDF, please convert it to images before uploading.
+        </p>
       </CardFooter>
     </Card>
   );

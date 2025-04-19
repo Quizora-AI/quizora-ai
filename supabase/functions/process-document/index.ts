@@ -41,6 +41,11 @@ serve(async (req) => {
       throw new Error(`File too large. Maximum size is 20MB. Your file is ${(fileSize/1024/1024).toFixed(2)}MB`);
     }
 
+    // AIMLAPI only supports images, so check file type
+    if (!fileType.startsWith('image/')) {
+      throw new Error(`Unsupported file type: ${fileType}. AIMLAPI only supports image formats (JPEG, PNG). Please convert your document to an image before uploading.`);
+    }
+
     // Read file data without using recursive functions
     const arrayBuffer = await file.arrayBuffer();
     const bytes = new Uint8Array(arrayBuffer);
@@ -187,4 +192,3 @@ IMPORTANT INSTRUCTIONS:
     );
   }
 });
-
