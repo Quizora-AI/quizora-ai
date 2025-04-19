@@ -14,14 +14,14 @@ serve(async (req) => {
   }
 
   try {
-    // Validate OpenRouter API key early
-    const openRouterApiKey = Deno.env.get('OPENROUTER_API_KEY');
-    if (!openRouterApiKey) {
-      console.error('OpenRouter API key is missing');
-      throw new Error('OpenRouter API key is not configured. Please add the API key in project secrets.');
+    // Validate AIMLAPI key early
+    const aimlApiKey = Deno.env.get('AIMLAPI_KEY');
+    if (!aimlApiKey) {
+      console.error('AIMLAPI key is missing');
+      throw new Error('AIMLAPI key is not configured. Please add the API key in project secrets.');
     }
     
-    console.log('Starting document processing with OpenRouter API');
+    console.log('Starting document processing with AIMLAPI');
     
     const formData = await req.formData();
     const file = formData.get('file');
@@ -71,105 +71,58 @@ IMPORTANT INSTRUCTIONS:
 
 Your output MUST strictly follow the specified JSON schema format with no deviations.`;
     
-    console.log('Preparing payload for OpenRouter API with improved JSON schema');
+    console.log('Preparing payload for AIMLAPI with improved JSON schema');
     
-    // IMPORTANT CHANGE: Reduced max_tokens to stay within free tier limits
+    // IMPORTANT: Reduced max_tokens to stay within limits
     const MAX_TOKENS = 500;
     
-    // Prepare payload for OpenRouter API with improved JSON schema
-    const payload = {
-      model: "anthropic/claude-3-opus:beta",
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: "Extract all multiple-choice questions from this medical document. Include the question text, all options (A, B, C, D, etc.), correct answer, and explanation if available. Follow the schema exactly."
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:${fileType};base64,${fileBase64}`
-              }
-            }
-          ]
-        }
-      ],
-      response_format: {
-        type: "json_schema",
-        schema: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              question: {
-                type: "string",
-                description: "Full question text exactly as it appears in document"
-              },
-              options: {
-                type: "array",
-                items: { 
-                  type: "string",
-                  description: "Full text of each answer option" 
-                },
-                description: "Array of answer options in order (A, B, C, D, etc.)"
-              },
-              correctAnswer: {
-                type: "integer",
-                description: "Index of the correct answer (0-based)"
-              },
-              explanation: {
-                type: "string",
-                description: "Explanation of why the correct answer is right (if available in document)"
-              }
-            },
-            required: ["question", "options", "correctAnswer"]
-          }
-        }
-      },
-      temperature: 0.1,
-      max_tokens: MAX_TOKENS
-    };
-    
-    console.log(`Sending request to OpenRouter API with max_tokens=${MAX_TOKENS}`);
-    
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    // Prepare payload for AIMLAPI
+    const response = await fetch('https://api.aimlapi.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openRouterApiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://medquiz.lovable.app',
-        'X-Title': 'MedQuiz Document Processor'
+        'Authorization': `Bearer ${aimlApiKey}`,
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Extract all multiple-choice questions from this medical document. Include the question text, all options (A, B, C, D, etc.), correct answer, and explanation if available. Follow the schema exactly."
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${fileType};base64,${fileBase64}`
+                }
+              }
+            ]
+          }
+        ],
+        temperature: 0.1,
+        max_tokens: MAX_TOKENS
+      }),
     });
     
-    const responseData = await response.json();
-    
-    // Detailed error logging for easier debugging
     if (!response.ok) {
-      console.error('OpenRouter API Error:', JSON.stringify(responseData));
-      
-      // Handle specific error cases
-      if (responseData.error?.code === 402) {
-        throw new Error('OpenRouter API credit limit reached. Please upgrade your OpenRouter account or reduce max_tokens.');
-      } else if (responseData.error?.message) {
-        throw new Error(`OpenRouter API error: ${responseData.error.message}`);
-      } else {
-        throw new Error(`OpenRouter API error: ${response.status} - ${JSON.stringify(responseData)}`);
-      }
+      const errorData = await response.json();
+      console.error('AIMLAPI Error:', errorData);
+      throw new Error(`AIMLAPI error: ${response.status} - ${JSON.stringify(errorData)}`);
     }
-    
-    console.log("Received response from OpenRouter API");
+
+    const responseData = await response.json();
+    console.log("Received response from AIMLAPI");
     
     if (!responseData.choices || !responseData.choices[0]?.message) {
-      console.error('Invalid response structure from OpenRouter API:', JSON.stringify(responseData));
-      throw new Error('Invalid response from OpenRouter API. Please try again with a smaller document or different file.');
+      console.error('Invalid response structure from AIMLAPI:', JSON.stringify(responseData));
+      throw new Error('Invalid response from AIMLAPI. Please try again with a smaller document or different file.');
     }
     
     // Extract the content from the response
