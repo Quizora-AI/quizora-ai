@@ -1,12 +1,12 @@
 
 import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Question } from "@/components/FileUpload";
 import { QuizQuestion } from "@/components/QuizQuestion";
 import { QuizResults } from "@/components/QuizResults";
 import { QuizAnalytics } from "@/components/QuizAnalytics";
 import { Header } from "@/components/Header";
 import { TabNavigation } from "@/components/TabNavigation";
-import { QuizGenerator } from "@/components/QuizGenerator";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from "uuid";
@@ -27,7 +27,11 @@ interface QuizHistory {
   questions: Question[];
 }
 
-const Index = () => {
+interface IndexProps {
+  initialTab?: string;
+}
+
+const Index = ({ initialTab = "generate" }: IndexProps) => {
   const [appState, setAppState] = useState<AppState>(AppState.CREATE);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -36,6 +40,8 @@ const Index = () => {
   const [endTime, setEndTime] = useState<Date | null>(null);
   const [quizTitle, setQuizTitle] = useState<string>("Medical Quiz");
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const location = useLocation();
   
   const handleQuizGenerated = (generatedQuestions: Question[]) => {
     setQuestions(generatedQuestions);
@@ -95,6 +101,9 @@ const Index = () => {
   // Save quiz result to history when quiz is completed
   useEffect(() => {
     if (appState === AppState.RESULTS && questions.length > 0 && userAnswers.length > 0) {
+      // Load settings
+      const userSettingsStr = localStorage.getItem("userSettings");
+      const userSettings = userSettingsStr ? JSON.parse(userSettingsStr) : {};
       const autoSave = localStorage.getItem("autoSave") !== "false";
       
       if (autoSave) {
@@ -127,7 +136,7 @@ const Index = () => {
         });
       }
     }
-  }, [appState, questions, userAnswers, quizTitle]);
+  }, [appState, questions, userAnswers, quizTitle, toast]);
 
   const pageVariants = {
     initial: { opacity: 0, x: 50 },
@@ -222,7 +231,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background/90 flex flex-col">
       <Header />
-      <main className="flex-1 px-4 py-8">
+      <main className="flex-1 px-4 py-8 pb-28">
         <AnimatePresence mode="wait">
           {renderContent()}
         </AnimatePresence>

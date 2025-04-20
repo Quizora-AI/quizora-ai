@@ -28,6 +28,10 @@ const App = () => {
             <Sonner />
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/quiz" element={<Index initialTab="generate" />} />
+              <Route path="/history" element={<Index initialTab="history" />} />
+              <Route path="/assistant" element={<Index initialTab="assistant" />} />
+              <Route path="/settings" element={<Index initialTab="settings" />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
