@@ -1,8 +1,10 @@
+
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { CircleCheck, CircleX, RotateCw, FileUp, BookmarkPlus, BarChart3 } from "lucide-react";
+import { CircleCheck, CircleX, RotateCw, BarChart3, PlusCircle } from "lucide-react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 interface QuizResultsProps {
   totalQuestions: number;
@@ -21,6 +23,7 @@ export function QuizResults({
 }: QuizResultsProps) {
   const [animatedScore, setAnimatedScore] = useState(0);
   const score = Math.round((correctAnswers / totalQuestions) * 100);
+  const navigate = useNavigate();
   
   useEffect(() => {
     const interval = setInterval(() => {
@@ -49,7 +52,12 @@ export function QuizResults({
     if (score >= 40) return "Not bad!";
     return "Needs improvement";
   };
+  
+  const handleCreateNewQuiz = () => {
+    navigate('/');
+  };
 
+  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
@@ -158,7 +166,7 @@ export function QuizResults({
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button onClick={onViewAnalytics} className="gap-2">
                 <BarChart3 className="h-4 w-4" />
-                View Detailed Analysis
+                View Analysis
               </Button>
             </motion.div>
           </motion.div>
@@ -174,18 +182,9 @@ export function QuizResults({
           
           <motion.div variants={itemVariants}>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button onClick={onNewFile} variant="outline" className="gap-2">
-                <FileUp className="h-4 w-4" />
-                Upload New File
-              </Button>
-            </motion.div>
-          </motion.div>
-          
-          <motion.div variants={itemVariants}>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button variant="ghost" className="gap-2">
-                <BookmarkPlus className="h-4 w-4" />
-                Save Quiz
+              <Button onClick={handleCreateNewQuiz} variant="outline" className="gap-2">
+                <PlusCircle className="h-4 w-4" />
+                Create New Quiz
               </Button>
             </motion.div>
           </motion.div>

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { FileUpload } from "@/components/FileUpload";
@@ -10,16 +10,60 @@ import { SettingsPanel } from "@/components/SettingsPanel";
 import { Question } from "@/components/FileUpload";
 import { motion } from "framer-motion";
 import { BrainCircuit, History, MessageSquare, Settings } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 interface TabNavigationProps {
   onQuizGenerated: (questions: Question[]) => void;
 }
 
 export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("generate");
+  const [isPremium, setIsPremium] = useState(false);
+  
+  useEffect(() => {
+    // Set active tab based on URL if it exists
+    const pathParts = location.pathname.split('/');
+    const lastPart = pathParts[pathParts.length - 1];
+    
+    if (lastPart === 'history') setActiveTab('history');
+    else if (lastPart === 'assistant') setActiveTab('assistant');
+    else if (lastPart === 'settings') setActiveTab('settings');
+    else setActiveTab('generate');
+    
+    // Check if user has premium subscription
+    const userSettings = localStorage.getItem("userSettings");
+    if (userSettings) {
+      const settings = JSON.parse(userSettings);
+      setIsPremium(settings.isPremium === true);
+    }
+  }, [location.pathname]);
   
   const handleTabChange = (value: string) => {
     setActiveTab(value);
+    
+    // Handle special case for assistant when user isn't premium
+    if (value === "assistant" && !isPremium) {
+      navigate('/settings?tab=premium');
+      return;
+    }
+    
+    // Update URL based on active tab
+    switch (value) {
+      case 'history':
+        navigate('/history');
+        break;
+      case 'assistant':
+        navigate('/assistant');
+        break;
+      case 'settings':
+        navigate('/settings');
+        break;
+      default:
+        navigate('/');
+        break;
+    }
   };
   
   const containerVariants = {
@@ -78,7 +122,29 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
           </TabsContent>
           
           <TabsContent value="assistant" className="mt-0">
-            <AIAssistant />
+            {isPremium ? (
+              <AIAssistant />
+            ) : (
+              <Card className="p-8 text-center">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <MessageSquare className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                  <h2 className="text-xl font-bold mb-2">Quizora Assistant</h2>
+                  <p className="text-muted-foreground mb-6">
+                    Upgrade to premium to access the Quizora AI Assistant and get personalized help with your studies.
+                  </p>
+                  <button
+                    onClick={() => navigate('/settings?tab=premium')}
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded"
+                  >
+                    Upgrade to Premium
+                  </button>
+                </motion.div>
+              </Card>
+            )}
           </TabsContent>
           
           <TabsContent value="settings" className="mt-0">

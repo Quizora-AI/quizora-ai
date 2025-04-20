@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,48 +8,101 @@ import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useForm, FormProvider } from "react-hook-form";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { BookOpen, BrainCircuit, Clock, Gauge, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
+import { BookOpen, BrainCircuit, Clock, AlertCircle, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Question } from "@/components/FileUpload";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 interface QuizSettingsFormData {
   course: string;
   subject: string;
   topic: string;
-  difficulty: string;
+  difficultyLevel: number;
   numQuestions: number;
   timePerQuestion: number;
 }
-
-const difficulties = [
-  { value: "easy", label: "Easy", description: "Basic concepts and straightforward questions" },
-  { value: "medium", label: "Medium", description: "More complex applications of concepts" },
-  { value: "hard", label: "Hard", description: "Advanced understanding and critical thinking" }
-];
 
 export function QuizGenerator({ onQuizGenerated }: { onQuizGenerated: (questions: Question[]) => void }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const form = useForm<QuizSettingsFormData>({
     defaultValues: {
       course: "",
       subject: "",
       topic: "",
-      difficulty: "medium",
-      numQuestions: 5,
+      difficultyLevel: 50,
+      numQuestions: isPremium ? 10 : 5,
       timePerQuestion: 30
     }
   });
 
+  useEffect(() => {
+    // Check if user has premium subscription
+    const userSettings = localStorage.getItem("userSettings");
+    if (userSettings) {
+      const settings = JSON.parse(userSettings);
+      setIsPremium(settings.isPremium === true);
+    }
+
+    // Check if user has exceeded free quiz limit
+    if (!isPremium) {
+      const quizHistoryStr = localStorage.getItem("quizHistory");
+      if (quizHistoryStr) {
+        const quizHistory = JSON.parse(quizHistoryStr);
+        if (quizHistory.length >= 2) {
+          toast({
+            title: "Free Quiz Limit Reached",
+            description: "You've reached the limit of 2 free quizzes. Upgrade to premium for unlimited quizzes!",
+            variant: "destructive"
+          });
+        }
+      }
+    }
+  }, [toast]);
+
+  const getDifficultyLabel = (value: number) => {
+    if (value <= 33) return "Easy";
+    if (value <= 66) return "Medium";
+    return "Hard";
+  };
+
+  const getDifficultyFromSlider = (value: number) => {
+    if (value <= 33) return "easy";
+    if (value <= 66) return "medium";
+    return "hard";
+  };
+
   const generateQuiz = async (data: QuizSettingsFormData) => {
+    // Check if free user has reached quiz limit
+    if (!isPremium) {
+      const quizHistoryStr = localStorage.getItem("quizHistory");
+      if (quizHistoryStr) {
+        const quizHistory = JSON.parse(quizHistoryStr);
+        if (quizHistory.length >= 2) {
+          navigate('/settings?tab=premium');
+          toast({
+            title: "Free Quiz Limit Reached",
+            description: "You've reached the limit of 2 free quizzes. Upgrade to premium for unlimited quizzes!",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+    }
+
     setIsGenerating(true);
     setGenerationProgress(0);
     setError(null);
+    
+    // Apply free plan restrictions
+    const maxQuestions = isPremium ? data.numQuestions : Math.min(data.numQuestions, 10);
+    const timePerQuestion = isPremium ? data.timePerQuestion : 30;
     
     // Simulate initial progress
     const interval = setInterval(() => {
@@ -63,10 +116,12 @@ export function QuizGenerator({ onQuizGenerated }: { onQuizGenerated: (questions
     }, 600);
 
     try {
+      const difficulty = getDifficultyFromSlider(data.difficultyLevel);
+      
       // Create a prompt based on the form data
       const prompt = `
-Create a medical quiz with ${data.numQuestions} multiple-choice questions about ${data.topic} in ${data.subject} 
-for ${data.course} students. The difficulty level should be ${data.difficulty}. 
+Create a ${data.course} quiz with ${maxQuestions} multiple-choice questions about ${data.topic} in ${data.subject} 
+for ${data.course} students. The difficulty level should be ${difficulty}. 
 Each question should have 4 options (A, B, C, D) with one correct answer.
 For each question, provide a detailed explanation of why the correct answer is right and why the others are wrong.
 Format the response as multiple-choice questions with lettered options.
@@ -76,8 +131,8 @@ Format the response as multiple-choice questions with lettered options.
       const { data: responseData, error: functionError } = await supabase.functions.invoke('process-document', {
         body: {
           promptText: prompt,
-          difficulty: data.difficulty,
-          numQuestions: data.numQuestions,
+          difficulty: difficulty,
+          numQuestions: maxQuestions,
           subject: data.subject,
           topic: data.topic
         }
@@ -96,13 +151,13 @@ Format the response as multiple-choice questions with lettered options.
       
       toast({
         title: "Quiz generated successfully!",
-        description: `Created ${responseData.questions.length} ${data.difficulty} questions about ${data.topic}`,
+        description: `Created ${responseData.questions.length} questions about ${data.topic}`,
       });
       
       // Apply the specified time per question to the questions
       const questionsWithTime = responseData.questions.map((q: Question) => ({
         ...q,
-        timeLimit: data.timePerQuestion
+        timeLimit: timePerQuestion
       }));
       
       setTimeout(() => {
@@ -146,6 +201,8 @@ Format the response as multiple-choice questions with lettered options.
       }
     }
   };
+
+  const maxQuestionLimit = isPremium ? 50 : 10;
   
   return (
     <Card className="w-full max-w-4xl mx-auto shadow-lg border border-primary/10 bg-card/50 backdrop-blur-sm">
@@ -159,9 +216,16 @@ Format the response as multiple-choice questions with lettered options.
           <div className="bg-primary/10 p-3 rounded-full">
             <BrainCircuit className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-indigo-500 bg-clip-text text-transparent">
-            AI Quiz Generator
-          </CardTitle>
+          <div>
+            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-indigo-500 bg-clip-text text-transparent">
+              AI Quiz Generator
+            </CardTitle>
+            {!isPremium && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Free plan: Limited to 2 quizzes, 10 questions max, 30 seconds per question
+              </p>
+            )}
+          </div>
         </motion.div>
       </CardHeader>
       
@@ -186,7 +250,7 @@ Format the response as multiple-choice questions with lettered options.
                       </FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="e.g., Medical School, Nursing, Biology" 
+                          placeholder="e.g., Medical School, Engineering, UPSC, Class 10" 
                           {...field} 
                           className="bg-background/50 border-primary/20 focus-visible:ring-primary/30"
                         />
@@ -207,7 +271,7 @@ Format the response as multiple-choice questions with lettered options.
                       </FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="e.g., Anatomy, Cardiology, Pharmacology" 
+                          placeholder="e.g., Anatomy, Physics, History, Mathematics" 
                           {...field} 
                           className="bg-background/50 border-primary/20 focus-visible:ring-primary/30"
                         />
@@ -230,7 +294,7 @@ Format the response as multiple-choice questions with lettered options.
                       </FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="e.g., Heart Valves, Antibiotic Mechanisms, Pulmonary Function" 
+                          placeholder="e.g., Heart Valves, Newton's Laws, World War II" 
                           {...field} 
                           className="bg-background/50 border-primary/20 focus-visible:ring-primary/30"
                         />
@@ -244,38 +308,33 @@ Format the response as multiple-choice questions with lettered options.
               <motion.div variants={itemVariants}>
                 <FormField
                   control={form.control}
-                  name="difficulty"
+                  name="difficultyLevel"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2 mb-2">
-                        <Gauge className="h-4 w-4 text-primary" />
-                        Difficulty Level
-                      </FormLabel>
+                      <div className="flex items-center justify-between mb-2">
+                        <FormLabel className="flex items-center gap-2">
+                          <div className="flex items-center">
+                            Difficulty Level
+                          </div>
+                        </FormLabel>
+                        <span className="px-2 py-1 bg-primary/10 rounded text-xs font-medium">
+                          {getDifficultyLabel(field.value)}
+                        </span>
+                      </div>
                       <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4"
-                        >
-                          {difficulties.map(difficulty => (
-                            <div key={difficulty.value} className="flex items-center space-x-2">
-                              <RadioGroupItem 
-                                value={difficulty.value} 
-                                id={difficulty.value}
-                                className={`border-2 ${difficulty.value === field.value ? 'border-primary' : 'border-primary/20'}`}
-                              />
-                              <Label 
-                                htmlFor={difficulty.value}
-                                className={`font-medium cursor-pointer ${difficulty.value === field.value ? 'text-primary' : 'text-muted-foreground'}`}
-                              >
-                                {difficulty.label}
-                              </Label>
-                            </div>
-                          ))}
-                        </RadioGroup>
+                        <Slider
+                          min={0}
+                          max={100}
+                          step={1}
+                          defaultValue={[field.value]}
+                          onValueChange={(value) => field.onChange(value[0])}
+                          className="py-4"
+                        />
                       </FormControl>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {difficulties.find(d => d.value === field.value)?.description}
+                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                        <span>Easy</span>
+                        <span>Medium</span>
+                        <span>Hard</span>
                       </div>
                       <FormMessage />
                     </FormItem>
@@ -289,25 +348,30 @@ Format the response as multiple-choice questions with lettered options.
                   name="numQuestions"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-primary" />
-                        Number of Questions
-                      </FormLabel>
-                      <div className="flex items-center gap-4">
-                        <FormControl>
-                          <Slider
-                            min={3}
-                            max={20}
-                            step={1}
-                            defaultValue={[field.value]}
-                            onValueChange={(value) => field.onChange(value[0])}
-                            className="py-4"
-                          />
-                        </FormControl>
+                      <div className="flex items-center justify-between">
+                        <FormLabel className="flex items-center gap-2">
+                          Number of Questions
+                        </FormLabel>
                         <span className="w-10 h-10 flex items-center justify-center bg-primary/10 rounded-full font-bold text-primary">
                           {field.value}
                         </span>
                       </div>
+                      <FormControl>
+                        <Slider
+                          min={3}
+                          max={maxQuestionLimit}
+                          step={1}
+                          defaultValue={[field.value]}
+                          onValueChange={(value) => field.onChange(value[0])}
+                          className="py-4"
+                          disabled={!isPremium && field.value > 10}
+                        />
+                      </FormControl>
+                      {!isPremium && (
+                        <p className="text-xs text-muted-foreground">
+                          Free plan: Limited to 10 questions max. <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => navigate('/settings?tab=premium')}>Upgrade for up to 50</Button>
+                        </p>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -318,25 +382,31 @@ Format the response as multiple-choice questions with lettered options.
                   name="timePerQuestion"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-primary" />
-                        Time per Question (seconds)
-                      </FormLabel>
-                      <div className="flex items-center gap-4">
-                        <FormControl>
-                          <Slider
-                            min={10}
-                            max={120}
-                            step={5}
-                            defaultValue={[field.value]}
-                            onValueChange={(value) => field.onChange(value[0])}
-                            className="py-4"
-                          />
-                        </FormControl>
+                      <div className="flex items-center justify-between">
+                        <FormLabel className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-primary" />
+                          Time per Question (sec)
+                        </FormLabel>
                         <span className="w-10 h-10 flex items-center justify-center bg-primary/10 rounded-full font-bold text-primary">
                           {field.value}
                         </span>
                       </div>
+                      <FormControl>
+                        <Slider
+                          min={10}
+                          max={120}
+                          step={5}
+                          defaultValue={[field.value]}
+                          onValueChange={(value) => field.onChange(value[0])}
+                          className="py-4"
+                          disabled={!isPremium}
+                        />
+                      </FormControl>
+                      {!isPremium && (
+                        <p className="text-xs text-muted-foreground">
+                          Free plan: Fixed at 30 seconds. <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => navigate('/settings?tab=premium')}>Upgrade to customize</Button>
+                        </p>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}

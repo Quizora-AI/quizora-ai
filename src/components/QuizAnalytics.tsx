@@ -13,9 +13,13 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell
+  Cell,
+  Legend
 } from "recharts";
 import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import { Plus } from "lucide-react";
 
 interface QuizAnalyticsProps {
   questions: Question[];
@@ -28,6 +32,21 @@ export function QuizAnalytics({ questions, correctAnswers, incorrectAnswers, use
   const [activeTab, setActiveTab] = useState("overview");
   const totalQuestions = questions.length;
   const score = Math.round((correctAnswers / totalQuestions) * 100);
+  const navigate = useNavigate();
+  
+  // Check if user has premium
+  const [isPremium, setIsPremium] = useState(() => {
+    try {
+      const userSettings = localStorage.getItem("userSettings");
+      if (userSettings) {
+        const settings = JSON.parse(userSettings);
+        return settings.isPremium === true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  });
   
   // Calculate timing per question (this would normally be tracked during the quiz)
   const avgTimePerQuestion = 15; // This is a placeholder, would be actual data in real implementation
@@ -58,7 +77,7 @@ export function QuizAnalytics({ questions, correctAnswers, incorrectAnswers, use
       return [
         "Excellent work! To further improve, focus on the specific questions you missed.",
         "Review the explanations for the questions you got wrong to solidify your understanding.",
-        "Consider increasing the difficulty level or time constraints in your next quiz."
+        "Consider increasing the difficulty level in your next quiz."
       ];
     } else if (score >= 60) {
       return [
@@ -73,6 +92,10 @@ export function QuizAnalytics({ questions, correctAnswers, incorrectAnswers, use
         "Review the explanations thoroughly and try similar questions to reinforce learning."
       ];
     }
+  };
+
+  const handleCreateNewQuiz = () => {
+    navigate('/');
   };
 
   const containerVariants = {
@@ -132,6 +155,12 @@ export function QuizAnalytics({ questions, correctAnswers, incorrectAnswers, use
                 <div className="text-sm text-muted-foreground">Incorrect</div>
               </div>
             </div>
+            
+            <div className="mt-6 flex justify-center">
+              <Button onClick={handleCreateNewQuiz} className="gap-2">
+                <Plus className="h-4 w-4" /> Create New Quiz
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </motion.div>
@@ -139,9 +168,9 @@ export function QuizAnalytics({ questions, correctAnswers, incorrectAnswers, use
       <motion.div variants={itemVariants}>
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid grid-cols-3 mb-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="questions">Questions Analysis</TabsTrigger>
-            <TabsTrigger value="improvement">Improvement Plan</TabsTrigger>
+            <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
+            <TabsTrigger value="questions" className="text-xs sm:text-sm">Questions Analysis</TabsTrigger>
+            <TabsTrigger value="improvement" className="text-xs sm:text-sm">Improvement Plan</TabsTrigger>
           </TabsList>
           
           <TabsContent value="overview">
@@ -168,6 +197,7 @@ export function QuizAnalytics({ questions, correctAnswers, incorrectAnswers, use
                         ))}
                       </Pie>
                       <Tooltip />
+                      <Legend />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -192,37 +222,51 @@ export function QuizAnalytics({ questions, correctAnswers, incorrectAnswers, use
                 <CardTitle>Question Breakdown</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-64 mb-6">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={questionBreakdownData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis hide />
-                      <Tooltip />
-                      <Bar dataKey="value">
-                        {
-                          questionBreakdownData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))
-                        }
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                
-                {incorrectQuestions.length > 0 && (
-                  <div className="space-y-4">
-                    <h3 className="font-medium text-lg">Questions to Review:</h3>
-                    {incorrectQuestions.map((q, index) => (
-                      <div key={index} className="p-4 border rounded-md bg-error/5">
-                        <p className="font-medium text-error mb-2">Question {questions.findIndex(question => question.id === q.id) + 1}:</p>
-                        <p className="mb-2">{q.question}</p>
-                        <p className="text-sm font-medium">Correct Answer: {q.options[q.correctAnswer]}</p>
-                        {q.explanation && (
-                          <p className="mt-2 text-sm text-muted-foreground">{q.explanation}</p>
-                        )}
+                {isPremium ? (
+                  <>
+                    <div className="h-64 mb-6">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={questionBreakdownData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" />
+                          <YAxis hide />
+                          <Tooltip />
+                          <Bar dataKey="value">
+                            {
+                              questionBreakdownData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))
+                            }
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    
+                    {incorrectQuestions.length > 0 && (
+                      <div className="space-y-4">
+                        <h3 className="font-medium text-lg">Questions to Review:</h3>
+                        {incorrectQuestions.map((q, index) => (
+                          <div key={index} className="p-4 border rounded-md bg-error/5">
+                            <p className="font-medium text-error mb-2">Question {questions.findIndex(question => question.id === q.id) + 1}:</p>
+                            <p className="mb-2">{q.question}</p>
+                            <p className="text-sm font-medium">Correct Answer: {q.options[q.correctAnswer]}</p>
+                            {q.explanation && (
+                              <p className="mt-2 text-sm text-muted-foreground">{q.explanation}</p>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-10">
+                    <h3 className="text-lg font-medium mb-2">Premium Feature</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto mb-6">
+                      Upgrade to Quizora AI Premium to access detailed question breakdown and analysis
+                    </p>
+                    <Button onClick={() => navigate('/settings?tab=premium')}>
+                      Upgrade to Premium
+                    </Button>
                   </div>
                 )}
               </CardContent>
@@ -235,34 +279,46 @@ export function QuizAnalytics({ questions, correctAnswers, incorrectAnswers, use
                 <CardTitle>Improvement Plan</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="font-medium text-lg mb-2">Strengths</h3>
-                    <ul className="list-disc list-inside space-y-1 pl-4">
-                      <li>You performed well on {correctAnswers} out of {totalQuestions} questions</li>
-                      {score > 50 && <li>Your overall understanding of the topics is good</li>}
-                      {score > 75 && <li>You have excellent knowledge in this subject area</li>}
-                    </ul>
+                {isPremium ? (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="font-medium text-lg mb-2">Strengths</h3>
+                      <ul className="list-disc list-inside space-y-1 pl-4">
+                        <li>You performed well on {correctAnswers} out of {totalQuestions} questions</li>
+                        {score > 50 && <li>Your overall understanding of the topics is good</li>}
+                        {score > 75 && <li>You have excellent knowledge in this subject area</li>}
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <h3 className="font-medium text-lg mb-2">Areas for Improvement</h3>
+                      <ul className="list-disc list-inside space-y-1 pl-4">
+                        {incorrectAnswers > 0 && <li>Focus on the {incorrectAnswers} questions you missed</li>}
+                        {score < 75 && <li>Review the explanations for incorrect answers carefully</li>}
+                        {score < 50 && <li>Consider revisiting the fundamental concepts of this topic</li>}
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <h3 className="font-medium text-lg mb-2">Suggestions</h3>
+                      <ul className="list-disc list-inside space-y-1 pl-4">
+                        {getPerformanceSuggestions().map((suggestion, index) => (
+                          <li key={index}>{suggestion}</li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
-                  
-                  <div>
-                    <h3 className="font-medium text-lg mb-2">Areas for Improvement</h3>
-                    <ul className="list-disc list-inside space-y-1 pl-4">
-                      {incorrectAnswers > 0 && <li>Focus on the {incorrectAnswers} questions you missed</li>}
-                      {score < 75 && <li>Review the explanations for incorrect answers carefully</li>}
-                      {score < 50 && <li>Consider revisiting the fundamental concepts of this topic</li>}
-                    </ul>
+                ) : (
+                  <div className="text-center py-10">
+                    <h3 className="text-lg font-medium mb-2">Premium Feature</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto mb-6">
+                      Upgrade to Quizora AI Premium to access personalized improvement plans and guidance
+                    </p>
+                    <Button onClick={() => navigate('/settings?tab=premium')}>
+                      Upgrade to Premium
+                    </Button>
                   </div>
-                  
-                  <div>
-                    <h3 className="font-medium text-lg mb-2">Suggestions</h3>
-                    <ul className="list-disc list-inside space-y-1 pl-4">
-                      {getPerformanceSuggestions().map((suggestion, index) => (
-                        <li key={index}>{suggestion}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

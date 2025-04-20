@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import * as React from "react";
@@ -18,6 +18,34 @@ const queryClient = new QueryClient({
   },
 });
 
+// Create a premium route guard component
+const PremiumRoute: React.FC<{element: React.ReactNode}> = ({ element }) => {
+  const [isPremium, setIsPremium] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    // Check if user has premium subscription from localStorage
+    const userSettings = localStorage.getItem("userSettings");
+    if (userSettings) {
+      try {
+        const settings = JSON.parse(userSettings);
+        setIsPremium(settings.isPremium === true);
+      } catch (error) {
+        console.error("Error parsing user settings:", error);
+      }
+    }
+    setLoading(false);
+  }, []);
+
+  if (loading) return null;
+
+  return isPremium ? (
+    <>{element}</>
+  ) : (
+    <Navigate to="/settings?tab=premium" replace />
+  );
+};
+
 const App = () => {
   return (
     <React.StrictMode>
@@ -30,7 +58,7 @@ const App = () => {
               <Route path="/" element={<Index />} />
               <Route path="/quiz" element={<Index initialTab="generate" />} />
               <Route path="/history" element={<Index initialTab="history" />} />
-              <Route path="/assistant" element={<Index initialTab="assistant" />} />
+              <Route path="/assistant" element={<PremiumRoute element={<Index initialTab="assistant" />} />} />
               <Route path="/settings" element={<Index initialTab="settings" />} />
               <Route path="/legal" element={<Index />} />
               <Route path="*" element={<NotFound />} />
