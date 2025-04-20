@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Upload, File, X, Check, Loader2, AlertTriangle, FileWarning, AlertCircle, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,7 @@ export interface Question {
   options: string[];
   correctAnswer: number;
   explanation?: string;
+  timeLimit?: number; // Added timeLimit property
 }
 
 export function FileUpload({ onFileProcessed }: FileUploadProps) {
