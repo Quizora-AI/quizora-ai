@@ -32,7 +32,7 @@ const App = () => {
               <Route path="/history" element={<Index initialTab="history" />} />
               <Route path="/assistant" element={<Index initialTab="assistant" />} />
               <Route path="/settings" element={<Index initialTab="settings" />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="/legal" element={<Index />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </TooltipProvider>

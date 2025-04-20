@@ -40,8 +40,8 @@ export function Header() {
     <header className="w-full py-4 px-6 bg-white dark:bg-gray-900 border-b">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         <div className="flex items-center">
-          <div className="text-2xl font-bold text-primary mr-2">MedQuiz</div>
-          <div className="text-2xl font-light">Pro</div>
+          <div className="text-2xl font-bold text-primary mr-2">Quizora</div>
+          <div className="text-2xl font-light">AI</div>
         </div>
         
         <Button variant="ghost" size="icon" onClick={toggleTheme}>

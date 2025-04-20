@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Question } from "@/components/FileUpload";
@@ -10,6 +9,7 @@ import { TabNavigation } from "@/components/TabNavigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from "uuid";
+import { LegalPages } from "@/components/LegalPages";
 
 enum AppState {
   CREATE,
@@ -50,7 +50,6 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
     setStartTime(new Date());
     setEndTime(null);
     
-    // Set a default quiz title based on the time
     const now = new Date();
     setQuizTitle(`Medical Quiz - ${now.toLocaleDateString()}`);
     
@@ -58,11 +57,9 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
   };
   
   const handleNextQuestion = (selectedOption: number) => {
-    // Update user answers
     const newUserAnswers = [...userAnswers, selectedOption];
     setUserAnswers(newUserAnswers);
     
-    // Move to next question or end quiz
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
@@ -98,10 +95,8 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
     }, 0);
   };
 
-  // Save quiz result to history when quiz is completed
   useEffect(() => {
     if (appState === AppState.RESULTS && questions.length > 0 && userAnswers.length > 0) {
-      // Load settings
       const userSettingsStr = localStorage.getItem("userSettings");
       const userSettings = userSettingsStr ? JSON.parse(userSettingsStr) : {};
       const autoSave = localStorage.getItem("autoSave") !== "false";
@@ -110,13 +105,11 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
         const correctAnswers = getCorrectAnswersCount();
         const score = Math.round((correctAnswers / questions.length) * 100);
 
-        // Get existing history from localStorage
         const existingHistoryString = localStorage.getItem("quizHistory");
         const existingHistory: QuizHistory[] = existingHistoryString 
           ? JSON.parse(existingHistoryString) 
           : [];
         
-        // Create new quiz history entry
         const newQuizEntry: QuizHistory = {
           id: uuidv4(),
           date: new Date().toISOString(),
@@ -126,7 +119,6 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
           questions: questions
         };
         
-        // Add new entry to history and save back to localStorage
         const updatedHistory = [newQuizEntry, ...existingHistory];
         localStorage.setItem("quizHistory", JSON.stringify(updatedHistory));
         
@@ -162,7 +154,11 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
             transition={pageTransition}
             className="w-full"
           >
-            <TabNavigation onQuizGenerated={handleQuizGenerated} />
+            {location.pathname === "/legal" ? (
+              <LegalPages />
+            ) : (
+              <TabNavigation onQuizGenerated={handleQuizGenerated} />
+            )}
           </motion.div>
         );
         
