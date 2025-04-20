@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import * as React from "react";
+import QuizReview from "./pages/QuizReview";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -58,6 +59,7 @@ const App = () => {
               <Route path="/" element={<Index />} />
               <Route path="/quiz" element={<Index initialTab="generate" />} />
               <Route path="/history" element={<Index initialTab="history" />} />
+              <Route path="/history/:quizId" element={<QuizReview />} />
               <Route path="/assistant" element={<PremiumRoute element={<Index initialTab="assistant" />} />} />
               <Route path="/settings" element={<Index initialTab="settings" />} />
               <Route path="/legal" element={<Index />} />

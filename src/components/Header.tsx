@@ -36,11 +36,50 @@ export function Header() {
     }
 
     // Check if user has premium subscription
-    const userSettings = localStorage.getItem("userSettings");
-    if (userSettings) {
-      const settings = JSON.parse(userSettings);
-      setIsPremium(settings.isPremium === true);
-    }
+    const checkPremiumStatus = () => {
+      const userSettings = localStorage.getItem("userSettings");
+      if (userSettings) {
+        try {
+          const settings = JSON.parse(userSettings);
+          
+          // Check if premium and not expired
+          if (settings.isPremium === true) {
+            if (settings.expiryDate) {
+              const expiryDate = new Date(settings.expiryDate);
+              const now = new Date();
+              
+              if (expiryDate > now) {
+                setIsPremium(true);
+              } else {
+                // Premium expired
+                setIsPremium(false);
+                
+                // Update localStorage to reflect expired premium
+                const updatedSettings = {
+                  ...settings,
+                  isPremium: false
+                };
+                localStorage.setItem("userSettings", JSON.stringify(updatedSettings));
+              }
+            } else {
+              setIsPremium(true);
+            }
+          } else {
+            setIsPremium(false);
+          }
+        } catch (error) {
+          console.error("Error checking premium status:", error);
+          setIsPremium(false);
+        }
+      }
+    };
+
+    checkPremiumStatus();
+    
+    // Set up interval to regularly check premium status
+    const intervalId = setInterval(checkPremiumStatus, 60000); // Check every minute
+    
+    return () => clearInterval(intervalId);
   }, []);
   
   const toggleTheme = () => {

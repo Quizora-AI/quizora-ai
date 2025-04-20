@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -34,7 +33,6 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 
-// Add this type definition
 interface UserSettings {
   name: string;
   email: string;
@@ -45,6 +43,9 @@ interface UserSettings {
   difficulty: "easy" | "medium" | "hard";
   isPremium: boolean;
   premiumTier?: string;
+  paymentId?: string;
+  subscriptionDate?: string;
+  expiryDate?: string;
 }
 
 const languages = [
@@ -93,7 +94,6 @@ export function SettingsPanel() {
   const navigate = useNavigate();
   
   useEffect(() => {
-    // Load settings from localStorage
     try {
       const savedSettings = localStorage.getItem("userSettings");
       if (savedSettings) {
@@ -108,13 +108,11 @@ export function SettingsPanel() {
         }));
       }
 
-      // Load quiz history
       const historyStr = localStorage.getItem("quizHistory");
       if (historyStr) {
         setQuizHistory(JSON.parse(historyStr));
       }
       
-      // Check if user is logged in
       const userEmail = localStorage.getItem("userEmail");
       setIsLoggedIn(!!userEmail);
       if (userEmail) {
@@ -159,7 +157,6 @@ export function SettingsPanel() {
       return;
     }
     
-    // Simple login simulation - in a real app this would validate credentials
     localStorage.setItem("userEmail", settings.email);
     setIsLoggedIn(true);
     
@@ -180,22 +177,76 @@ export function SettingsPanel() {
   };
   
   const activatePremium = (tier: string) => {
-    // In a real app, this would connect to a payment provider
-    setSettings(prev => ({
-      ...prev,
-      isPremium: true,
-      premiumTier: tier
-    }));
-    
-    localStorage.setItem("userSettings", JSON.stringify({
+    if (window.Razorpay) {
+      const options = {
+        key: "rzp_test_YourTestKey",
+        amount: tier === 'monthly' ? 249 * 100 : 1500 * 100,
+        currency: "INR",
+        name: "Quizora AI",
+        description: tier === 'monthly' ? "Monthly Premium Subscription" : "Annual Premium Subscription",
+        image: "https://example.com/your_logo",
+        handler: function (response: any) {
+          console.log("Payment ID: " + response.razorpay_payment_id);
+          
+          const updatedSettings = {
+            ...settings,
+            isPremium: true,
+            premiumTier: tier,
+            paymentId: response.razorpay_payment_id,
+            subscriptionDate: new Date().toISOString(),
+            expiryDate: tier === 'monthly' 
+              ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() 
+              : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+          };
+          
+          setSettings(updatedSettings);
+          localStorage.setItem("userSettings", JSON.stringify(updatedSettings));
+          
+          toast({
+            title: "Premium activated",
+            description: `Thank you for subscribing to Quizora AI Premium!`
+          });
+        },
+        prefill: {
+          email: settings.email,
+          name: settings.name
+        },
+        theme: {
+          color: "#6366F1"
+        }
+      };
+      
+      try {
+        const paymentObject = new window.Razorpay(options);
+        paymentObject.open();
+      } catch (error) {
+        console.error("Razorpay error:", error);
+        
+        simulatePremiumActivation(tier);
+      }
+    } else {
+      simulatePremiumActivation(tier);
+    }
+  };
+  
+  const simulatePremiumActivation = (tier: string) => {
+    const updatedSettings = {
       ...settings,
       isPremium: true,
-      premiumTier: tier
-    }));
+      premiumTier: tier,
+      paymentId: `demo-${Date.now()}`,
+      subscriptionDate: new Date().toISOString(),
+      expiryDate: tier === 'monthly' 
+        ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() 
+        : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+    };
+    
+    setSettings(updatedSettings);
+    localStorage.setItem("userSettings", JSON.stringify(updatedSettings));
     
     toast({
-      title: "Premium activated",
-      description: "Thank you for subscribing to Quizora AI Premium!"
+      title: "Premium activated (Demo)",
+      description: `Your premium subscription has been activated for demonstration purposes.`
     });
   };
   
@@ -587,6 +638,13 @@ export function SettingsPanel() {
                         </p>
                       </div>
                     </div>
+                    {settings.expiryDate && (
+                      <div className="mt-4 text-sm">
+                        <p className="text-muted-foreground">
+                          Your {settings.premiumTier} subscription is active until {new Date(settings.expiryDate).toLocaleDateString()}
+                        </p>
+                      </div>
+                    )}
                   </motion.div>
                 ) : (
                   <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 gap-6">
