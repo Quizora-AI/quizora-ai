@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
@@ -207,18 +208,19 @@ IMPORTANT INSTRUCTIONS:
    - Four options (A, B, C, D) with only ONE correct answer
    - Mark the correct answer
    - Provide a detailed explanation of why the correct answer is right and why the other options are wrong
-3. Ensure your response follows the exact JSON schema:
+3. Ensure your response follows the exact JSON schema without any markdown formatting:
    [
      {
        "id": "q1",
        "question": "Question text here",
        "options": ["A) Option A", "B) Option B", "C) Option C", "D) Option D"],
-       "correctAnswer": 0, // Index of the correct answer (0-3)
+       "correctAnswer": 0, 
        "explanation": "Detailed explanation of the correct answer"
      }
    ]
 4. Vary the question types to test different cognitive levels (recall, application, analysis)
-5. Make sure the questions are challenging but fair for the ${difficulty || 'medium'} difficulty level`;
+5. Make sure the questions are challenging but fair for the ${difficulty || 'medium'} difficulty level
+6. DO NOT include any markdown formatting like \`\`\`json or any other formatting - JUST RETURN PURE JSON`;
       
       console.log('Preparing payload for AIMLAPI with improved JSON schema');
       
@@ -242,8 +244,9 @@ IMPORTANT INSTRUCTIONS:
             }
           ],
           temperature: 0.7,
-          max_tokens: 2000, // Increased for more complex responses
-          top_p: 0.9
+          max_tokens: 2000,
+          top_p: 0.9,
+          response_format: { type: "json_object" } // Force JSON format
         }),
       });
       
@@ -268,11 +271,65 @@ IMPORTANT INSTRUCTIONS:
       // Parse the JSON content
       let parsedQuestions;
       try {
-        parsedQuestions = JSON.parse(extractedContent);
+        // Handle case where the API returns a JSON string inside a JSON object
+        const contentToParse = typeof extractedContent === 'string' ? extractedContent : JSON.stringify(extractedContent);
+        
+        // Try to find and extract a JSON array from the response if it's wrapped in an object
+        let jsonContent = contentToParse;
+        
+        // If it's a string, look for possible JSON array pattern and clean it up
+        if (typeof contentToParse === 'string') {
+          // Remove any markdown code block markers
+          jsonContent = contentToParse
+            .replace(/```json\s*/g, '')  // Remove ```json
+            .replace(/```\s*/g, '')      // Remove closing ```
+            .trim();
+            
+          // If the content is nested in a "questions" field, extract that
+          try {
+            const potentialObject = JSON.parse(jsonContent);
+            if (potentialObject.questions && Array.isArray(potentialObject.questions)) {
+              parsedQuestions = potentialObject.questions;
+              console.log(`Successfully extracted ${parsedQuestions.length} questions from questions field`);
+            } else if (Array.isArray(potentialObject)) {
+              parsedQuestions = potentialObject;
+              console.log(`Successfully parsed ${parsedQuestions.length} questions from array`);
+            } else {
+              // Look for any array in the object
+              const arrayFields = Object.entries(potentialObject)
+                .find(([_, value]) => Array.isArray(value));
+                
+              if (arrayFields) {
+                parsedQuestions = arrayFields[1];
+                console.log(`Successfully extracted ${parsedQuestions.length} questions from field ${arrayFields[0]}`);
+              } else {
+                throw new Error("Could not find question array in response");
+              }
+            }
+          } catch (innerError) {
+            // If we can't parse it as JSON with questions field, try to extract a JSON array pattern
+            const arrayMatch = jsonContent.match(/\[\s*\{[\s\S]*\}\s*\]/);
+            if (arrayMatch) {
+              try {
+                parsedQuestions = JSON.parse(arrayMatch[0]);
+                console.log(`Successfully extracted ${parsedQuestions.length} questions from matched array`);
+              } catch (arrayParseError) {
+                throw new Error("Failed to parse extracted array as JSON");
+              }
+            } else {
+              throw new Error("Failed to find valid JSON array in response");
+            }
+          }
+        }
+        
+        if (!parsedQuestions) {
+          throw new Error("Could not extract questions from response");
+        }
+        
         console.log(`Successfully parsed ${parsedQuestions.length} questions`);
       } catch (parseError) {
         console.error("JSON parse error:", parseError);
-        throw new Error(`Failed to extract questions. The API returned an invalid response.`);
+        throw new Error(`Failed to extract questions. The API returned an invalid response: ${parseError.message}`);
       }
       
       // Validate the parsed questions
