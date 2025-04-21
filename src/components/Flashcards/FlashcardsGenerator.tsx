@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { Book } from "lucide-react";
+import { Book, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Json } from "@/integrations/supabase/types";
 
@@ -48,6 +48,7 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -70,6 +71,7 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
+    setErrorDetails(null);
     const count = parseInt(values.count);
     if (!isPremium && count > 10) {
       toast({
@@ -82,6 +84,8 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
     }
 
     try {
+      console.log("Generating flashcards with values:", values);
+      
       // Call the process-document edge function for flashcards
       const response = await fetch("https://ltteeavnkygcgbwlblof.functions.supabase.co/process-document", {
         method: "POST",
@@ -98,17 +102,19 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
         })
       });
 
+      const responseData = await response.json();
+      console.log("Response from process-document:", responseData);
+      
       if (!response.ok) {
-        throw new Error(`Error generating flashcards: ${response.status}`);
+        throw new Error(`Error ${response.status}: ${responseData.error || "Unknown error"}`);
       }
 
-      const data = await response.json();
-      if (data.error) {
-        throw new Error(data.error);
+      if (responseData.error) {
+        throw new Error(responseData.error);
       }
 
       // Build flashcards from response
-      const flashcards: Flashcard[] = data.questions.map((q: any, idx: number) => ({
+      const flashcards: Flashcard[] = responseData.questions.map((q: any, idx: number) => ({
         id: `card-${idx}`,
         front: q.question,
         back: q.correctAnswer,
@@ -130,10 +136,15 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         try {
-          // Convert Flashcard[] to Json type before saving to Supabase
-          const cardsJson = flashcards as unknown as Json;
+          // Convert cards to a structure that's compatible with Supabase's Json type
+          const cardsForDb = flashcards.map(card => ({
+            id: card.id,
+            front: card.front,
+            back: card.back,
+            status: card.status
+          }));
           
-          const { data: inserted, error } = await supabase
+          const { error } = await supabase
             .from("flashcard_sets")
             .insert({
               id: flashcardsSet.id,
@@ -141,16 +152,17 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
               course: flashcardsSet.course,
               subject: flashcardsSet.subject,
               topic: flashcardsSet.topic,
-              cards: cardsJson,
+              cards: cardsForDb as unknown as Json,
               user_id: user.id,
               created_at: new Date().toISOString()
             });
             
           if (error) {
+            console.error("Supabase insert error:", error);
             throw new Error(error.message);
           }
           setId = flashcardsSet.id;
-        } catch (error) {
+        } catch (error: any) {
           console.error("Failed to save flashcards to database:", error);
         }
       }
@@ -169,6 +181,8 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
         description: `${flashcards.length} flashcards were successfully created.`,
       });
     } catch (error: any) {
+      console.error("Error generating flashcards:", error);
+      setErrorDetails(error.message);
       toast({
         title: "Error Generating Flashcards",
         description: error.message || "Something went wrong. Please try again.",
@@ -206,6 +220,18 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
           </motion.div>
         </CardHeader>
         <CardContent>
+          {errorDetails && (
+            <div className="mb-6 p-4 border border-destructive/50 bg-destructive/10 rounded-md">
+              <div className="flex gap-2">
+                <AlertCircle className="h-5 w-5 text-destructive" />
+                <div>
+                  <h4 className="font-semibold text-destructive">Error Details</h4>
+                  <p className="text-sm text-muted-foreground">{errorDetails}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -1,15 +1,14 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { corsHeaders } from '../_shared/cors.ts';
-import { OpenAI } from "https://deno.land/x/openai@1.4.2/mod.ts";
 
-const apiKey = Deno.env.get("OPENAI_API_KEY");
+const apiKey = Deno.env.get("AIMLAPI_KEY");
 
 if (!apiKey) {
-  console.warn("OPENAI_API_KEY environment variable not set!");
+  console.warn("AIMLAPI_KEY environment variable not set!");
 }
 
-const openai = new OpenAI(apiKey);
+const baseURL = "https://api.aimlapi.com/v1";
 
 const prepareContent = (document: string, course: string, subject: string, topic: string) => {
   let content = '';
@@ -54,16 +53,7 @@ const processDocument = async (req: Request) => {
       systemPrompt = `You are an AI flashcard generator for students. Generate ${questionCount} flashcards based on the following information. Each flashcard should have a clear question on the front and a concise answer on the back.`;
     }
     
-    let content = '';
-    if (document) {
-      content = `Document content:\n${document}\n`;
-    } else {
-      content = `Course: ${course}\nSubject: ${subject}\n`;
-      if (topic) {
-        content += `Topic: ${topic}\n`;
-      }
-    }
-
+    let content = prepareContent(document, course, subject, topic);
     const apiType = selectAPI(document, course, subject, topic, prompt);
 
     if (apiType === "custom") {
@@ -107,18 +97,42 @@ const processDocument = async (req: Request) => {
 
     console.log("System Prompt:", systemPrompt);
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo-16k",
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt,
-        },
-      ],
+    // Call AIMLAPI instead of OpenAI
+    const response = await fetch("https://api.aimlapi.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-3.5-turbo-16k", // Using GPT 3.5 Turbo for similar capability
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 1000
+      })
     });
 
-    const responseText = completion.choices[0].message.content;
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error("AIMLAPI error response:", response.status, errorData);
+      return new Response(
+        JSON.stringify({ 
+          error: `AIMLAPI returned status ${response.status}`, 
+          details: errorData 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 502 }
+      );
+    }
 
+    const data = await response.json();
+    console.log("Response from AIMLAPI:", JSON.stringify(data));
+    
+    const responseText = data.choices[0].message.content;
     console.log("Response Text:", responseText);
 
     let parsedQuestions;
@@ -128,7 +142,7 @@ const processDocument = async (req: Request) => {
       console.error("Failed to parse JSON response:", parseError);
       console.error("Response causing the error:", responseText);
       return new Response(
-        JSON.stringify({ error: 'Failed to parse JSON response from OpenAI' }),
+        JSON.stringify({ error: 'Failed to parse JSON response from AIMLAPI', rawResponse: responseText }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
