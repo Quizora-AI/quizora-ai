@@ -14,16 +14,16 @@ interface QuizHistoryEntry {
 }
 
 interface Props {
-  history: QuizHistoryEntry[];
+  quizzes: any[];
   itemVariants: any;
-  onDelete: (id: string, e: React.MouseEvent) => void;
-  onView: (entry: QuizHistoryEntry) => void;
+  onDelete?: (id: string, e: React.MouseEvent) => void;
+  onView?: (entry: QuizHistoryEntry) => void;
 }
 
-export function QuizHistoryList({ history, itemVariants, onDelete, onView }: Props) {
+export function QuizHistoryList({ quizzes, itemVariants, onDelete, onView }: Props) {
   return (
     <div className="space-y-4">
-      {history.map((entry) => (
+      {quizzes.map((entry) => (
         <QuizHistoryListItem
           key={entry.id}
           entry={entry}

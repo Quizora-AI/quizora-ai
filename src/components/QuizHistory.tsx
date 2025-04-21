@@ -91,7 +91,7 @@ export function QuizHistory() {
       ) : quizzes.length > 0 ? (
         <QuizHistoryList quizzes={quizzes} itemVariants={itemVariants} />
       ) : (
-        <QuizHistoryEmpty />
+        <QuizHistoryEmpty itemVariants={itemVariants} />
       )}
     </motion.div>
   );
