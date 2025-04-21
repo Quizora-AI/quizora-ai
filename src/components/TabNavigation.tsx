@@ -124,7 +124,6 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
           value={activeTab}
           onValueChange={handleTabChange}
         >
-          {/* Removed top area with back button & duplicate Create New Quiz button */}
           <TabsList className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 grid grid-cols-4 max-w-md w-[90%] shadow-lg border border-border/20">
             <TabsTrigger value="generate" className="flex items-center" disabled={isChangingTab}>
               <BrainCircuit className={tabIconStyle} />
@@ -146,17 +145,6 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
           
           <div className="pb-20">
             <TabsContent value="generate" className="mt-0">
-              {/* Add Create New Quiz button in contextually correct location below, if needed */}
-              <div className="flex justify-end mb-3">
-                <Button 
-                  variant="default"
-                  size="sm"
-                  className="gap-2"
-                  onClick={handleCreateNewQuiz}
-                >
-                  Create New Quiz
-                </Button>
-              </div>
               <QuizGenerator onQuizGenerated={onQuizGenerated} />
             </TabsContent>
             <TabsContent value="history" className="mt-0">
@@ -196,4 +184,3 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
     </TooltipProvider>
   );
 }
-// This file is getting quite long. Please consider refactoring TabNavigation into smaller components for cleanliness.

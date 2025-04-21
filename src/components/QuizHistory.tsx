@@ -273,12 +273,6 @@ export function QuizHistory() {
             </motion.div>
           ) : (
             <div className="space-y-4">
-              <motion.div variants={itemVariants} className="flex justify-end mb-4">
-                <Button onClick={createNewQuiz}>
-                  Create New Quiz
-                </Button>
-              </motion.div>
-            
               {history.map((entry) => (
                 <motion.div
                   key={entry.id}
@@ -302,7 +296,12 @@ export function QuizHistory() {
                             {entry.attempts} attempts
                           </span>
                         )}
-                        {!entry.completed && (
+                        {/* Fix the completed status display logic - if userAnswers exists and has length, consider it completed */}
+                        {entry.userAnswers && entry.userAnswers.length > 0 ? (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
+                            Completed
+                          </span>
+                        ) : (
                           <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">
                             Incomplete
                           </span>
