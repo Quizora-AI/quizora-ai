@@ -43,6 +43,8 @@ serve(async (req) => {
       { role: "user", content: message }
     ];
 
+    console.log("Sending request to AIMLAPI with messages:", JSON.stringify(messages));
+
     const response = await fetch("https://api.aimlapi.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -57,7 +59,14 @@ serve(async (req) => {
       })
     });
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("AI API error response:", response.status, errorText);
+      throw new Error(`AI API returned status ${response.status}: ${errorText}`);
+    }
+
     const data = await response.json();
+    console.log("Response from AIMLAPI:", JSON.stringify(data));
     
     if (data.error) {
       throw new Error(`AI API error: ${data.error.message}`);
