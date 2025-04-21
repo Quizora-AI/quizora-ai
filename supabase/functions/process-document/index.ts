@@ -1,6 +1,7 @@
+
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { corsHeaders } from '../_shared/cors.ts';
-import { OpenAI } from "https://deno.land/x/openai@v1.3.0/mod.ts";
+import { OpenAI } from "https://deno.land/x/openai@1.4.2/mod.ts";
 
 const apiKey = Deno.env.get("OPENAI_API_KEY");
 
