@@ -53,8 +53,46 @@ export const QuizFlow = ({
 
   useEffect(() => {
     setAppState(initialAppState);
+    
+    // Check for saved progress
+    const savedQuizState = localStorage.getItem("quizInProgress");
+    if (savedQuizState && initialAppState === AppState.QUIZ) {
+      try {
+        const { currentIndex, userAnsList } = JSON.parse(savedQuizState);
+        if (currentIndex !== undefined) {
+          setCurrentQuestionIndex(currentIndex);
+        }
+        if (userAnsList && userAnsList.length > 0) {
+          setUserAnswers(userAnsList);
+        }
+      } catch (error) {
+        console.error("Error restoring quiz state:", error);
+      }
+    }
+    
+    // Set start time
+    setStartTime(new Date());
     // eslint-disable-next-line
   }, [initialAppState]);
+  
+  // Save quiz state when user navigates away
+  useEffect(() => {
+    if (appState === AppState.QUIZ && questions.length > 0 && currentQuestionIndex > 0) {
+      const quizState = {
+        questions,
+        title: quizTitle,
+        currentIndex: currentQuestionIndex,
+        userAnsList: userAnswers,
+        timestamp: new Date().toISOString()
+      };
+      localStorage.setItem("quizInProgress", JSON.stringify(quizState));
+    }
+    
+    // Clean up saved state when quiz is completed
+    if (appState !== AppState.QUIZ) {
+      localStorage.removeItem("quizInProgress");
+    }
+  }, [appState, currentQuestionIndex, questions, quizTitle, userAnswers]);
 
   const getCorrectAnswersCount = () =>
     userAnswers.reduce((count, answer, idx) =>
@@ -70,6 +108,8 @@ export const QuizFlow = ({
     } else {
       setEndTime(new Date());
       setAppState(AppState.RESULTS);
+      // Remove in-progress state once completed
+      localStorage.removeItem("quizInProgress");
     }
   };
 
@@ -89,15 +129,12 @@ export const QuizFlow = ({
   };
 
   const handleNewQuiz = () => {
-    setQuestions([]);
-    setCurrentQuestionIndex(0);
-    setUserAnswers([]);
-    setStartTime(null);
-    setEndTime(null);
-    setAppState(AppState.QUIZ);
-    setTimeout(() => {
-      onBackToCreate();
-    }, 100);
+    // Clear quiz data
+    localStorage.removeItem("quizInProgress");
+    
+    // Go back to create page
+    onBackToCreate();
+    
     toast({
       title: "Create New Quiz",
       description: "Choose a file or use AI to generate questions",
@@ -216,4 +253,3 @@ export const QuizFlow = ({
       return null;
   }
 };
-
