@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { Flashcard } from "./FlashcardsGenerator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Json } from "@/integrations/supabase/types";
 
 interface FlashcardsSetHistory {
   id: string;
@@ -25,6 +26,14 @@ export function FlashcardsHistory() {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Helper function to convert Json to Flashcard[]
+  const jsonToFlashcards = (json: Json): Flashcard[] => {
+    if (Array.isArray(json)) {
+      return json as Flashcard[];
+    }
+    return [];
+  };
 
   useEffect(() => {
     // Load flashcards history
@@ -47,7 +56,18 @@ export function FlashcardsHistory() {
         if (error) throw error;
         
         if (data && data.length > 0) {
-          setFlashcardSets(data);
+          // Convert the cards from Json to Flashcard[]
+          const formattedData: FlashcardsSetHistory[] = data.map(item => ({
+            id: item.id,
+            title: item.title,
+            course: item.course || undefined,
+            subject: item.subject,
+            topic: item.topic || undefined,
+            cards: jsonToFlashcards(item.cards),
+            created_at: item.created_at
+          }));
+          
+          setFlashcardSets(formattedData);
           setIsLoading(false);
           return;
         }

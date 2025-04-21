@@ -119,11 +119,16 @@ const App = () => {
     }
   }, []);
 
+  // Get Auth0 credentials from environment variables or use placeholders
+  // Users should replace these with their actual Auth0 credentials
+  const auth0Domain = import.meta.env.VITE_AUTH0_DOMAIN || "dev-example.us.auth0.com";
+  const auth0ClientId = import.meta.env.VITE_AUTH0_CLIENT_ID || "YourAuth0ClientId";
+
   return (
     <React.StrictMode>
       <Auth0Provider
-        domain="YOUR_AUTH0_DOMAIN"
-        clientId="YOUR_AUTH0_CLIENT_ID"
+        domain={auth0Domain}
+        clientId={auth0ClientId}
         authorizationParams={{
           redirect_uri: window.location.origin
         }}

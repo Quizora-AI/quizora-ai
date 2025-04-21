@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLocation } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth0 } from "@auth0/auth0-react";
+import { Json } from "@/integrations/supabase/types";
 
 export enum FlashcardsState {
   CREATE,
@@ -28,6 +29,19 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
   const { toast } = useToast();
   const location = useLocation();
   const { isAuthenticated, user } = useAuth0();
+
+  // Helper function to convert Flashcard[] to Json
+  const flashcardsToJson = (cards: Flashcard[]): Json => {
+    return cards as unknown as Json;
+  };
+
+  // Helper function to convert Json to Flashcard[]
+  const jsonToFlashcards = (json: Json): Flashcard[] => {
+    if (Array.isArray(json)) {
+      return json as Flashcard[];
+    }
+    return [];
+  };
 
   // Safer data loading with retry mechanism
   const loadFlashcardsData = useCallback(async () => {
@@ -106,7 +120,7 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
           subject: setMeta?.subject || "General",
           course: setMeta?.course || null,
           topic: setMeta?.topic || null,
-          cards: generatedFlashcards,
+          cards: flashcardsToJson(generatedFlashcards),
           user_id: user.sub
         };
         
@@ -176,7 +190,7 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
         const { error } = await supabase
           .from("flashcard_sets")
           .update({ 
-            cards: updatedFlashcards,
+            cards: flashcardsToJson(updatedFlashcards),
           })
           .eq("id", setId);
           
