@@ -1,7 +1,6 @@
 
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
@@ -52,20 +51,19 @@ const App = () => {
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/quiz" element={<Index initialTab="generate" />} />
-              <Route path="/history" element={<Index initialTab="history" />} />
-              <Route path="/history/:quizId" element={<QuizReview />} />
-              <Route path="/assistant" element={<PremiumRoute element={<Index initialTab="assistant" />} />} />
-              <Route path="/settings" element={<Index initialTab="settings" />} />
-              <Route path="/legal" element={<Index />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </TooltipProvider>
+          {/* Remove the TooltipProvider from here - we'll add it at the component level where needed */}
+          <Toaster />
+          <Sonner />
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/quiz" element={<Index initialTab="generate" />} />
+            <Route path="/history" element={<Index initialTab="history" />} />
+            <Route path="/history/:quizId" element={<QuizReview />} />
+            <Route path="/assistant" element={<PremiumRoute element={<Index initialTab="assistant" />} />} />
+            <Route path="/settings" element={<Index initialTab="settings" />} />
+            <Route path="/legal" element={<Index />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </BrowserRouter>
       </QueryClientProvider>
     </React.StrictMode>
