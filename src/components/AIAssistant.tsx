@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -101,7 +100,6 @@ export function AIAssistant() {
         timestamp: new Date(),
       }]);
 
-      // Use the edge function to get AI response
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`, {
         method: "POST",
         headers: {
@@ -207,7 +205,7 @@ export function AIAssistant() {
                   Quizora Assistant
                 </CardTitle>
                 <CardDescription>
-                  Ask questions about any subject and get personalized learning assistance
+                  Ask questions about <span className="font-semibold">any course or subject</span> and get real-time, personalized study support.
                 </CardDescription>
               </div>
             </div>
