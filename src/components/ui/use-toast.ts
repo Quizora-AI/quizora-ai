@@ -1,4 +1,5 @@
 
+
 import { useToast as useInternalToast, toast as internalToast, type ToastParams } from "@/hooks/use-toast";
 
 // Re-export with extended functionality
@@ -12,9 +13,9 @@ export function useToast() {
       // Check if it's a premium-related toast and user is premium
       try {
         if (
-          (props.title?.toLowerCase().includes("free") || 
-           props.description?.toLowerCase().includes("free limit") ||
-           props.description?.toLowerCase().includes("upgrade to premium")) && 
+          (typeof props.title === 'string' && props.title.toLowerCase().includes("free") || 
+           typeof props.description === 'string' && props.description.toLowerCase().includes("free limit") ||
+           typeof props.description === 'string' && props.description.toLowerCase().includes("upgrade to premium")) && 
           checkIfUserIsPremium()
         ) {
           console.log("Skipping premium-related toast for premium user");
@@ -48,9 +49,9 @@ export const toast = (props: ToastParams) => {
   // Check if it's a premium-related toast and user is premium
   try {
     if (
-      (props.title?.toLowerCase().includes("free") || 
-       props.description?.toLowerCase().includes("free limit") ||
-       props.description?.toLowerCase().includes("upgrade to premium")) && 
+      (typeof props.title === 'string' && props.title.toLowerCase().includes("free") || 
+       typeof props.description === 'string' && props.description.toLowerCase().includes("free limit") ||
+       typeof props.description === 'string' && props.description.toLowerCase().includes("upgrade to premium")) && 
       checkIfUserIsPremium()
     ) {
       console.log("Skipping premium-related toast for premium user");
