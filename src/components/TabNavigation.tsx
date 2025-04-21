@@ -28,7 +28,11 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
     else if (path === '/flashcards') setActiveTab('flashcards');
     else if (path === '/settings') setActiveTab('settings');
     else if (path === '/quiz') setActiveTab('generate');
+    else if (path === '/') setActiveTab('generate');
     else setActiveTab('generate');
+
+    // Log current path for debugging
+    console.log("Current path:", path, "Active tab set to:", activeTab);
 
     // Check premium status from local storage
     const userSettings = localStorage.getItem("userSettings");
@@ -47,6 +51,7 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
     
     setIsChangingTab(true);
     setActiveTab(value);
+    console.log("Tab changed to:", value);
 
     // Improve tab changing responsiveness
     requestAnimationFrame(() => {
