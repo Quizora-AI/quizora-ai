@@ -27,6 +27,7 @@ interface QuizHistory {
   score: number;
   questions: Question[];
   userAnswers?: number[];
+  attempts?: number;
 }
 
 interface IndexProps {
@@ -86,6 +87,11 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
     setQuizTitle(`Medical Quiz - ${now.toLocaleDateString()}`);
     
     setAppState(AppState.QUIZ);
+    
+    toast({
+      title: "Quiz Generated",
+      description: `${generatedQuestions.length} questions ready for you`
+    });
   };
   
   const handleNextQuestion = (selectedOption: number) => {
@@ -110,6 +116,11 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
     setStartTime(new Date());
     setEndTime(null);
     setAppState(AppState.QUIZ);
+    
+    toast({
+      title: "Quiz Restarted",
+      description: "Good luck on your retake!"
+    });
   };
   
   const handleNewQuiz = () => {
@@ -120,6 +131,11 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
     setEndTime(null);
     setAppState(AppState.CREATE);
     navigate('/');
+    
+    toast({
+      title: "Create New Quiz",
+      description: "Choose a file or use AI to generate questions"
+    });
   };
   
   const getCorrectAnswersCount = () => {
@@ -150,7 +166,8 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
           questionsCount: questions.length,
           score,
           questions,
-          userAnswers
+          userAnswers,
+          attempts: 1
         };
         
         const updatedHistory = [newQuizEntry, ...existingHistory];

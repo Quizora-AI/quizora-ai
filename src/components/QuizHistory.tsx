@@ -97,8 +97,6 @@ export function QuizHistory() {
     // If the quiz has attempts, increment it
     if (!entry.attempts) {
       entry.attempts = 1;
-    } else {
-      entry.attempts += 1;
     }
     
     // Update the quiz in history
@@ -180,7 +178,16 @@ export function QuizHistory() {
       }
     }
     
+    // Clear any existing quizToRetake data to ensure a fresh quiz
+    localStorage.removeItem("quizToRetake");
+    
+    // Navigate to the home/create quiz page
     navigate('/');
+    
+    toast({
+      title: "Create New Quiz",
+      description: "Choose a file or use AI to generate questions"
+    });
   };
 
   return (
@@ -250,6 +257,12 @@ export function QuizHistory() {
             </motion.div>
           ) : (
             <div className="space-y-4">
+              <motion.div variants={itemVariants} className="flex justify-end mb-4">
+                <Button onClick={createNewQuiz}>
+                  Create New Quiz
+                </Button>
+              </motion.div>
+            
               {history.map((entry) => (
                 <motion.div
                   key={entry.id}
