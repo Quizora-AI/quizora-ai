@@ -7,7 +7,6 @@ import { Progress } from "@/components/ui/progress";
 import { BookOpen, BookPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Flashcard } from "./FlashcardsGenerator";
-import { useToast } from "@/hooks/use-toast";
 
 interface FlashcardsSetHistory {
   id: string;
@@ -22,7 +21,6 @@ interface FlashcardsSetHistory {
 export function FlashcardsHistory() {
   const [flashcardSets, setFlashcardSets] = useState<FlashcardsSetHistory[]>([]);
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
     // Load flashcards history
@@ -31,7 +29,6 @@ export function FlashcardsHistory() {
       try {
         const parsedSets = JSON.parse(savedFlashcards);
         setFlashcardSets(parsedSets);
-        console.log("Loaded flashcard sets:", parsedSets);
       } catch (error) {
         console.error("Error loading flashcard history:", error);
       }
@@ -49,30 +46,11 @@ export function FlashcardsHistory() {
     return date.toLocaleDateString();
   };
 
-  const handleReviewFlashcards = (setId: string) => {
+  const handleRetakeFlashcards = (setId: string) => {
     const selectedSet = flashcardSets.find(set => set.id === setId);
     if (selectedSet) {
-      try {
-        // Save the selected flashcard set to localStorage to be used by FlashcardsFlow
-        localStorage.setItem("currentFlashcardSet", JSON.stringify(selectedSet));
-        console.log("Selected flashcard set saved for review:", selectedSet);
-        
-        // Toast notification to confirm action
-        toast({
-          title: "Flashcards Ready",
-          description: `Loading ${selectedSet.cards.length} flashcards for review`,
-        });
-        
-        // Navigate to the flashcards page
-        navigate("/flashcards");
-      } catch (error) {
-        console.error("Error setting up flashcard review:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load flashcards for review",
-          variant: "destructive"
-        });
-      }
+      localStorage.setItem("flashcardsToReview", JSON.stringify(selectedSet));
+      navigate("/flashcards");
     }
   };
 
@@ -112,11 +90,11 @@ export function FlashcardsHistory() {
         >
           {flashcardSets.map((set) => (
             <motion.div key={set.id} variants={itemVariants}>
-              <Card className="overflow-hidden border border-border/40 bg-card/60 backdrop-blur-sm hover:shadow-md transition-all duration-200">
+              <Card>
                 <CardContent className="p-4">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div className="flex-1">
-                      <h3 className="font-medium text-lg">{set.title}</h3>
+                      <h3 className="font-medium">{set.title}</h3>
                       <div className="text-sm text-muted-foreground flex flex-wrap gap-2 items-center">
                         <span>{formatDate(set.created_at)}</span>
                         <span>•</span>
@@ -127,13 +105,13 @@ export function FlashcardsHistory() {
                           <span>Progress</span>
                           <span>{Math.round(calculateProgress(set.cards))}%</span>
                         </div>
-                        <Progress value={calculateProgress(set.cards)} className="h-1.5" />
+                        <Progress value={calculateProgress(set.cards)} className="h-1" />
                       </div>
                     </div>
                     <Button
-                      onClick={() => handleReviewFlashcards(set.id)}
-                      className="bg-primary/90 hover:bg-primary text-primary-foreground shadow-sm"
+                      variant="secondary"
                       size="sm"
+                      onClick={() => handleRetakeFlashcards(set.id)}
                     >
                       Review
                     </Button>

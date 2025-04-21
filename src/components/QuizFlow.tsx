@@ -51,19 +51,14 @@ export const QuizFlow = ({
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  console.log("QuizFlow rendered with questions:", questions?.length, "initialAppState:", initialAppState);
-
   useEffect(() => {
     setAppState(initialAppState);
-    console.log("QuizFlow: Setting initial app state to", initialAppState);
     
     // Check for saved progress
     const savedQuizState = localStorage.getItem("quizInProgress");
     if (savedQuizState && initialAppState === AppState.QUIZ) {
       try {
-        const parsedState = JSON.parse(savedQuizState);
-        console.log("QuizFlow: Found saved quiz state", parsedState);
-        const { currentIndex, userAnsList } = parsedState;
+        const { currentIndex, userAnsList } = JSON.parse(savedQuizState);
         if (currentIndex !== undefined) {
           setCurrentQuestionIndex(currentIndex);
         }
@@ -91,7 +86,6 @@ export const QuizFlow = ({
         timestamp: new Date().toISOString()
       };
       localStorage.setItem("quizInProgress", JSON.stringify(quizState));
-      console.log("QuizFlow: Saved quiz progress", quizState);
     }
     
     // Clean up saved state when quiz is completed
@@ -108,7 +102,6 @@ export const QuizFlow = ({
   const handleNextQuestion = (selectedOption: number) => {
     const newUserAnswers = [...userAnswers, selectedOption];
     setUserAnswers(newUserAnswers);
-    console.log("QuizFlow: User answered question", currentQuestionIndex, "with option", selectedOption);
 
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
@@ -117,14 +110,10 @@ export const QuizFlow = ({
       setAppState(AppState.RESULTS);
       // Remove in-progress state once completed
       localStorage.removeItem("quizInProgress");
-      console.log("QuizFlow: Quiz completed, showing results");
     }
   };
 
-  const handleViewAnalytics = () => {
-    setAppState(AppState.ANALYTICS);
-    console.log("QuizFlow: Showing analytics");
-  };
+  const handleViewAnalytics = () => setAppState(AppState.ANALYTICS);
 
   const handleRetakeQuiz = () => {
     setCurrentQuestionIndex(0);
@@ -132,7 +121,6 @@ export const QuizFlow = ({
     setStartTime(new Date());
     setEndTime(null);
     setAppState(AppState.QUIZ);
-    console.log("QuizFlow: Retaking quiz");
 
     toast({
       title: "Quiz Restarted",
@@ -143,7 +131,6 @@ export const QuizFlow = ({
   const handleNewQuiz = () => {
     // Clear quiz data
     localStorage.removeItem("quizInProgress");
-    console.log("QuizFlow: Starting new quiz");
     
     // Go back to create page
     onBackToCreate();
@@ -180,7 +167,6 @@ export const QuizFlow = ({
 
         const updatedHistory = [newQuizEntry, ...existingHistory];
         localStorage.setItem("quizHistory", JSON.stringify(updatedHistory));
-        console.log("QuizFlow: Saved quiz to history", newQuizEntry);
 
         toast({
           title: "Quiz saved",
@@ -204,12 +190,9 @@ export const QuizFlow = ({
   };
 
   if (!questions || questions.length === 0) {
-    console.log("QuizFlow: No questions available, redirecting to create");
     onBackToCreate();
     return null;
   }
-
-  console.log("QuizFlow: Rendering with appState:", appState);
 
   switch (appState) {
     case AppState.QUIZ:

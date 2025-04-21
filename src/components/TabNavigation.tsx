@@ -24,13 +24,10 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
     // Determine active tab from URL path
     const path = location.pathname;
     
-    if (path.includes('/history')) setActiveTab('history');
+    if (path === '/history') setActiveTab('history');
     else if (path === '/flashcards') setActiveTab('flashcards');
     else if (path === '/settings') setActiveTab('settings');
-    else if (path === '/quiz' || path === '/') setActiveTab('generate');
-    
-    // Log current path for debugging
-    console.log("Current path in TabNavigation:", path, "Active tab set to:", activeTab);
+    else setActiveTab('generate');
 
     // Check premium status from local storage
     const userSettings = localStorage.getItem("userSettings");
@@ -47,36 +44,33 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
   const handleTabChange = (value: string) => {
     if (isChangingTab) return;
     
+    console.log(`Changing tab to: ${value} from ${activeTab}`);
     setIsChangingTab(true);
     setActiveTab(value);
-    console.log("Tab changed to:", value);
 
     // Improve tab changing responsiveness
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       switch (value) {
         case 'history':
-          navigate('/history');
+          navigate('/history', { replace: false });
           break;
         case 'flashcards':
-          navigate('/flashcards');
+          navigate('/flashcards', { replace: false });
           break;
         case 'settings':
-          navigate('/settings');
-          break;
-        case 'generate':
-          navigate('/quiz');
+          navigate('/settings', { replace: false });
           break;
         default:
-          navigate('/quiz');
+          navigate('/', { replace: false });
           break;
       }
       
       // Use a proper delay to prevent rapid clicks
       setTimeout(() => setIsChangingTab(false), 300);
-    }, 0);
+    });
   };
 
-  const tabIconStyle = "h-4 w-4";
+  const tabIconStyle = "h-4 w-4 mr-2";
 
   return (
     <TooltipProvider>
@@ -92,22 +86,22 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
           value={activeTab}
           onValueChange={handleTabChange}
         >
-          <TabsList className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 grid grid-cols-4 max-w-md w-[90%] shadow-lg bg-background/80 backdrop-blur-md border border-border/30 rounded-full">
-            <TabsTrigger value="generate" className="rounded-l-full" disabled={isChangingTab}>
+          <TabsList className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 grid grid-cols-4 max-w-md w-[90%] shadow-lg border border-border/20 backdrop-blur-sm">
+            <TabsTrigger value="generate" className="flex items-center" disabled={isChangingTab}>
               <BrainCircuit className={tabIconStyle} />
-              <span className="ml-2 hidden sm:inline">Quiz</span>
+              <span className="hidden sm:inline">Quiz</span>
             </TabsTrigger>
-            <TabsTrigger value="flashcards" disabled={isChangingTab}>
+            <TabsTrigger value="flashcards" className="flex items-center" disabled={isChangingTab}>
               <Book className={tabIconStyle} />
-              <span className="ml-2 hidden sm:inline">Flashcards</span>
+              <span className="hidden sm:inline">Flashcards</span>
             </TabsTrigger>
-            <TabsTrigger value="history" disabled={isChangingTab}>
+            <TabsTrigger value="history" className="flex items-center" disabled={isChangingTab}>
               <History className={tabIconStyle} />
-              <span className="ml-2 hidden sm:inline">History</span>
+              <span className="hidden sm:inline">History</span>
             </TabsTrigger>
-            <TabsTrigger value="settings" className="rounded-r-full" disabled={isChangingTab}>
+            <TabsTrigger value="settings" className="flex items-center" disabled={isChangingTab}>
               <Settings className={tabIconStyle} />
-              <span className="ml-2 hidden sm:inline">Settings</span>
+              <span className="hidden sm:inline">Settings</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>
