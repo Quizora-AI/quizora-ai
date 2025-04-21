@@ -1,15 +1,13 @@
 
 // This file integrates shadcn's toast functionality
-import { Toast, ToastActionElement, ToastProps } from "@/components/ui/toast"
-import {
-  useToast as useToastOriginal,
-} from "@radix-ui/react-toast"
+import { Toast as ToastPrimitive, ToastActionElement, ToastProps } from "@/components/ui/toast"
 import * as React from "react"
 
 const TOAST_LIMIT = 5
 const TOAST_REMOVE_DELAY = 5000
 
-type ToasterToast = Toast & {
+// Define the ToasterToast type without circular reference
+interface ToasterToastProps extends ToastProps {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
@@ -35,11 +33,11 @@ type ActionType = typeof actionTypes
 type Action =
   | {
       type: ActionType["ADD_TOAST"]
-      toast: Omit<ToasterToast, "id">
+      toast: Omit<ToasterToastProps, "id">
     }
   | {
       type: ActionType["UPDATE_TOAST"]
-      toast: Partial<ToasterToast> & { id: string }
+      toast: Partial<ToasterToastProps> & { id: string }
     }
   | {
       type: ActionType["DISMISS_TOAST"]
@@ -51,7 +49,7 @@ type Action =
     }
 
 interface State {
-  toasts: ToasterToast[]
+  toasts: ToasterToastProps[]
 }
 
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
@@ -73,7 +71,7 @@ const addToRemoveQueue = (toastId: string) => {
 }
 
 // Check if a toast with the same title and description already exists
-const hasToastDuplicate = (newToast: Omit<ToasterToast, "id">, toasts: ToasterToast[]): boolean => {
+const hasToastDuplicate = (newToast: Omit<ToasterToastProps, "id">, toasts: ToasterToastProps[]): boolean => {
   return toasts.some(
     toast => 
       toast.title === newToast.title && 
@@ -155,9 +153,10 @@ function dispatch(action: Action) {
   })
 }
 
-type Toast = Omit<ToasterToast, "id">
+// Define toast function with proper types
+type ToastProps = Omit<ToasterToastProps, "id">
 
-function toast({ ...props }: Toast) {
+function toast({ ...props }: ToastProps) {
   // Check for duplicates before adding
   if (hasToastDuplicate(props, memoryState.toasts)) {
     return {
@@ -169,7 +168,7 @@ function toast({ ...props }: Toast) {
 
   const id = genId()
 
-  const update = (props: Toast) =>
+  const update = (props: ToastProps) =>
     dispatch({
       type: actionTypes.UPDATE_TOAST,
       toast: { ...props, id },
