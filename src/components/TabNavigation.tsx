@@ -90,18 +90,19 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
     if (userSettings) {
       const settings = JSON.parse(userSettings);
       if (!settings.isPremium && historyData.length >= 2) {
-        navigate('/settings?tab=premium');
         toast({
           title: "Free Quiz Limit Reached",
           description: "Upgrade to premium for unlimited quizzes!"
         });
+        navigate('/settings?tab=premium');
         return;
       }
     }
     
     // Clear any existing data for a fresh quiz
     localStorage.removeItem("quizToRetake");
-    window.location.href = "/";
+    // Don't use window.location.href as it causes a full page refresh
+    navigate("/");
     setActiveTab("generate");
   };
 
@@ -137,20 +138,22 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
             <Button 
               variant="outline" 
               size="sm"
-              className="gap-2"
+              className="flex gap-2 items-center border-border hover:bg-muted"
               onClick={handleGoBack}
             >
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Back</span>
             </Button>
-            <Button 
-              variant="default"
-              size="sm"
-              className="gap-2"
-              onClick={handleCreateNewQuiz}
-            >
-              Create New Quiz
-            </Button>
+            {activeTab !== 'history' && (
+              <Button 
+                variant="default"
+                size="sm"
+                className="gap-2"
+                onClick={handleCreateNewQuiz}
+              >
+                Create New Quiz
+              </Button>
+            )}
           </div>
           <TabsList className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 grid grid-cols-4 max-w-md w-[90%] shadow-lg border border-border/20">
             <TabsTrigger value="generate" className="flex items-center" disabled={isChangingTab}>

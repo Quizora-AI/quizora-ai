@@ -10,12 +10,14 @@ import { QuizFlow, AppState as QuizAppState } from "@/components/QuizFlow";
 import { LegalContentWrapper } from "@/components/LegalContentWrapper";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
   const [appState, setAppState] = useState<number>(0);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [quizTitle, setQuizTitle] = useState<string>("Medical Quiz");
   const [quizInProgress, setQuizInProgress] = useState<boolean>(false);
+  const [showQuizResumeDialog, setShowQuizResumeDialog] = useState<boolean>(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -23,19 +25,14 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
   useEffect(() => {
     // Check for saved quiz in progress
     const savedQuizState = localStorage.getItem("quizInProgress");
-    if (savedQuizState) {
+    if (savedQuizState && location.pathname === '/') {
       try {
-        const { questions, title, currentIndex, userAnswers } = JSON.parse(savedQuizState);
+        const { questions, title } = JSON.parse(savedQuizState);
         if (questions && questions.length > 0) {
           setQuestions(questions);
           if (title) setQuizTitle(title);
-          setAppState(1);
-          setQuizInProgress(true);
-          
-          toast({
-            title: "Resume Quiz",
-            description: "You can continue your quiz from where you left off"
-          });
+          // Ask user if they want to resume instead of auto-resuming
+          setShowQuizResumeDialog(true);
         }
       } catch (error) {
         console.error("Error loading saved quiz:", error);
@@ -66,6 +63,26 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
     }
     // eslint-disable-next-line
   }, []);
+
+  const handleResumeQuiz = () => {
+    setAppState(1);
+    setQuizInProgress(true);
+    setShowQuizResumeDialog(false);
+    toast({
+      title: "Quiz Resumed",
+      description: "You can continue your quiz from where you left off"
+    });
+  };
+  
+  const handleDiscardQuiz = () => {
+    localStorage.removeItem("quizInProgress");
+    setQuestions([]);
+    setShowQuizResumeDialog(false);
+    toast({
+      title: "Quiz Discarded",
+      description: "Starting with a fresh quiz"
+    });
+  };
 
   const handleQuizGenerated = (generatedQuestions: Question[]) => {
     setQuestions(generatedQuestions);
@@ -122,7 +139,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
             <Button 
               variant="outline" 
               size="sm" 
-              className="gap-2" 
+              className="flex items-center gap-2 border-border hover:bg-muted" 
               onClick={() => navigate("/")}
             >
               <ArrowLeft className="h-4 w-4" /> Back to home
@@ -140,7 +157,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
             <Button 
               variant="outline" 
               size="sm" 
-              className="gap-2" 
+              className="flex items-center gap-2 border-border hover:bg-muted" 
               onClick={handleExitQuiz}
             >
               <ArrowLeft className="h-4 w-4" /> Exit quiz
@@ -189,6 +206,38 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
           {renderContent()}
         </AnimatePresence>
       </main>
+
+      {/* Quiz Resume Dialog */}
+      <Dialog open={showQuizResumeDialog} onOpenChange={setShowQuizResumeDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Resume Quiz?</DialogTitle>
+            <DialogDescription>
+              You have an unfinished quiz. Would you like to continue where you left off?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col space-y-4 my-4">
+            <p className="text-center text-sm text-muted-foreground">
+              {quizTitle}
+            </p>
+          </div>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleDiscardQuiz}
+              className="sm:flex-1"
+            >
+              Start new quiz
+            </Button>
+            <Button 
+              onClick={handleResumeQuiz}
+              className="sm:flex-1"
+            >
+              Resume quiz
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -19,6 +19,7 @@ interface QuizHistoryEntry {
   questions: Question[];
   userAnswers?: number[];
   attempts?: number;
+  completed?: boolean;
 }
 
 export function QuizHistory() {
@@ -192,6 +193,8 @@ export function QuizHistory() {
     
     // Clear any existing quizToRetake data to ensure a fresh quiz
     localStorage.removeItem("quizToRetake");
+    // Clear any in progress quiz
+    localStorage.removeItem("quizInProgress");
     
     // Navigate to the home/create quiz page
     navigate('/');
@@ -232,7 +235,7 @@ export function QuizHistory() {
         </CardHeader>
         
         <CardContent>
-          {showFreeWarning && (
+          {showFreeWarning && !showPremiumDialog && (
             <motion.div
               variants={itemVariants}
               className="mb-4 p-4 bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 rounded-lg text-center"
@@ -299,6 +302,11 @@ export function QuizHistory() {
                             {entry.attempts} attempts
                           </span>
                         )}
+                        {!entry.completed && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">
+                            Incomplete
+                          </span>
+                        )}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {format(new Date(entry.date), "MMM d, yyyy 'at' h:mm a")} • 
@@ -335,7 +343,10 @@ export function QuizHistory() {
       </Card>
 
       {/* Premium Upgrade Dialog */}
-      <Dialog open={showPremiumDialog} onOpenChange={setShowPremiumDialog}>
+      <Dialog open={showPremiumDialog} onOpenChange={(open) => {
+        setShowPremiumDialog(open);
+        if (!open) setShowFreeWarning(true); // Show the warning banner when dialog closes
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Upgrade to Premium</DialogTitle>
