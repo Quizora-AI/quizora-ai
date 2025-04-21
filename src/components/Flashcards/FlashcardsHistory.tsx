@@ -30,7 +30,8 @@ export function FlashcardsHistory() {
   // Helper function to convert Json to Flashcard[]
   const jsonToFlashcards = (json: Json): Flashcard[] => {
     if (Array.isArray(json)) {
-      return json as Flashcard[];
+      // Properly convert from Json to Flashcards with explicit type casting
+      return (json as unknown) as Flashcard[];
     }
     return [];
   };

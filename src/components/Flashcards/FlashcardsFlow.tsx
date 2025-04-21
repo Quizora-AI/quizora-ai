@@ -32,13 +32,16 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
 
   // Helper function to convert Flashcard[] to Json
   const flashcardsToJson = (cards: Flashcard[]): Json => {
-    return cards as unknown as Json;
+    // First convert to a plain object/array through JSON serialization
+    // Then assign as Json type
+    return JSON.parse(JSON.stringify(cards)) as Json;
   };
 
   // Helper function to convert Json to Flashcard[]
   const jsonToFlashcards = (json: Json): Flashcard[] => {
     if (Array.isArray(json)) {
-      return json as Flashcard[];
+      // First cast to unknown, then to the target type
+      return (json as unknown) as Flashcard[];
     }
     return [];
   };
