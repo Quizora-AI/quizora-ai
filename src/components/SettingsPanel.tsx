@@ -1,42 +1,20 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Settings, 
-  User, 
-  Info, 
-  Globe, 
-  Book, 
-  Check, 
-  Crown, 
-  Lock,
-  ChevronDown,
-  CreditCard,
-  CheckCircle,
-  BarChart
-} from "lucide-react";
+import { Settings, Book, Crown, Info, BarChart } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { CardFooter } from "@/components/ui/card";
+import { ChevronDown } from "lucide-react";
 
 interface UserSettings {
-  name: string;
-  email: string;
-  language: string;
   course: string;
   autoSave: boolean;
   theme: "light" | "dark" | "system";
@@ -48,39 +26,12 @@ interface UserSettings {
   expiryDate?: string;
 }
 
-const languages = [
-  { value: "en", label: "English", flag: "🇺🇸" },
-  { value: "hi", label: "Hindi", flag: "🇮🇳" },
-  { value: "gu", label: "Gujarati", flag: "🇮🇳" },
-  { value: "bn", label: "Bengali", flag: "🇧🇩" },
-  { value: "ta", label: "Tamil", flag: "🇮🇳" },
-  { value: "te", label: "Telugu", flag: "🇮🇳" },
-  { value: "ml", label: "Malayalam", flag: "🇮🇳" },
-  { value: "kn", label: "Kannada", flag: "🇮🇳" },
-  { value: "mr", label: "Marathi", flag: "🇮🇳" },
-  { value: "pa", label: "Punjabi", flag: "🇮🇳" },
-  { value: "ur", label: "Urdu", flag: "🇮🇳" },
-  { value: "es", label: "Spanish", flag: "🇪🇸" },
-  { value: "fr", label: "French", flag: "🇫🇷" },
-  { value: "de", label: "German", flag: "🇩🇪" },
-  { value: "it", label: "Italian", flag: "🇮🇹" },
-  { value: "pt", label: "Portuguese", flag: "🇵🇹" },
-  { value: "ru", label: "Russian", flag: "🇷🇺" },
-  { value: "ja", label: "Japanese", flag: "🇯🇵" },
-  { value: "ko", label: "Korean", flag: "🇰🇷" },
-  { value: "zh", label: "Chinese", flag: "🇨🇳" },
-  { value: "ar", label: "Arabic", flag: "🇸🇦" },
-];
-
 export function SettingsPanel() {
   const [searchParams] = useSearchParams();
-  const defaultTab = searchParams.get("tab") || "profile";
+  const defaultTab = searchParams.get("tab") || "preferences";
   
   const [settings, setSettings] = useState<UserSettings>({
-    name: "",
-    email: "",
-    language: "en",
-    course: "medical",
+    course: "",
     autoSave: true,
     theme: "system",
     difficulty: "medium",
@@ -88,7 +39,6 @@ export function SettingsPanel() {
   });
   
   const [activeTab, setActiveTab] = useState(defaultTab);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [quizHistory, setQuizHistory] = useState<any[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -111,15 +61,6 @@ export function SettingsPanel() {
       const historyStr = localStorage.getItem("quizHistory");
       if (historyStr) {
         setQuizHistory(JSON.parse(historyStr));
-      }
-      
-      const userEmail = localStorage.getItem("userEmail");
-      setIsLoggedIn(!!userEmail);
-      if (userEmail) {
-        setSettings(prev => ({
-          ...prev,
-          email: userEmail
-        }));
       }
     } catch (error) {
       console.error("Failed to load settings:", error);
@@ -145,35 +86,39 @@ export function SettingsPanel() {
     }
   };
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!settings.email) {
-      toast({
-        title: "Login failed",
-        description: "Email is required",
-        variant: "destructive"
-      });
-      return;
+  const updateSetting = (key: keyof UserSettings, value: any) => {
+    setSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        when: "beforeChildren",
+        staggerChildren: 0.1
+      }
     }
-    
-    localStorage.setItem("userEmail", settings.email);
-    setIsLoggedIn(true);
-    
-    toast({
-      title: "Login successful",
-      description: `Welcome back, ${settings.name || settings.email}!`
-    });
   };
   
-  const handleLogout = () => {
-    localStorage.removeItem("userEmail");
-    setIsLoggedIn(false);
-    
-    toast({
-      title: "Logged out",
-      description: "You have been logged out successfully"
-    });
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { 
+        type: "spring",
+        stiffness: 300,
+        damping: 24
+      }
+    }
+  };
+
+  const handleGoToPremium = () => {
+    setActiveTab("premium");
   };
   
   const activatePremium = (tier: string) => {
@@ -206,10 +151,6 @@ export function SettingsPanel() {
             title: "Premium activated",
             description: `Thank you for subscribing to Quizora AI Premium!`
           });
-        },
-        prefill: {
-          email: settings.email,
-          name: settings.name
         },
         theme: {
           color: "#6366F1"
@@ -250,49 +191,6 @@ export function SettingsPanel() {
     });
   };
   
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setSettings(prev => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value
-    }));
-  };
-  
-  const updateSetting = (key: keyof UserSettings, value: any) => {
-    setSettings(prev => ({
-      ...prev,
-      [key]: value
-    }));
-  };
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        when: "beforeChildren",
-        staggerChildren: 0.1
-      }
-    }
-  };
-  
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { 
-        type: "spring",
-        stiffness: 300,
-        damping: 24
-      }
-    }
-  };
-
-  const handleGoToPremium = () => {
-    setActiveTab("premium");
-  };
-  
   return (
     <motion.div 
       className="w-full max-w-4xl mx-auto space-y-6"
@@ -324,11 +222,7 @@ export function SettingsPanel() {
         
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-5 mb-6">
-              <TabsTrigger value="profile" className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                <span className="hidden sm:inline">Profile</span>
-              </TabsTrigger>
+            <TabsList className="grid grid-cols-4 mb-6">
               <TabsTrigger value="preferences" className="flex items-center gap-2">
                 <Book className="h-4 w-4" />
                 <span className="hidden sm:inline">Preferences</span>
@@ -347,222 +241,23 @@ export function SettingsPanel() {
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="profile">
-              <motion.div 
-                variants={containerVariants}
-                className="space-y-6"
-              >
-                {isLoggedIn ? (
-                  <>
-                    <motion.div variants={itemVariants} className="flex items-center justify-between p-4 bg-primary/5 rounded-lg">
-                      <div>
-                        <h3 className="font-medium">Logged in as</h3>
-                        <p className="text-sm text-muted-foreground">{settings.email}</p>
-                      </div>
-                      <Button onClick={handleLogout} variant="outline" size="sm">Log Out</Button>
-                    </motion.div>
-                    
-                    <motion.div variants={itemVariants} className="space-y-2">
-                      <Label htmlFor="name">Name</Label>
-                      <Input 
-                        id="name" 
-                        name="name" 
-                        value={settings.name} 
-                        onChange={handleChange}
-                        placeholder="Your name"
-                      />
-                    </motion.div>
-                    
-                    <motion.div variants={itemVariants} className="pt-4">
-                      <Button onClick={saveSettings}>Save Profile</Button>
-                    </motion.div>
-                  </>
-                ) : (
-                  <form onSubmit={handleLogin}>
-                    <motion.div variants={itemVariants} className="space-y-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input 
-                          id="email" 
-                          name="email" 
-                          value={settings.email} 
-                          onChange={handleChange}
-                          placeholder="your.email@example.com"
-                          type="email"
-                          required
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
-                        <Input 
-                          id="password" 
-                          name="password" 
-                          type="password"
-                          placeholder="••••••••"
-                          required
-                        />
-                      </div>
-                      
-                      <div className="space-y-4">
-                        <Button type="submit" className="w-full">Sign In</Button>
-                        <div className="text-center">
-                          <span className="text-sm text-muted-foreground">Don't have an account? </span>
-                          <Button variant="link" className="p-0 h-auto" onClick={() => setActiveTab("register")}>Register</Button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  </form>
-                )}
-              </motion.div>
-            </TabsContent>
-            
-            <TabsContent value="register">
-              <motion.div 
-                variants={containerVariants}
-                className="space-y-6"
-              >
-                <motion.div variants={itemVariants} className="text-center mb-6">
-                  <h2 className="text-xl font-bold">Create an Account</h2>
-                  <p className="text-sm text-muted-foreground">Join Quizora AI to save your quizzes and track progress</p>
-                </motion.div>
-                
-                <form onSubmit={(e) => {
-                  e.preventDefault();
-                  localStorage.setItem("userEmail", settings.email);
-                  setIsLoggedIn(true);
-                  toast({
-                    title: "Account created",
-                    description: "Your account has been created successfully!"
-                  });
-                }}>
-                  <motion.div variants={itemVariants} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="reg-name">Name</Label>
-                      <Input 
-                        id="reg-name" 
-                        name="name" 
-                        value={settings.name} 
-                        onChange={handleChange}
-                        placeholder="Your name"
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="reg-email">Email</Label>
-                      <Input 
-                        id="reg-email" 
-                        name="email" 
-                        value={settings.email} 
-                        onChange={handleChange}
-                        placeholder="your.email@example.com"
-                        type="email"
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="reg-password">Password</Label>
-                      <Input 
-                        id="reg-password" 
-                        name="password" 
-                        type="password"
-                        placeholder="••••••••"
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="reg-confirm-password">Confirm Password</Label>
-                      <Input 
-                        id="reg-confirm-password" 
-                        name="confirmPassword" 
-                        type="password"
-                        placeholder="••••••••"
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-4 pt-2">
-                      <Button type="submit" className="w-full">Create Account</Button>
-                      <div className="text-center">
-                        <span className="text-sm text-muted-foreground">Already have an account? </span>
-                        <Button variant="link" className="p-0 h-auto" onClick={() => setActiveTab("profile")}>Sign In</Button>
-                      </div>
-                    </div>
-                  </motion.div>
-                </form>
-              </motion.div>
-            </TabsContent>
-            
             <TabsContent value="preferences">
               <motion.div 
                 variants={containerVariants}
                 className="space-y-6"
               >
                 <motion.div variants={itemVariants}>
-                  <Label className="block mb-3">Language</Label>
-                  <Select 
-                    value={settings.language}
-                    onValueChange={(value) => updateSetting('language', value)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {languages.map((language) => (
-                        <SelectItem key={language.value} value={language.value}>
-                          <div className="flex items-center">
-                            <span className="mr-2">{language.flag}</span>
-                            {language.label}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </motion.div>
-                
-                <motion.div variants={itemVariants}>
-                  <Label className="block mb-3">Course</Label>
-                  <RadioGroup 
+                  <Label htmlFor="course" className="block mb-3">Course</Label>
+                  <Input 
+                    id="course" 
                     value={settings.course}
-                    onValueChange={(value) => updateSetting('course', value)}
-                    className="grid grid-cols-2 gap-2 sm:grid-cols-3"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="medical" id="medical" />
-                      <Label htmlFor="medical">Medical</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="engineering" id="engineering" />
-                      <Label htmlFor="engineering">Engineering</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="science" id="science" />
-                      <Label htmlFor="science">Science</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="arts" id="arts" />
-                      <Label htmlFor="arts">Arts</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="commerce" id="commerce" />
-                      <Label htmlFor="commerce">Commerce</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="upsc" id="upsc" />
-                      <Label htmlFor="upsc">UPSC</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="school" id="school" />
-                      <Label htmlFor="school">K-12</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="competitive" id="competitive" />
-                      <Label htmlFor="competitive">Competitive</Label>
-                    </div>
-                  </RadioGroup>
+                    onChange={(e) => updateSetting('course', e.target.value)}
+                    placeholder="Enter your course or subject (e.g. Chemistry, History, Programming)"
+                    className="w-full"
+                  />
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Enter the course or subject you'd like to study
+                  </p>
                 </motion.div>
                 
                 <motion.div variants={itemVariants}>
@@ -623,10 +318,7 @@ export function SettingsPanel() {
                 </motion.div>
                 
                 {settings.isPremium ? (
-                  <motion.div 
-                    variants={itemVariants}
-                    className="bg-gradient-to-r from-amber-500/20 to-orange-600/20 p-6 rounded-lg border border-amber-500/30"
-                  >
+                  <motion.div variants={itemVariants} className="bg-gradient-to-r from-amber-500/20 to-orange-600/20 p-6 rounded-lg border border-amber-500/30">
                     <div className="flex items-center gap-3">
                       <div className="bg-amber-500/20 p-2 rounded-full">
                         <CheckCircle className="h-6 w-6 text-amber-500" />
@@ -662,23 +354,23 @@ export function SettingsPanel() {
                       <CardContent>
                         <ul className="space-y-2">
                           <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
+                            <span>✓</span>
                             <span>Unlimited quizzes</span>
                           </li>
                           <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
+                            <span>✓</span>
                             <span>Up to 50 questions per quiz</span>
                           </li>
                           <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
+                            <span>✓</span>
                             <span>Custom time per question</span>
                           </li>
                           <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
+                            <span>✓</span>
                             <span>Detailed analytics</span>
                           </li>
                           <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
+                            <span>✓</span>
                             <span>Quizora AI Assistant</span>
                           </li>
                         </ul>
@@ -688,7 +380,6 @@ export function SettingsPanel() {
                           onClick={() => activatePremium('monthly')}
                           className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
                         >
-                          <CreditCard className="mr-2 h-4 w-4" />
                           Subscribe Monthly
                         </Button>
                       </CardFooter>
@@ -708,19 +399,19 @@ export function SettingsPanel() {
                       <CardContent>
                         <ul className="space-y-2">
                           <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
+                            <span>✓</span>
                             <span>All monthly features</span>
                           </li>
                           <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
+                            <span>✓</span>
                             <span>50% discount vs. monthly</span>
                           </li>
                           <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
+                            <span>✓</span>
                             <span>Priority support</span>
                           </li>
                           <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
+                            <span>✓</span>
                             <span>Early access to new features</span>
                           </li>
                         </ul>
@@ -731,7 +422,6 @@ export function SettingsPanel() {
                           className="w-full"
                           variant="outline"
                         >
-                          <CreditCard className="mr-2 h-4 w-4" />
                           Subscribe Yearly
                         </Button>
                       </CardFooter>
@@ -802,7 +492,7 @@ export function SettingsPanel() {
                             <CardContent className="pt-6">
                               <div className="text-center">
                                 <div className="text-3xl font-bold">
-                                  {quizHistory.reduce((avg, quiz) => avg + quiz.score, 0) / quizHistory.length || 0}%
+                                  {Math.round(quizHistory.reduce((avg, quiz) => avg + quiz.score, 0) / quizHistory.length || 0)}%
                                 </div>
                                 <p className="text-sm text-muted-foreground">Average Score</p>
                               </div>
@@ -829,15 +519,15 @@ export function SettingsPanel() {
                             <CardContent>
                               <ul className="space-y-2">
                                 <li className="flex items-start gap-2">
-                                  <Check className="h-4 w-4 text-green-500 mt-0.5" />
+                                  <span>✓</span>
                                   <span>Continue practicing with different topics to broaden your knowledge.</span>
                                 </li>
                                 <li className="flex items-start gap-2">
-                                  <Check className="h-4 w-4 text-green-500 mt-0.5" />
+                                  <span>✓</span>
                                   <span>Focus on reviewing questions you got wrong to strengthen weak areas.</span>
                                 </li>
                                 <li className="flex items-start gap-2">
-                                  <Check className="h-4 w-4 text-green-500 mt-0.5" />
+                                  <span>✓</span>
                                   <span>Try gradually increasing the difficulty level as you improve.</span>
                                 </li>
                               </ul>

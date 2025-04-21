@@ -33,7 +33,13 @@ export function QuizHistory() {
       try {
         const historyString = localStorage.getItem("quizHistory");
         const historyData = historyString ? JSON.parse(historyString) : [];
-        setHistory(historyData);
+        
+        // Sort the history by date, newest first
+        const sortedHistory = [...historyData].sort((a, b) => 
+          new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+        
+        setHistory(sortedHistory);
         
         // Check if user has premium subscription
         const userSettings = localStorage.getItem("userSettings");

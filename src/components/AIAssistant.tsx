@@ -21,7 +21,7 @@ export function AIAssistant() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
-  const [userName, setUserName] = useState("");
+  const [course, setCourse] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -40,8 +40,8 @@ export function AIAssistant() {
     if (userSettings) {
       const settings = JSON.parse(userSettings);
       setIsPremium(settings.isPremium === true);
-      if (settings.name) {
-        setUserName(settings.name);
+      if (settings.course) {
+        setCourse(settings.course);
       }
     }
   }, []);
@@ -74,7 +74,7 @@ export function AIAssistant() {
     try {
       // Call the Supabase function to get AI response
       const { data, error } = await supabase.functions.invoke('ai-assistant', {
-        body: { message: userMessage.content, userName }
+        body: { message: userMessage.content, course }
       });
 
       if (error) throw new Error(error.message);
@@ -137,7 +137,7 @@ export function AIAssistant() {
                 Quizora Assistant
               </CardTitle>
               <CardDescription>
-                Ask questions about medical concepts and get personalized guidance
+                Ask questions about any subject and get personalized learning assistance
               </CardDescription>
             </div>
           </motion.div>
