@@ -1,13 +1,15 @@
-
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { MessageSquare, SendHorizonal, User, BrainCircuit, ArrowDown, Lock, Crown } from "lucide-react";
+import { MessageSquare, SendHorizonal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { AssistantPremiumOverlay } from "./AssistantPremiumOverlay";
+import { AIAssistantChat } from "./AIAssistantChat";
+import { AssistantEmptyState } from "./AssistantEmptyState";
 
 interface Message {
   id: string;
@@ -35,7 +37,6 @@ export function AIAssistant() {
   }, [messages]);
 
   useEffect(() => {
-    // Check if user has premium subscription
     const fetchUserDetails = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -63,7 +64,6 @@ export function AIAssistant() {
     e.preventDefault();
     if (!input.trim()) return;
 
-    // If not premium, show message and redirect
     if (!isPremium) {
       navigate('/settings?tab=premium');
       toast({
@@ -85,7 +85,6 @@ export function AIAssistant() {
     setIsLoading(true);
 
     try {
-      // Call the Supabase function to get AI response
       const { data, error } = await supabase.functions.invoke('ai-assistant', {
         body: { message: userMessage.content, userName }
       });
@@ -112,6 +111,10 @@ export function AIAssistant() {
     }
   };
 
+  const handleUpgradeToPremium = () => {
+    navigate('/settings?tab=premium');
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -121,10 +124,6 @@ export function AIAssistant() {
         staggerChildren: 0.1,
       },
     },
-  };
-
-  const handleUpgradeToPremium = () => {
-    navigate('/settings?tab=premium');
   };
 
   return (
@@ -164,12 +163,11 @@ export function AIAssistant() {
               transition={{ delay: 0.2 }}
               className="relative"
             >
-              {/* Blurred preview of the assistant interface */}
               <div className="filter blur-sm pointer-events-none">
                 <div className="space-y-4 mb-4 h-[40vh] overflow-hidden">
                   <div className="flex gap-3">
                     <div className="bg-primary p-2 rounded-full">
-                      <BrainCircuit className="h-4 w-4 text-primary-foreground" />
+                      <MessageSquare className="h-4 w-4 text-primary-foreground" />
                     </div>
                     <div className="rounded-lg p-3 max-w-[80%] bg-muted text-muted-foreground">
                       Hello! I'm your Quizora Assistant. How can I help you with your studies today?
@@ -178,7 +176,7 @@ export function AIAssistant() {
                   
                   <div className="flex gap-3 flex-row-reverse">
                     <div className="bg-accent p-2 rounded-full">
-                      <User className="h-4 w-4" />
+                      <MessageSquare className="h-4 w-4" />
                     </div>
                     <div className="rounded-lg p-3 max-w-[80%] bg-primary text-primary-foreground">
                       Can you explain this topic to me?
@@ -187,7 +185,7 @@ export function AIAssistant() {
                   
                   <div className="flex gap-3">
                     <div className="bg-primary p-2 rounded-full">
-                      <BrainCircuit className="h-4 w-4 text-primary-foreground" />
+                      <MessageSquare className="h-4 w-4 text-primary-foreground" />
                     </div>
                     <div className="rounded-lg p-3 max-w-[80%] bg-muted text-muted-foreground">
                       I'd be happy to explain that topic to you in detail...
@@ -195,88 +193,14 @@ export function AIAssistant() {
                   </div>
                 </div>
               </div>
-              
-              {/* Premium overlay */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
-                <div className="bg-amber-500/10 p-4 rounded-full mb-4">
-                  <Lock className="h-8 w-8 text-amber-500" />
-                </div>
-                <h3 className="text-xl font-medium mb-2">Premium Feature</h3>
-                <p className="text-center text-muted-foreground mb-6 max-w-md">
-                  Quizora Assistant is available exclusively for premium subscribers. Upgrade now to get personalized help with your studies!
-                </p>
-                <Button onClick={handleUpgradeToPremium} className="bg-gradient-to-r from-amber-500 to-orange-600">
-                  <Crown className="mr-2 h-4 w-4" />
-                  Upgrade to Premium
-                </Button>
-              </div>
+              <AssistantPremiumOverlay onUpgrade={handleUpgradeToPremium} />
             </motion.div>
           ) : (
-            <div className="space-y-4 mb-4 max-h-[50vh] overflow-y-auto p-1">
-              {messages.length === 0 ? (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="text-center py-8 text-muted-foreground"
-                >
-                  <BrainCircuit className="mx-auto h-12 w-12 mb-4 opacity-40" />
-                  <h3 className="text-xl font-medium mb-2">No messages yet</h3>
-                  <p>Start a conversation with your Quizora Assistant</p>
-                  <div className="mt-4 flex justify-center">
-                    <motion.div
-                      animate={{
-                        y: [0, 5, 0],
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                      }}
-                    >
-                      <ArrowDown className="h-5 w-5 opacity-60" />
-                    </motion.div>
-                  </div>
-                </motion.div>
-              ) : (
-                <AnimatePresence>
-                  {messages.map((message) => (
-                    <motion.div
-                      key={message.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className={`flex gap-3 ${
-                        message.role === "assistant" ? "" : "flex-row-reverse"
-                      }`}
-                    >
-                      <div
-                        className={`rounded-full p-2 ${
-                          message.role === "assistant"
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-accent text-accent-foreground"
-                        }`}
-                      >
-                        {message.role === "assistant" ? (
-                          <BrainCircuit className="h-4 w-4" />
-                        ) : (
-                          <User className="h-4 w-4" />
-                        )}
-                      </div>
-                      <div
-                        className={`rounded-lg p-3 max-w-[80%] ${
-                          message.role === "assistant"
-                            ? "bg-muted text-muted-foreground"
-                            : "bg-primary text-primary-foreground"
-                        }`}
-                      >
-                        {message.content}
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
+            messages.length === 0 ? (
+              <AssistantEmptyState />
+            ) : (
+              <AIAssistantChat messages={messages} />
+            )
           )}
         </CardContent>
 
