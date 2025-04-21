@@ -5,6 +5,7 @@ import { Flashcard, FlashcardsGenerator } from "./FlashcardsGenerator";
 import { FlashcardsViewer } from "./FlashcardsViewer";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Json } from "@/integrations/supabase/types";
 
 export enum FlashcardsState {
   CREATE,
@@ -81,9 +82,12 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
     const { data: { user } } = await supabase.auth.getUser();
     if (user && setId) {
       try {
+        // Convert Flashcard[] to Json type before saving to Supabase
+        const cardsJson = updatedFlashcards as unknown as Json;
+        
         await supabase
           .from("flashcard_sets")
-          .update({ cards: updatedFlashcards })
+          .update({ cards: cardsJson })
           .eq("id", setId)
           .eq("user_id", user.id);
       } catch (error) {

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,6 +7,8 @@ import { Flashcard } from "./FlashcardsGenerator";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { BookOpen, ArrowDown, ArrowUp } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 interface FlashcardsViewerProps {
   flashcards: Flashcard[];

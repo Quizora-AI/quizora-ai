@@ -12,6 +12,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Book } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Json } from "@/integrations/supabase/types";
 
 export interface Flashcard {
   id: string;
@@ -129,18 +130,22 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         try {
+          // Convert Flashcard[] to Json type before saving to Supabase
+          const cardsJson = flashcards as unknown as Json;
+          
           const { data: inserted, error } = await supabase
             .from("flashcard_sets")
-            .insert([{
+            .insert({
               id: flashcardsSet.id,
               title: flashcardsSet.title,
               course: flashcardsSet.course,
               subject: flashcardsSet.subject,
               topic: flashcardsSet.topic,
-              cards: flashcardsSet.cards,
+              cards: cardsJson,
               user_id: user.id,
               created_at: new Date().toISOString()
-            }]);
+            });
+            
           if (error) {
             throw new Error(error.message);
           }
