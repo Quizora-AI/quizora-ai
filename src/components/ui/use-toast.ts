@@ -1,5 +1,16 @@
 
 import { useToast as useInternalToast, toast as internalToast, type ToastParams } from "@/hooks/use-toast";
+import { isString } from "lodash";
+
+/**
+ * Helper function to safely check if a ReactNode contains a specific substring
+ */
+const reactNodeContainsText = (node: React.ReactNode, text: string): boolean => {
+  if (typeof node === 'string') {
+    return node.toLowerCase().includes(text.toLowerCase());
+  }
+  return false;
+};
 
 // Re-export with extended functionality
 export function useToast() {
@@ -12,9 +23,9 @@ export function useToast() {
       // Check if it's a premium-related toast and user is premium
       try {
         if (
-          (typeof props.title === 'string' && props.title.toLowerCase().includes("free") || 
-           typeof props.description === 'string' && props.description.toLowerCase().includes("free limit") ||
-           typeof props.description === 'string' && props.description.toLowerCase().includes("upgrade to premium")) && 
+          (reactNodeContainsText(props.title, "free") || 
+           reactNodeContainsText(props.description, "free limit") ||
+           reactNodeContainsText(props.description, "upgrade to premium")) && 
           checkIfUserIsPremium()
         ) {
           console.log("Skipping premium-related toast for premium user");
@@ -48,9 +59,9 @@ export const toast = (props: ToastParams) => {
   // Check if it's a premium-related toast and user is premium
   try {
     if (
-      (typeof props.title === 'string' && props.title.toLowerCase().includes("free") || 
-       typeof props.description === 'string' && props.description.toLowerCase().includes("free limit") ||
-       typeof props.description === 'string' && props.description.toLowerCase().includes("upgrade to premium")) && 
+      (reactNodeContainsText(props.title, "free") || 
+       reactNodeContainsText(props.description, "free limit") ||
+       reactNodeContainsText(props.description, "upgrade to premium")) && 
       checkIfUserIsPremium()
     ) {
       console.log("Skipping premium-related toast for premium user");

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -25,9 +26,20 @@ interface QuizAnalyticsProps {
   correctAnswers: number;
   incorrectAnswers: number;
   userAnswers: number[];
+  timePerQuestion?: number[];
+  averageTime?: number;
+  totalTime?: number;
 }
 
-export function QuizAnalytics({ questions, correctAnswers, incorrectAnswers, userAnswers }: QuizAnalyticsProps) {
+export function QuizAnalytics({ 
+  questions, 
+  correctAnswers, 
+  incorrectAnswers, 
+  userAnswers,
+  timePerQuestion = [],
+  averageTime = 15,
+  totalTime = 45
+}: QuizAnalyticsProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const totalQuestions = questions.length;
@@ -49,14 +61,10 @@ export function QuizAnalytics({ questions, correctAnswers, incorrectAnswers, use
   });
   
   useEffect(() => {
-    // Generate performance suggestions based on score when component mounts
-    // This ensures suggestions don't keep changing
+    // Generate performance suggestions based on user's actual performance
     setSuggestions(getPerformanceSuggestions());
-  }, []);
+  }, [score, correctAnswers, incorrectAnswers]);
 
-  // Calculate timing per question (this would normally be tracked during the quiz)
-  const avgTimePerQuestion = 15; // This is a placeholder, would be actual data in real implementation
-  
   // Prepare data for overview chart
   const overviewData = [
     { name: "Correct", value: correctAnswers, color: "#10b981" },
@@ -66,38 +74,85 @@ export function QuizAnalytics({ questions, correctAnswers, incorrectAnswers, use
   // Prepare data for question breakdown
   const questionBreakdownData = questions.map((question, index) => {
     const isCorrect = userAnswers[index] === question.correctAnswer;
+    const timeSpent = timePerQuestion && timePerQuestion[index] ? timePerQuestion[index] : 0;
+    
     return {
       name: `Q${index + 1}`,
       status: isCorrect ? "Correct" : "Incorrect",
       value: 1,
+      time: timeSpent,
       color: isCorrect ? "#10b981" : "#ef4444"
+    };
+  });
+
+  // Prepare timing data for visualization
+  const timingData = questions.map((_, index) => {
+    const timeSpent = timePerQuestion && timePerQuestion[index] ? timePerQuestion[index] : 0;
+    return {
+      name: `Q${index + 1}`,
+      time: timeSpent,
+      avg: averageTime
     };
   });
 
   // Get incorrect questions for detailed review
   const incorrectQuestions = questions.filter((_, index) => userAnswers[index] !== questions[index].correctAnswer);
 
-  // Performance suggestions based on score
+  // Performance suggestions based on score and specific patterns
   function getPerformanceSuggestions() {
+    const baselineSuggestions = [];
+    
+    // General score-based suggestions
     if (score >= 80) {
-      return [
+      baselineSuggestions.push(
         "Excellent work! To further improve, focus on the specific questions you missed.",
-        "Review the explanations for the questions you got wrong to solidify your understanding.",
-        "Consider increasing the difficulty level in your next quiz."
-      ];
+        "Review the explanations for the questions you got wrong to solidify your understanding."
+      );
     } else if (score >= 60) {
-      return [
+      baselineSuggestions.push(
         "Good job! To improve, review the concepts related to the questions you missed.",
-        "Create flashcards for the topics you found challenging.",
-        "Practice more questions on the subjects where you made mistakes."
-      ];
+        "Create flashcards for the topics you found challenging."
+      );
     } else {
-      return [
+      baselineSuggestions.push(
         "Focus on understanding the fundamental concepts related to the questions you missed.",
-        "Consider breaking down your study sessions into smaller, more focused segments.",
-        "Review the explanations thoroughly and try similar questions to reinforce learning."
-      ];
+        "Consider breaking down your study sessions into smaller, more focused segments."
+      );
     }
+    
+    // Time-based suggestions
+    if (timePerQuestion && timePerQuestion.length > 0) {
+      const fastAnswers = timePerQuestion.filter(time => time < 5).length;
+      const slowAnswers = timePerQuestion.filter(time => time > 25).length;
+      
+      if (fastAnswers > 0 && score < 70) {
+        baselineSuggestions.push("You answered some questions very quickly. Consider taking more time to carefully read all options.");
+      }
+      
+      if (slowAnswers > 0) {
+        baselineSuggestions.push("Some questions took you longer to answer. Focus on practicing similar questions to build confidence and speed.");
+      }
+    }
+    
+    // Pattern-based suggestions (check for consecutive wrong answers)
+    let consecutiveWrong = 0;
+    let maxConsecutiveWrong = 0;
+    
+    userAnswers.forEach((answer, index) => {
+      if (answer !== questions[index].correctAnswer) {
+        consecutiveWrong++;
+        maxConsecutiveWrong = Math.max(maxConsecutiveWrong, consecutiveWrong);
+      } else {
+        consecutiveWrong = 0;
+      }
+    });
+    
+    if (maxConsecutiveWrong >= 2) {
+      baselineSuggestions.push("You missed several questions in a row. Consider taking a short break when you feel your focus declining during an exam.");
+    }
+    
+    // Ensure we don't have too many suggestions
+    return baselineSuggestions.slice(0, 4);
   }
 
   const handleCreateNewQuiz = () => {
@@ -211,11 +266,11 @@ export function QuizAnalytics({ questions, correctAnswers, incorrectAnswers, use
                 <div className="mt-4 space-y-2">
                   <div className="flex items-center justify-between px-4 py-2 bg-muted rounded-md">
                     <span>Average Time per Question:</span>
-                    <span className="font-medium">{avgTimePerQuestion} seconds</span>
+                    <span className="font-medium">{averageTime} seconds</span>
                   </div>
                   <div className="flex items-center justify-between px-4 py-2 bg-muted rounded-md">
                     <span>Completion Time:</span>
-                    <span className="font-medium">{avgTimePerQuestion * totalQuestions} seconds</span>
+                    <span className="font-medium">{totalTime} seconds</span>
                   </div>
                 </div>
               </CardContent>
@@ -232,12 +287,39 @@ export function QuizAnalytics({ questions, correctAnswers, incorrectAnswers, use
                   <>
                     <div className="h-64 mb-6">
                       <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={timingData} barSize={20}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" />
+                          <YAxis label={{ value: 'Time (seconds)', angle: -90, position: 'insideLeft' }} />
+                          <Tooltip formatter={(value) => [`${value} seconds`, 'Time']} />
+                          <Legend />
+                          <Bar name="Time spent" dataKey="time" fill="#8884d8" />
+                          <Bar name="Average time" dataKey="avg" fill="#82ca9d" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    
+                    <div className="h-48 mb-6">
+                      <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={questionBreakdownData}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="name" />
                           <YAxis hide />
-                          <Tooltip />
-                          <Bar dataKey="value">
+                          <Tooltip content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="bg-background p-2 border rounded shadow-md">
+                                  <p className="font-medium">{payload[0].payload.name}</p>
+                                  <p className={payload[0].payload.status === "Correct" ? "text-success" : "text-error"}>
+                                    {payload[0].payload.status}
+                                  </p>
+                                  <p>Time: {payload[0].payload.time}s</p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }} />
+                          <Bar dataKey="value" name="Result">
                             {
                               questionBreakdownData.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={entry.color} />
@@ -302,11 +384,12 @@ export function QuizAnalytics({ questions, correctAnswers, incorrectAnswers, use
                         {incorrectAnswers > 0 && <li>Focus on the {incorrectAnswers} questions you missed</li>}
                         {score < 75 && <li>Review the explanations for incorrect answers carefully</li>}
                         {score < 50 && <li>Consider revisiting the fundamental concepts of this topic</li>}
+                        {averageTime > 20 && <li>Work on improving your speed while maintaining accuracy</li>}
                       </ul>
                     </div>
                     
                     <div>
-                      <h3 className="font-medium text-lg mb-2">Suggestions</h3>
+                      <h3 className="font-medium text-lg mb-2">Personalized Suggestions</h3>
                       <ul className="list-disc list-inside space-y-1 pl-4">
                         {suggestions.map((suggestion, index) => (
                           <li key={index}>{suggestion}</li>

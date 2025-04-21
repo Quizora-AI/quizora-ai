@@ -7,6 +7,9 @@ interface QuizFlowAnalyticsProps {
   correctAnswers: number;
   incorrectAnswers: number;
   userAnswers: number[];
+  timePerQuestion?: number[];
+  averageTime?: number;
+  totalTime?: number;
 }
 
 const QuizFlowAnalytics = ({
@@ -14,6 +17,9 @@ const QuizFlowAnalytics = ({
   correctAnswers,
   incorrectAnswers,
   userAnswers,
+  timePerQuestion,
+  averageTime,
+  totalTime,
 }: QuizFlowAnalyticsProps) => {
   return (
     <QuizAnalytics
@@ -21,6 +27,9 @@ const QuizFlowAnalytics = ({
       correctAnswers={correctAnswers}
       incorrectAnswers={incorrectAnswers}
       userAnswers={userAnswers}
+      timePerQuestion={timePerQuestion}
+      averageTime={averageTime}
+      totalTime={totalTime}
     />
   );
 };

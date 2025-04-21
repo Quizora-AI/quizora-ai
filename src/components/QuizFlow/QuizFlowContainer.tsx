@@ -24,6 +24,8 @@ interface QuizHistory {
   questions: Question[];
   userAnswers?: number[];
   attempts?: number;
+  timePerQuestion?: number[];
+  totalTime?: number;
 }
 
 interface QuizFlowContainerProps {
@@ -48,20 +50,30 @@ const QuizFlowContainer = ({
   const [userAnswers, setUserAnswers] = useState<number[]>([]);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [endTime, setEndTime] = useState<Date | null>(null);
+  const [questionStartTime, setQuestionStartTime] = useState<Date | null>(null);
+  const [timePerQuestion, setTimePerQuestion] = useState<number[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Set question start time initially
+  useEffect(() => {
+    setQuestionStartTime(new Date());
+  }, [currentQuestionIndex]);
 
   useEffect(() => {
     setAppState(initialAppState);
     const savedQuizState = localStorage.getItem("quizInProgress");
     if (savedQuizState && initialAppState === AppState.QUIZ) {
       try {
-        const { currentIndex, userAnsList } = JSON.parse(savedQuizState);
+        const { currentIndex, userAnsList, timings } = JSON.parse(savedQuizState);
         if (currentIndex !== undefined) {
           setCurrentQuestionIndex(currentIndex);
         }
         if (userAnsList && userAnsList.length > 0) {
           setUserAnswers(userAnsList);
+        }
+        if (timings && timings.length > 0) {
+          setTimePerQuestion(timings);
         }
       } catch (error) {
         console.error("Error restoring quiz state:", error);
@@ -77,6 +89,7 @@ const QuizFlowContainer = ({
         title: quizTitle,
         currentIndex: currentQuestionIndex,
         userAnsList: userAnswers,
+        timings: timePerQuestion,
         timestamp: new Date().toISOString()
       };
       localStorage.setItem("quizInProgress", JSON.stringify(quizState));
@@ -84,7 +97,7 @@ const QuizFlowContainer = ({
     if (appState !== AppState.QUIZ) {
       localStorage.removeItem("quizInProgress");
     }
-  }, [appState, currentQuestionIndex, questions, quizTitle, userAnswers]);
+  }, [appState, currentQuestionIndex, questions, quizTitle, userAnswers, timePerQuestion]);
 
   const getCorrectAnswersCount = () =>
     userAnswers.reduce((count, answer, idx) =>
@@ -92,11 +105,20 @@ const QuizFlowContainer = ({
     );
 
   const handleNextQuestion = (selectedOption: number) => {
+    // Record time spent on current question
+    if (questionStartTime) {
+      const now = new Date();
+      const timeSpent = Math.round((now.getTime() - questionStartTime.getTime()) / 1000);
+      setTimePerQuestion(prev => [...prev, timeSpent]);
+    }
+
     const newUserAnswers = [...userAnswers, selectedOption];
     setUserAnswers(newUserAnswers);
 
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
+      // Set start time for next question
+      setQuestionStartTime(new Date());
     } else {
       setEndTime(new Date());
       setAppState(AppState.RESULTS);
@@ -111,6 +133,8 @@ const QuizFlowContainer = ({
     setUserAnswers([]);
     setStartTime(new Date());
     setEndTime(null);
+    setTimePerQuestion([]);
+    setQuestionStartTime(new Date());
     setAppState(AppState.QUIZ);
 
     toast({
@@ -140,6 +164,9 @@ const QuizFlowContainer = ({
           ? JSON.parse(existingHistoryString)
           : [];
 
+        // Calculate total time
+        const totalTime = timePerQuestion.reduce((sum, time) => sum + time, 0);
+
         const newQuizEntry: QuizHistory = {
           id: uuidv4(),
           date: new Date().toISOString(),
@@ -148,6 +175,8 @@ const QuizFlowContainer = ({
           score,
           questions,
           userAnswers,
+          timePerQuestion,
+          totalTime,
           attempts: 1,
         };
 
@@ -160,7 +189,7 @@ const QuizFlowContainer = ({
         });
       }
     }
-  }, [appState, questions, userAnswers, quizTitle, toast]);
+  }, [appState, questions, userAnswers, quizTitle, toast, timePerQuestion]);
 
   const pageVariants = {
     initial: { opacity: 0, x: 50 },
@@ -178,6 +207,13 @@ const QuizFlowContainer = ({
     onBackToCreate();
     return null;
   }
+
+  // Calculate the average time per question and total time
+  const avgTimePerQuestion = timePerQuestion.length > 0 
+    ? Math.round(timePerQuestion.reduce((sum, time) => sum + time, 0) / timePerQuestion.length) 
+    : 0;
+
+  const totalTime = timePerQuestion.reduce((sum, time) => sum + time, 0);
 
   switch (appState) {
     case AppState.QUIZ:
@@ -231,6 +267,9 @@ const QuizFlowContainer = ({
             correctAnswers={correctCount}
             incorrectAnswers={questions.length - correctCount}
             userAnswers={userAnswers}
+            timePerQuestion={timePerQuestion}
+            averageTime={avgTimePerQuestion}
+            totalTime={totalTime}
           />
         </motion.div>
       );

@@ -28,6 +28,7 @@ export function QuizQuestion({
   const [isTimerRunning, setIsTimerRunning] = useState(true);
   const [animateOptions, setAnimateOptions] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [confirmAnswer, setConfirmAnswer] = useState(false);
   const optionLabels = ["A", "B", "C", "D"];
   const timerProgressRef = useRef<HTMLDivElement>(null);
 
@@ -39,6 +40,7 @@ export function QuizQuestion({
     setIsAnswered(false);
     setAnimateOptions(true);
     setShowFeedback(false);
+    setConfirmAnswer(false);
   }, [question.id, defaultTimePerQuestion]);
 
   useEffect(() => {
@@ -67,10 +69,18 @@ export function QuizQuestion({
     if (isAnswered) return;
     
     setSelectedOption(optionIndex);
-    setIsAnswered(true);
-    setIsTimerRunning(false);
     
-    // Show feedback after a short delay for better UX
+    // Don't mark as answered yet - wait for confirm button
+    setConfirmAnswer(true);
+    setIsTimerRunning(false);
+  };
+
+  const handleConfirmAnswer = () => {
+    if (selectedOption === null || isAnswered) return;
+    
+    setIsAnswered(true);
+    
+    // Show feedback after confirming
     setTimeout(() => {
       setShowFeedback(true);
     }, 300);
@@ -285,6 +295,33 @@ export function QuizQuestion({
             )}
           </CardContent>
           <CardFooter className="flex justify-end">
+            {confirmAnswer && !isAnswered && (
+              <motion.div 
+                className="w-full flex justify-between items-center"
+                variants={resultVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <div className="flex items-center">
+                  <span className="font-medium">Confirm your answer?</span>
+                </div>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Button onClick={handleConfirmAnswer} className="relative overflow-hidden">
+                    <motion.span
+                      initial={{ x: 20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.2 }}
+                    >
+                      Confirm
+                    </motion.span>
+                  </Button>
+                </motion.div>
+              </motion.div>
+            )}
+            
             {isAnswered && (
               <motion.div 
                 className="w-full flex justify-between items-center"
