@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -27,6 +26,12 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { ResetPassword } from "./ResetPassword";
+import { ProfileTab } from "./settings/ProfileTab";
+import { PreferencesTab } from "./settings/PreferencesTab";
+import { PremiumTab } from "./settings/PremiumTab";
+import { AnalyticsTab } from "./settings/AnalyticsTab";
+import { LegalTab } from "./settings/LegalTab";
+import { useSettingsAuth } from "./settings/useSettingsAuth";
 
 interface UserSettings {
   name: string;
@@ -43,25 +48,16 @@ interface UserSettings {
 }
 
 export function SettingsPanel() {
+  // Use the new useSettingsAuth
+  const {
+    settings, setSettings, activeTab, setActiveTab,
+    isLoggedIn, setIsLoggedIn, quizHistory, setQuizHistory,
+    supabaseUser, setSupabaseUser, supabaseSession, setSupabaseSession,
+    authLoading, setAuthLoading
+  } = useSettingsAuth();
   const [searchParams] = useSearchParams();
   const defaultTab = searchParams.get("tab") || "profile";
   
-  const [settings, setSettings] = useState<UserSettings>({
-    name: "",
-    email: "",
-    course: "",
-    autoSave: true,
-    theme: "system",
-    difficulty: "medium",
-    isPremium: false
-  });
-  
-  const [activeTab, setActiveTab] = useState(defaultTab);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [quizHistory, setQuizHistory] = useState<any[]>([]);
-  const [supabaseUser, setSupabaseUser] = useState<any>(null);
-  const [supabaseSession, setSupabaseSession] = useState<any>(null);
-  const [authLoading, setAuthLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   const [isResetEmailSent, setIsResetEmailSent] = useState(false);
@@ -69,84 +65,6 @@ export function SettingsPanel() {
   const { toast } = useToast();
   const navigate = useNavigate();
   
-  useEffect(() => {
-    try {
-      const savedSettings = localStorage.getItem("userSettings");
-      if (savedSettings) {
-        setSettings(JSON.parse(savedSettings));
-      }
-      
-      const savedAutoSave = localStorage.getItem("autoSave");
-      if (savedAutoSave !== null) {
-        setSettings(prev => ({
-          ...prev,
-          autoSave: savedAutoSave !== "false"
-        }));
-      }
-
-      const historyStr = localStorage.getItem("quizHistory");
-      if (historyStr) {
-        setQuizHistory(JSON.parse(historyStr));
-      }
-    } catch (error) {
-      console.error("Failed to load settings:", error);
-    }
-  }, []);
-  
-  useEffect(() => {
-    // Subscribe to Supabase auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSupabaseSession(session);
-      setSupabaseUser(session?.user ?? null);
-      setIsLoggedIn(!!session?.user);
-      setAuthLoading(false);
-
-      // Fetch user profile if logged in
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
-      }
-    });
-
-    // Get current session on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSupabaseSession(session);
-      setSupabaseUser(session?.user ?? null);
-      setIsLoggedIn(!!session?.user);
-      setAuthLoading(false);
-      
-      // Fetch user profile if logged in
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-  
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-      
-      if (error) throw error;
-      
-      if (data) {
-        setSettings(prev => ({
-          ...prev,
-          name: data.name || prev.name,
-          email: data.email || prev.email,
-          course: data.course || prev.course,
-          isPremium: data.isPremium || false
-        }));
-      }
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
-    }
-  };
-
   const saveSettings = async () => {
     try {
       localStorage.setItem("userSettings", JSON.stringify(settings));
@@ -485,632 +403,46 @@ export function SettingsPanel() {
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="profile">
-              <motion.div 
-                variants={containerVariants}
-                className="space-y-6"
-              >
-                {authLoading ? (
-                  <div className="flex items-center justify-center p-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-                  </div>
-                ) : isLoggedIn && supabaseUser ? (
-                  <>
-                    <motion.div variants={itemVariants} className="flex items-center justify-between p-4 bg-primary/5 rounded-lg">
-                      <div>
-                        <h3 className="font-medium">Logged in as</h3>
-                        <p className="text-sm text-muted-foreground">{supabaseUser.email}</p>
-                      </div>
-                      <Button onClick={handleLogout} variant="outline" size="sm">Log Out</Button>
-                    </motion.div>
-                    
-                    <motion.div variants={itemVariants} className="space-y-2">
-                      <Label htmlFor="name">Name</Label>
-                      <Input 
-                        id="name" 
-                        name="name" 
-                        value={settings.name} 
-                        onChange={handleChange}
-                        placeholder="Your name"
-                      />
-                    </motion.div>
-                    
-                    <motion.div variants={itemVariants} className="pt-4">
-                      <Button onClick={saveSettings}>Save Profile</Button>
-                    </motion.div>
-                  </>
-                ) : (
-                  <form onSubmit={handleLogin}>
-                    <motion.div variants={itemVariants} className="space-y-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input 
-                          id="email" 
-                          name="email" 
-                          value={settings.email} 
-                          onChange={handleChange}
-                          placeholder="your.email@example.com"
-                          type="email"
-                          required
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
-                        <Input 
-                          id="password" 
-                          name="password" 
-                          type="password"
-                          placeholder="••••••••"
-                          required
-                        />
-                      </div>
-                      
-                      <div className="space-y-4">
-                        <Button type="submit" className="w-full">Sign In</Button>
-                        <div className="flex justify-between">
-                          <Button
-                            variant="link"
-                            className="p-0 h-auto"
-                            onClick={() => setActiveTab("register")}
-                            type="button"
-                          >
-                            Register
-                          </Button>
-                          <Button
-                            variant="link"
-                            className="p-0 h-auto"
-                            onClick={() => setActiveTab("forgot")}
-                            type="button"
-                          >
-                            Forgot password?
-                          </Button>
-                        </div>
-                        {errorMessage && (
-                          <div className="text-red-500 text-center text-sm">{errorMessage}</div>
-                        )}
-                      </div>
-                    </motion.div>
-                  </form>
-                )}
-              </motion.div>
-            </TabsContent>
-            
-            <TabsContent value="forgot">
-              <motion.div
-                variants={containerVariants}
-                className="space-y-6"
-              >
-                {isResetEmailSent ? (
-                  <div className="text-center py-6 space-y-4">
-                    <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                      <Check className="h-6 w-6 text-primary" />
-                    </div>
-                    <h3 className="text-xl font-medium">Check your email</h3>
-                    <p className="text-muted-foreground mb-4">
-                      We've sent a password reset link to {forgotPasswordEmail}
-                    </p>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => {
-                        setIsResetEmailSent(false);
-                        setActiveTab("profile");
-                      }}
-                    >
-                      Back to login
-                    </Button>
-                  </div>
-                ) : (
-                  <form onSubmit={handleForgotPassword}>
-                    <div className="space-y-6">
-                      <div className="text-center mb-2">
-                        <h2 className="text-xl font-bold mb-1">Reset Password</h2>
-                        <p className="text-sm text-muted-foreground">
-                          Enter your email and we'll send you a link to reset your password
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="forgot-email">Email Address</Label>
-                        <Input
-                          id="forgot-email"
-                          name="forgot-email"
-                          type="email"
-                          value={forgotPasswordEmail}
-                          onChange={e => setForgotPasswordEmail(e.target.value)}
-                          placeholder="your.email@example.com"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Button 
-                          type="submit" 
-                          className="w-full"
-                          disabled={isSendingReset}
-                        >
-                          {isSendingReset ? (
-                            <>
-                              <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                              Sending...
-                            </>
-                          ) : (
-                            "Send Reset Link"
-                          )}
-                        </Button>
-                      </div>
-                      <div className="text-center">
-                        <Button
-                          variant="link"
-                          type="button"
-                          onClick={() => setActiveTab("profile")}
-                        >
-                          Back to login
-                        </Button>
-                      </div>
-                    </div>
-                  </form>
-                )}
-              </motion.div>
-            </TabsContent>
-            
-            <TabsContent value="register">
-              <motion.div
-                variants={containerVariants}
-                className="space-y-6"
-              >
-                <motion.div variants={itemVariants} className="text-center mb-6">
-                  <h2 className="text-xl font-bold">Create an Account</h2>
-                  <p className="text-sm text-muted-foreground">Join Quizora AI to save your quizzes and track progress</p>
-                </motion.div>
-                <form onSubmit={handleRegister}>
-                  <motion.div variants={itemVariants} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="reg-name">Name</Label>
-                      <Input
-                        id="reg-name"
-                        name="name"
-                        value={settings.name}
-                        onChange={handleChange}
-                        placeholder="Your name"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="reg-email">Email</Label>
-                      <Input
-                        id="reg-email"
-                        name="email"
-                        value={settings.email}
-                        onChange={handleChange}
-                        placeholder="your.email@example.com"
-                        type="email"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="reg-password">Password</Label>
-                      <Input
-                        id="reg-password"
-                        name="password"
-                        type="password"
-                        placeholder="••••••••"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="reg-confirm-password">Confirm Password</Label>
-                      <Input
-                        id="reg-confirm-password"
-                        name="confirmPassword"
-                        type="password"
-                        placeholder="••••••••"
-                        required
-                      />
-                    </div>
-                    {errorMessage && (
-                      <div className="text-red-500 text-center text-sm">{errorMessage}</div>
-                    )}
-                    <div className="space-y-4 pt-2">
-                      <Button type="submit" className="w-full">Create Account</Button>
-                      <div className="text-center">
-                        <span className="text-sm text-muted-foreground">Already have an account? </span>
-                        <Button
-                          variant="link"
-                          className="p-0 h-auto"
-                          onClick={() => setActiveTab("profile")}
-                          type="button"
-                        >Sign In</Button>
-                      </div>
-                    </div>
-                  </motion.div>
-                </form>
-              </motion.div>
-            </TabsContent>
-            
-            <TabsContent value="preferences">
-              <motion.div 
-                variants={containerVariants}
-                className="space-y-6"
-              >
-                <motion.div variants={itemVariants}>
-                  <Label className="block mb-3">Course</Label>
-                  <Input 
-                    id="course" 
-                    name="course" 
-                    value={settings.course} 
-                    onChange={handleChange}
-                    placeholder="Enter your course or field of study"
-                  />
-                  <p className="text-sm text-muted-foreground mt-2">
-                    This helps personalize quiz questions and assistant responses
-                  </p>
-                </motion.div>
-                
-                <motion.div variants={itemVariants}>
-                  <Label className="block mb-3">Default Difficulty</Label>
-                  <RadioGroup 
-                    value={settings.difficulty}
-                    onValueChange={(value: "easy" | "medium" | "hard") => updateSetting('difficulty', value)}
-                    className="flex gap-4"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="easy" id="easy" />
-                      <Label htmlFor="easy">Easy</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="medium" id="medium" />
-                      <Label htmlFor="medium">Medium</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="hard" id="hard" />
-                      <Label htmlFor="hard">Hard</Label>
-                    </div>
-                  </RadioGroup>
-                </motion.div>
-                
-                <motion.div variants={itemVariants} className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="autoSave">Auto-save quiz results</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Automatically save quiz results to history
-                    </p>
-                  </div>
-                  <Switch 
-                    id="autoSave" 
-                    checked={settings.autoSave} 
-                    onCheckedChange={(checked) => updateSetting('autoSave', checked)}
-                  />
-                </motion.div>
-                
-                <motion.div variants={itemVariants} className="pt-4">
-                  <Button onClick={saveSettings}>Save Preferences</Button>
-                </motion.div>
-              </motion.div>
-            </TabsContent>
-            
-            <TabsContent value="premium">
-              <motion.div 
-                variants={containerVariants}
-                className="space-y-8"
-              >
-                <motion.div variants={itemVariants} className="text-center">
-                  <h2 className="text-2xl font-bold bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent inline-flex items-center gap-2">
-                    <Crown className="h-6 w-6 text-amber-500" />
-                    Quizora AI Premium
-                  </h2>
-                  <p className="text-muted-foreground mt-2">
-                    Unlock the full potential of your learning with Quizora AI Premium
-                  </p>
-                </motion.div>
-                
-                {settings.isPremium ? (
-                  <motion.div 
-                    variants={itemVariants}
-                    className="bg-gradient-to-r from-amber-500/20 to-orange-600/20 p-6 rounded-lg border border-amber-500/30"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="bg-amber-500/20 p-2 rounded-full">
-                        <CheckCircle className="h-6 w-6 text-amber-500" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-lg">Premium Active</h3>
-                        <p className="text-sm text-muted-foreground">
-                          You're enjoying all premium features of Quizora AI
-                        </p>
-                      </div>
-                    </div>
-                    {settings.expiryDate && (
-                      <div className="mt-4 text-sm">
-                        <p className="text-muted-foreground">
-                          Your {settings.premiumTier} subscription is active until {new Date(settings.expiryDate).toLocaleDateString()}
-                        </p>
-                      </div>
-                    )}
-                  </motion.div>
-                ) : (
-                  <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card className="border-amber-500/30 hover:border-amber-500/50 transition-all">
-                      <CardHeader>
-                        <CardTitle className="flex items-center justify-between">
-                          <span>Monthly</span>
-                          <Badge className="bg-amber-500">Popular</Badge>
-                        </CardTitle>
-                        <div className="flex items-baseline">
-                          <span className="text-3xl font-bold">$2.49</span>
-                          <span className="text-muted-foreground ml-1">/ month</span>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <ul className="space-y-2">
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            <span>Unlimited quizzes</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            <span>Up to 50 questions per quiz</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            <span>Custom time per question</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            <span>Detailed analytics</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            <span>Quizora AI Assistant</span>
-                          </li>
-                        </ul>
-                      </CardContent>
-                      <CardFooter>
-                        <Button 
-                          onClick={() => activatePremium('monthly')}
-                          className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
-                        >
-                          <CreditCard className="mr-2 h-4 w-4" />
-                          Subscribe Monthly
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                    
-                    <Card className="border-amber-500/30 hover:border-amber-500/50 transition-all">
-                      <CardHeader>
-                        <CardTitle className="flex items-center justify-between">
-                          <span>Annual</span>
-                          <Badge className="bg-green-600">Save 50%</Badge>
-                        </CardTitle>
-                        <div className="flex items-baseline">
-                          <span className="text-3xl font-bold">$15.00</span>
-                          <span className="text-muted-foreground ml-1">/ year</span>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <ul className="space-y-2">
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            <span>All monthly features</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            <span>50% discount vs. monthly</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            <span>Priority support</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" />
-                            <span>Early access to new features</span>
-                          </li>
-                        </ul>
-                      </CardContent>
-                      <CardFooter>
-                        <Button 
-                          onClick={() => activatePremium('yearly')}
-                          className="w-full"
-                          variant="outline"
-                        >
-                          <CreditCard className="mr-2 h-4 w-4" />
-                          Subscribe Yearly
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  </motion.div>
-                )}
-                
-                <motion.div variants={itemVariants}>
-                  <div className="rounded-lg bg-muted p-4">
-                    <h3 className="text-lg font-medium mb-2">Free vs Premium</h3>
-                    <div className="grid grid-cols-3 gap-2 text-sm">
-                      <div className="font-medium">Feature</div>
-                      <div className="font-medium">Free</div>
-                      <div className="font-medium">Premium</div>
-                      
-                      <div>Quizzes</div>
-                      <div className="text-muted-foreground">2 max</div>
-                      <div className="text-green-600">Unlimited</div>
-                      
-                      <div>Questions per quiz</div>
-                      <div className="text-muted-foreground">10 max</div>
-                      <div className="text-green-600">Up to 50</div>
-                      
-                      <div>Time per question</div>
-                      <div className="text-muted-foreground">Fixed 30s</div>
-                      <div className="text-green-600">Adjustable</div>
-                      
-                      <div>Analytics</div>
-                      <div className="text-muted-foreground">Basic</div>
-                      <div className="text-green-600">Advanced</div>
-                      
-                      <div>AI Assistant</div>
-                      <div className="text-muted-foreground">Not available</div>
-                      <div className="text-green-600">Full access</div>
-                    </div>
-                  </div>
-                </motion.div>
-              </motion.div>
-            </TabsContent>
-            
-            <TabsContent value="analytics">
-              <motion.div 
-                variants={containerVariants}
-                className="space-y-6"
-              >
-                {settings.isPremium ? (
-                  <>
-                    <motion.div variants={itemVariants} className="text-center">
-                      <h2 className="text-xl font-bold mb-2">Performance Overview</h2>
-                      <p className="text-muted-foreground text-sm">
-                        Track your learning progress and identify areas for improvement
-                      </p>
-                    </motion.div>
-                    
-                    {quizHistory.length > 0 ? (
-                      <>
-                        <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <Card>
-                            <CardContent className="pt-6">
-                              <div className="text-center">
-                                <div className="text-3xl font-bold">{quizHistory.length}</div>
-                                <p className="text-sm text-muted-foreground">Total Quizzes Taken</p>
-                              </div>
-                            </CardContent>
-                          </Card>
-                          
-                          <Card>
-                            <CardContent className="pt-6">
-                              <div className="text-center">
-                                <div className="text-3xl font-bold">
-                                  {quizHistory.reduce((avg, quiz) => avg + quiz.score, 0) / quizHistory.length || 0}%
-                                </div>
-                                <p className="text-sm text-muted-foreground">Average Score</p>
-                              </div>
-                            </CardContent>
-                          </Card>
-                          
-                          <Card>
-                            <CardContent className="pt-6">
-                              <div className="text-center">
-                                <div className="text-3xl font-bold">
-                                  {quizHistory.reduce((total, quiz) => total + quiz.questionsCount, 0)}
-                                </div>
-                                <p className="text-sm text-muted-foreground">Total Questions Answered</p>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </motion.div>
-                        
-                        <motion.div variants={itemVariants}>
-                          <Card>
-                            <CardHeader>
-                              <CardTitle>Improvement Suggestions</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <ul className="space-y-2">
-                                <li className="flex items-start gap-2">
-                                  <Check className="h-4 w-4 text-green-500 mt-0.5" />
-                                  <span>Continue practicing with different topics to broaden your knowledge.</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                  <Check className="h-4 w-4 text-green-500 mt-0.5" />
-                                  <span>Focus on reviewing questions you got wrong to strengthen weak areas.</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                  <Check className="h-4 w-4 text-green-500 mt-0.5" />
-                                  <span>Try gradually increasing the difficulty level as you improve.</span>
-                                </li>
-                              </ul>
-                            </CardContent>
-                          </Card>
-                        </motion.div>
-                      </>
-                    ) : (
-                      <motion.div variants={itemVariants} className="text-center p-8">
-                        <p className="text-muted-foreground">
-                          No quiz history found. Take some quizzes to see your analytics!
-                        </p>
-                        <Button 
-                          onClick={() => navigate('/')} 
-                          variant="outline"
-                          className="mt-4"
-                        >
-                          Create Your First Quiz
-                        </Button>
-                      </motion.div>
-                    )}
-                  </>
-                ) : (
-                  <motion.div variants={itemVariants} className="text-center p-8">
-                    <div className="flex justify-center mb-4">
-                      <Lock className="h-12 w-12 text-muted-foreground" />
-                    </div>
-                    <h3 className="text-xl font-medium mb-2">Premium Feature</h3>
-                    <p className="text-muted-foreground mb-6">
-                      Advanced analytics is a premium feature. Upgrade to access detailed insights and performance tracking.
-                    </p>
-                    <Button onClick={handleGoToPremium}>
-                      <Crown className="mr-2 h-4 w-4" />
-                      Go Premium
-                    </Button>
-                  </motion.div>
-                )}
-              </motion.div>
-            </TabsContent>
-            
-            <TabsContent value="legal">
-              <motion.div 
-                variants={containerVariants}
-                className="space-y-4"
-              >
-                <motion.div variants={itemVariants}>
-                  <Button variant="outline" className="w-full flex justify-between" onClick={() => navigate('/legal?page=about')}>
-                    <span>About Quizora AI</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </motion.div>
-                
-                <motion.div variants={itemVariants}>
-                  <Button variant="outline" className="w-full flex justify-between" onClick={() => navigate('/legal?page=privacy')}>
-                    <span>Privacy Policy</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </motion.div>
-                
-                <motion.div variants={itemVariants}>
-                  <Button variant="outline" className="w-full flex justify-between" onClick={() => navigate('/legal?page=terms')}>
-                    <span>Terms of Service</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </motion.div>
-                
-                <motion.div variants={itemVariants}>
-                  <Button variant="outline" className="w-full flex justify-between" onClick={() => navigate('/legal?page=contact')}>
-                    <span>Contact Us</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </motion.div>
-                
-                <motion.div variants={itemVariants} className="pt-4">
-                  <Card className="bg-muted/50">
-                    <CardContent className="pt-6">
-                      <div>
-                        <h3 className="text-lg font-medium mb-2">Quizora AI</h3>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Version 1.0.1
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          © 2025 Quizora AI. All rights reserved.
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-4">
-                          For support: quizoraaihelp@gmail.com
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </motion.div>
-            </TabsContent>
+    <TabsContent value="profile">
+      <ProfileTab
+        settings={settings}
+        setSettings={setSettings}
+        handleChange={handleChange}
+        saveSettings={saveSettings}
+        isLoggedIn={isLoggedIn}
+        supabaseUser={supabaseUser}
+        handleLogout={handleLogout}
+        authLoading={authLoading}
+        errorMessage={errorMessage}
+        setErrorMessage={setErrorMessage}
+        handleLogin={handleLogin}
+        setActiveTab={setActiveTab}
+      />
+    </TabsContent>
+    <TabsContent value="preferences">
+      <PreferencesTab
+        settings={settings}
+        handleChange={handleChange}
+        updateSetting={updateSetting}
+        saveSettings={saveSettings}
+      />
+    </TabsContent>
+    <TabsContent value="premium">
+      <PremiumTab
+        settings={settings}
+        activatePremium={activatePremium}
+      />
+    </TabsContent>
+    <TabsContent value="analytics">
+      <AnalyticsTab
+        settings={settings}
+        quizHistory={quizHistory}
+        navigateToQuiz={() => navigate("/")}
+      />
+    </TabsContent>
+    <TabsContent value="legal">
+      <LegalTab />
+    </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
