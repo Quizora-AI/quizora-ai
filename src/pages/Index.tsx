@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Question } from "@/components/FileUpload";
 import { Header } from "@/components/Header";
@@ -20,10 +20,12 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
   const [quizInProgress, setQuizInProgress] = useState<boolean>(false);
   const [showQuizResumeDialog, setShowQuizResumeDialog] = useState<boolean>(false);
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
+  const [contentKey, setContentKey] = useState<string>(`content-${Date.now()}`);
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
 
+  // Effect for handling saved quiz state and quiz retakes
   useEffect(() => {
     const savedQuizState = localStorage.getItem("quizInProgress");
     if (savedQuizState && location.pathname === '/') {
@@ -60,6 +62,9 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
         localStorage.removeItem("quizToRetake");
       }
     }
+
+    // Force a re-render when the route changes to ensure proper content display
+    setContentKey(`content-${location.pathname}-${Date.now()}`);
   }, [location.pathname]);
 
   const handleResumeQuiz = () => {
@@ -124,7 +129,6 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
   };
 
   const renderContent = () => {
-    // Use console.log to help diagnose rendering and navigation issues
     console.log("Rendering content for path:", location.pathname, "with appState:", appState);
     
     if (location.pathname === "/legal") {
@@ -133,7 +137,12 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
     
     if (appState === 1 && questions && questions.length > 0) {
       return (
-        <>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2 }}
+          key="quiz-flow"
+        >
           <div className="flex items-center mb-4">
             <Button 
               variant="outline" 
@@ -152,38 +161,39 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
             onBackToCreate={handleBackToCreate}
             initialAppState={QuizAppState.QUIZ}
           />
-        </>
+        </motion.div>
       );
     }
     
-    // For flashcards page, render the flashcards component with unique key to prevent duplicate components
-    if (location.pathname === "/flashcards") {
-      return (
-        <div key={`content-${location.pathname}`} className="w-full">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            className="w-full mb-16"
-            key="flashcards-flow"
-          >
-            <FlashcardsFlow onBackToCreate={() => navigate('/')} />
-          </motion.div>
-        </div>
-      );
-    }
-    
+    // For any route, we'll render the tab navigation
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        key={contentKey}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.3 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.2 }}
         className="w-full"
-        key={`tab-content-${location.pathname}`}
       >
         <TabNavigation onQuizGenerated={handleQuizGenerated} />
+        
+        {/* Render route-specific content */}
+        <AnimatePresence mode="wait">
+          {location.pathname === "/flashcards" && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.2 }}
+              key="flashcards-content"
+              className="w-full mb-16"
+            >
+              <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading Flashcards...</div>}>
+                <FlashcardsFlow onBackToCreate={() => navigate('/')} />
+              </Suspense>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     );
   };
@@ -197,8 +207,11 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
         </AnimatePresence>
       </main>
       
-      {/* Always render tab navigation at the bottom when on flashcards page */}
-      {location.pathname === "/flashcards" && (
+      {/* Always render tab navigation at the bottom when on specific pages */}
+      {(location.pathname === "/flashcards" || 
+        location.pathname === "/history" || 
+        location.pathname === "/settings" || 
+        location.pathname === "/") && appState !== 1 && (
         <div className="fixed bottom-0 left-0 right-0 z-40">
           <TabNavigation onQuizGenerated={handleQuizGenerated} />
         </div>

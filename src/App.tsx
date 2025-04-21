@@ -8,12 +8,16 @@ import NotFound from "./pages/NotFound";
 import * as React from "react";
 import QuizReview from "./pages/QuizReview";
 
-// Create a client
+// Create a client with better error handling
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: false,
-      refetchOnWindowFocus: false
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 30000, // 30 seconds
+      onError: (error) => {
+        console.error("Query error:", error);
+      }
     },
   },
 });
@@ -54,7 +58,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<Index initialTab="generate" />} />
             <Route path="/quiz" element={<Index initialTab="generate" />} />
             <Route path="/flashcards" element={<Index initialTab="flashcards" />} />
             <Route path="/history" element={<Index initialTab="history" />} />

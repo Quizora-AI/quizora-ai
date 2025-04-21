@@ -10,7 +10,7 @@ import { FlashcardsFlow } from "@/components/Flashcards/FlashcardsFlow";
 import { FlashcardsHistory } from "@/components/Flashcards/FlashcardsHistory";
 import { SettingsPanel } from "@/components/SettingsPanel";
 import { Question } from "@/components/FileUpload";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { BrainCircuit, History, Book, Settings } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -53,7 +53,7 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
     setIsChangingTab(true);
     setActiveTab(value);
 
-    // Use setTimeout to ensure the tab change is visible before navigation
+    // Pre-emptive active tab update to improve perceived responsiveness
     setTimeout(() => {
       switch (value) {
         case 'history':
@@ -70,9 +70,9 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
           break;
       }
       
-      // Add delay before allowing another tab change to prevent rapid clicks
-      setTimeout(() => setIsChangingTab(false), 300);
-    }, 10);
+      // Shorter delay for better responsiveness
+      setTimeout(() => setIsChangingTab(false), 200);
+    }, 0);
   };
 
   // Only show "Create New Quiz" button on generate tab (bottom mobile bar)
@@ -103,8 +103,8 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
       opacity: 1,
       transition: {
         when: "beforeChildren",
-        staggerChildren: 0.1,
-        duration: 0.3
+        staggerChildren: 0.05, // Faster staggering
+        duration: 0.2 // Faster overall animation
       }
     }
   };
@@ -125,7 +125,7 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
           value={activeTab}
           onValueChange={handleTabChange}
         >
-          <TabsList className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 grid grid-cols-4 max-w-md w-[90%] shadow-lg border border-border/20">
+          <TabsList className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 grid grid-cols-4 max-w-md w-[90%] shadow-lg border border-border/20 backdrop-blur-sm">
             <TabsTrigger value="generate" className="flex items-center" disabled={isChangingTab}>
               <BrainCircuit className={tabIconStyle} />
               <span className="hidden sm:inline">Quiz</span>
@@ -144,26 +144,7 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
             </TabsTrigger>
           </TabsList>
           
-          {/* Only render tab content if it matches the active route */}
-          {activeTab === 'generate' && location.pathname === '/' && (
-            <TabsContent value="generate" className="mt-0 pb-20">
-              <QuizGenerator onQuizGenerated={onQuizGenerated} />
-            </TabsContent>
-          )}
-          
-          {activeTab === 'history' && location.pathname === '/history' && (
-            <TabsContent value="history" className="mt-0 pb-20">
-              <FlashcardsHistory />
-            </TabsContent>
-          )}
-          
-          {activeTab === 'settings' && location.pathname === '/settings' && (
-            <TabsContent value="settings" className="mt-0 pb-20">
-              <SettingsPanel />
-            </TabsContent>
-          )}
-          
-          {/* We don't render flashcards content here since it's handled in the Index component */}
+          {/* We're no longer rendering tab content here - this is now handled in Index.tsx */}
         </Tabs>
       </motion.div>
     </TooltipProvider>
