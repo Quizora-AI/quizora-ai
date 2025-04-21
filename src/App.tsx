@@ -1,8 +1,10 @@
 
 import * as React from 'react';
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster as ToastUIToaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import LandingPage from "./pages/LandingPage";
@@ -52,6 +54,25 @@ const PremiumRoute: React.FC<{element: React.ReactNode}> = ({ element }) => {
   );
 };
 
+// Component to clear persistent toasts
+const ToastCleaner = () => {
+  const { dismissAll } = useToast();
+  
+  React.useEffect(() => {
+    // Clear any stuck toasts on component mount
+    dismissAll();
+    
+    // Set up an interval to periodically check and clear persistent toasts
+    const interval = setInterval(() => {
+      dismissAll();
+    }, 10000); // Check every 10 seconds
+    
+    return () => clearInterval(interval);
+  }, [dismissAll]);
+  
+  return null;
+};
+
 const App = () => {
   // Check if this is user's first visit
   const [isFirstVisit, setIsFirstVisit] = React.useState(false);
@@ -72,7 +93,9 @@ const App = () => {
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <Toaster />
+          <ToastCleaner />
+          <ToastUIToaster />
+          <SonnerToaster />
           <Routes>
             <Route path="/" element={isFirstVisit ? <Navigate to="/landing" /> : <Navigate to="/quiz" />} />
             <Route path="/landing" element={<LandingPage />} />

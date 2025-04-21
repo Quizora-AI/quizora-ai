@@ -1,13 +1,13 @@
 
 // This file integrates shadcn's toast functionality
-import { Toast, ToastActionElement } from "@/components/ui/toast"
 import * as React from "react"
+import type { ToastActionElement, ToastProps as ToastUIProps } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 5
 const TOAST_REMOVE_DELAY = 5000
 
 // Define interfaces to avoid circular references
-interface ToasterToastProps {
+export interface ToasterToast {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
@@ -17,11 +17,23 @@ interface ToasterToastProps {
   onOpenChange?: (open: boolean) => void
 }
 
+// Define toast parameters without circular references
+export interface ToastParams {
+  title?: React.ReactNode
+  description?: React.ReactNode
+  action?: ToastActionElement
+  variant?: "default" | "destructive" | "success"
+  duration?: number
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}
+
 const actionTypes = {
   ADD_TOAST: "ADD_TOAST",
   UPDATE_TOAST: "UPDATE_TOAST",
   DISMISS_TOAST: "DISMISS_TOAST",
   REMOVE_TOAST: "REMOVE_TOAST",
+  REMOVE_ALL_TOASTS: "REMOVE_ALL_TOASTS", // New action to remove all toasts
 } as const
 
 let count = 0
@@ -36,11 +48,11 @@ type ActionType = typeof actionTypes
 type Action =
   | {
       type: ActionType["ADD_TOAST"]
-      toast: Omit<ToasterToastProps, "id">
+      toast: Omit<ToasterToast, "id">
     }
   | {
       type: ActionType["UPDATE_TOAST"]
-      toast: Partial<ToasterToastProps> & { id: string }
+      toast: Partial<ToasterToast> & { id: string }
     }
   | {
       type: ActionType["DISMISS_TOAST"]
@@ -50,9 +62,12 @@ type Action =
       type: ActionType["REMOVE_TOAST"]
       toastId?: string
     }
+  | {
+      type: ActionType["REMOVE_ALL_TOASTS"]
+    }
 
 interface State {
-  toasts: ToasterToastProps[]
+  toasts: ToasterToast[]
 }
 
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
@@ -73,8 +88,16 @@ const addToRemoveQueue = (toastId: string) => {
   toastTimeouts.set(toastId, timeout)
 }
 
+// Clear all toast timeouts
+const clearToastTimeouts = () => {
+  toastTimeouts.forEach((timeout) => {
+    clearTimeout(timeout)
+  })
+  toastTimeouts.clear()
+}
+
 // Check if a toast with the same title and description already exists
-const hasToastDuplicate = (newToast: Omit<ToasterToastProps, "id">, toasts: ToasterToastProps[]): boolean => {
+const hasToastDuplicate = (newToast: Omit<ToasterToast, "id">, toasts: ToasterToast[]): boolean => {
   return toasts.some(
     toast => 
       toast.title === newToast.title && 
@@ -142,6 +165,12 @@ export const reducer = (state: State, action: Action): State => {
         ...state,
         toasts: state.toasts.filter((t) => t.id !== action.toastId),
       }
+    case actionTypes.REMOVE_ALL_TOASTS:
+      clearToastTimeouts();
+      return {
+        ...state,
+        toasts: [],
+      }
   }
 }
 
@@ -154,17 +183,6 @@ function dispatch(action: Action) {
   listeners.forEach((listener) => {
     listener(memoryState)
   })
-}
-
-// Define custom toast parameters without circular references
-interface ToastParams {
-  title?: React.ReactNode
-  description?: React.ReactNode
-  action?: ToastActionElement
-  variant?: "default" | "destructive" | "success"
-  duration?: number
-  open?: boolean
-  onOpenChange?: (open: boolean) => void
 }
 
 function toast(props: ToastParams) {
@@ -205,6 +223,11 @@ function toast(props: ToastParams) {
   }
 }
 
+// Function to dismiss all toasts
+function dismissAllToasts() {
+  dispatch({ type: actionTypes.REMOVE_ALL_TOASTS })
+}
+
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
 
@@ -222,6 +245,7 @@ function useToast() {
     ...state,
     toast,
     dismiss: (toastId?: string) => dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
+    dismissAll: () => dismissAllToasts(),
   }
 }
 
