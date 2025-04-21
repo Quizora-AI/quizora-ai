@@ -83,7 +83,8 @@ const App = () => {
             <Route path="/history" element={<Index initialTab="history" />} />
             <Route path="/history/:quizId" element={<QuizReview />} />
             <Route path="/settings" element={<Index initialTab="settings" />} />
-            <Route path="/legal" element={<Index initialTab="generate" />} />
+            <Route path="/analytics" element={<PremiumRoute element={<Index initialTab="analytics" />} />} />
+            <Route path="/legal" element={<Index initialTab="legal" />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

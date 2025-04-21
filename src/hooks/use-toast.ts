@@ -6,7 +6,7 @@ import * as React from "react"
 const TOAST_LIMIT = 5
 const TOAST_REMOVE_DELAY = 1000000
 
-interface ToastProps {
+type ToasterToastProps = {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
@@ -37,11 +37,11 @@ type ActionType = typeof actionTypes
 type Action =
   | {
       type: ActionType["ADD_TOAST"]
-      toast: Omit<ToastProps, "id">
+      toast: Omit<ToasterToastProps, "id">
     }
   | {
       type: ActionType["UPDATE_TOAST"]
-      toast: Partial<ToastProps> & { id: string }
+      toast: Partial<ToasterToastProps> & { id: string }
     }
   | {
       type: ActionType["DISMISS_TOAST"]
@@ -53,7 +53,7 @@ type Action =
     }
 
 interface State {
-  toasts: ToastProps[]
+  toasts: ToasterToastProps[]
 }
 
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
@@ -143,7 +143,7 @@ function dispatch(action: Action) {
   })
 }
 
-type ToastInput = Omit<ToastProps, "id">
+type ToastInput = Omit<ToasterToastProps, "id">
 
 function toast({ ...props }: ToastInput) {
   const id = genId()

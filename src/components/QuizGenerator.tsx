@@ -46,8 +46,15 @@ export function QuizGenerator({ onQuizGenerated }: { onQuizGenerated: (questions
     // Check if user has premium subscription
     const userSettings = localStorage.getItem("userSettings");
     if (userSettings) {
-      const settings = JSON.parse(userSettings);
-      setIsPremium(settings.isPremium === true);
+      try {
+        const settings = JSON.parse(userSettings);
+        setIsPremium(settings.isPremium === true);
+        
+        // Update form defaults based on premium status
+        form.setValue('numQuestions', settings.isPremium ? 10 : 5);
+      } catch (error) {
+        console.error("Error parsing user settings:", error);
+      }
     }
 
     // Check if user has exceeded free quiz limit
@@ -64,7 +71,7 @@ export function QuizGenerator({ onQuizGenerated }: { onQuizGenerated: (questions
         }
       }
     }
-  }, [toast]);
+  }, [toast, form, isPremium]);
 
   const getDifficultyLabel = (value: number) => {
     if (value <= 33) return "Easy";
@@ -127,6 +134,8 @@ For each question, provide a detailed explanation of why the correct answer is r
 Format the response as multiple-choice questions with lettered options.
       `;
 
+      console.log("Generating quiz with prompt:", prompt);
+
       // Call the edge function to generate quiz with AI
       const { data: responseData, error: functionError } = await supabase.functions.invoke('process-document', {
         body: {
@@ -138,11 +147,15 @@ Format the response as multiple-choice questions with lettered options.
         }
       });
       
+      console.log("Received response from edge function:", responseData);
+      
       if (functionError) {
+        console.error("Edge function error:", functionError);
         throw new Error(`Error calling AI: ${functionError.message}`);
       }
       
       if (!responseData?.questions || responseData.questions.length === 0) {
+        console.error("No questions in response:", responseData);
         throw new Error('No questions were generated. Please try again with different parameters.');
       }
       
@@ -157,7 +170,8 @@ Format the response as multiple-choice questions with lettered options.
       // Apply the specified time per question to the questions
       const questionsWithTime = responseData.questions.map((q: Question) => ({
         ...q,
-        timeLimit: timePerQuestion
+        timeLimit: timePerQuestion,
+        id: q.id || `q-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
       }));
       
       setTimeout(() => {
@@ -274,6 +288,7 @@ Format the response as multiple-choice questions with lettered options.
                           placeholder="e.g., Anatomy, Physics, History, Mathematics" 
                           {...field} 
                           className="bg-background/50 border-primary/20 focus-visible:ring-primary/30"
+                          required
                         />
                       </FormControl>
                       <FormMessage />
