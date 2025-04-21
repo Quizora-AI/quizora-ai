@@ -92,9 +92,11 @@ export function AIAssistant() {
     setInput("");
     setIsLoading(true);
 
+    // Define tempId here so it's accessible in both try and catch blocks
+    const tempId = crypto.randomUUID();
+
     try {
       // Add a "thinking" message
-      const tempId = crypto.randomUUID();
       setMessages(prev => [...prev, {
         id: tempId,
         role: "assistant",
