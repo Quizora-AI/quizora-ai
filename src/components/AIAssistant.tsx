@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { MessageSquare, SendHorizonal, User, BrainCircuit, ArrowDown, Lock, Crown } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
 interface Message {
@@ -45,8 +44,6 @@ export function AIAssistant() {
         console.error("Error loading saved messages:", error);
       }
     }
-    
-    // Initial greeting if no messages
     if (!savedMessages) {
       const welcomeMessage: Message = {
         id: crypto.randomUUID(),
@@ -56,7 +53,6 @@ export function AIAssistant() {
       };
       setMessages([welcomeMessage]);
     }
-
     // Check if user has premium subscription
     const userSettings = localStorage.getItem("userSettings");
     if (userSettings) {
@@ -68,7 +64,6 @@ export function AIAssistant() {
     }
   }, []);
   
-  // Save messages to localStorage whenever they change
   useEffect(() => {
     if (messages.length > 0) {
       localStorage.setItem("assistantMessages", JSON.stringify(messages));
@@ -79,7 +74,6 @@ export function AIAssistant() {
     e.preventDefault();
     if (!input.trim()) return;
 
-    // If not premium, show message and redirect
     if (!isPremium) {
       navigate('/settings?tab=premium');
       toast({
@@ -110,19 +104,25 @@ export function AIAssistant() {
         timestamp: new Date(),
       }]);
 
-      // Call the Supabase function to get AI response
-      const { data, error } = await supabase.functions.invoke('ai-assistant', {
-        body: { 
-          message: userMessage.content, 
-          course,
-          context: messages.slice(-4).map(m => ({ 
-            role: m.role, 
-            content: m.content 
-          })) // Send recent conversation context
-        }
-      });
-
-      if (error) throw new Error(error.message);
+      // Use AIMLAPI instead of OpenAI
+      const { response } = await fetch("https://api.aimlapi.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${import.meta.env.VITE_AIMLAPI_KEY || ""}`, // Optionally pass via env var, or implement as per your backend's integration
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: [
+            ...(course ? [{role: "system", content: `You are a Quizora medical assistant for ${course}`}]: []),
+            ...messages.slice(-4).map(m => ({
+              role: m.role,
+              content: m.content
+            })),
+            { role: "user", content: input.trim() }
+          ]
+        })
+      }).then(r => r.json());
 
       // Remove typing indicator
       setMessages(prev => prev.filter(m => m.id !== tempId));
@@ -130,21 +130,17 @@ export function AIAssistant() {
       const aiResponse: Message = {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: data.response || "I'm sorry, I couldn't process your request at this time.",
+        content: response?.choices?.[0]?.message?.content || response?.result || "I'm sorry, I couldn't process your request at this time.",
         timestamp: new Date(),
       };
 
       setMessages((prev) => [...prev, aiResponse]);
       
-      // Toast notification for successful response
       toast({
         title: "Assistant Response",
         description: "Got an answer to your question",
       });
-    } catch (error) {
-      console.error("Error getting AI response:", error);
-      
-      // Remove typing indicator and add error message
+    } catch (error:any) {
       setMessages(prev => {
         const filtered = prev.filter(m => m.content !== "Thinking...");
         return [...filtered, {
@@ -154,7 +150,6 @@ export function AIAssistant() {
           timestamp: new Date(),
         }];
       });
-      
       toast({
         title: "Error",
         description: "Failed to get response from the assistant",
@@ -390,3 +385,4 @@ export function AIAssistant() {
     </motion.div>
   );
 }
+// This file is getting long. Please ask me to refactor AIAssistant into smaller files after you're done reviewing these changes.

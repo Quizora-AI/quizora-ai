@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
 const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
-  const [appState, setAppState] = useState<number>(0); // 0: CREATE, 1: QUIZ
+  const [appState, setAppState] = useState<number>(0);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [quizTitle, setQuizTitle] = useState<string>("Medical Quiz");
   const [quizInProgress, setQuizInProgress] = useState<boolean>(false);
@@ -78,6 +78,13 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
       title: "Quiz Generated",
       description: `${generatedQuestions.length} questions ready for you`,
     });
+    // Save initial quiz state
+    localStorage.setItem("quizInProgress", JSON.stringify({
+      questions: generatedQuestions,
+      title: quizTitle,
+      currentIndex: 0,
+      userAnswers: [],
+    }));
   };
 
   const handleBackToCreate = () => {
@@ -89,6 +96,16 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
   };
 
   const handleExitQuiz = () => {
+    // Save quiz state if in progress
+    if (questions?.length) {
+      localStorage.setItem("quizInProgress", JSON.stringify({
+        questions,
+        title: quizTitle,
+        // Optionally can add more state (currentIndex, etc)
+      }));
+    }
+    setQuizInProgress(false);
+    setAppState(0);
     navigate("/");
     toast({
       title: "Quiz saved",
@@ -115,23 +132,20 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
         </>
       );
     }
-    
     // Quiz flow (QUIZ/RESULTS/ANALYTICS)
     if (appState === 1 && questions && questions.length > 0) {
       return (
         <>
-          {quizInProgress && (
-            <div className="flex items-center mb-4">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="gap-2" 
-                onClick={handleExitQuiz}
-              >
-                <ArrowLeft className="h-4 w-4" /> Exit quiz
-              </Button>
-            </div>
-          )}
+          <div className="flex items-center mb-4">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="gap-2" 
+              onClick={handleExitQuiz}
+            >
+              <ArrowLeft className="h-4 w-4" /> Exit quiz
+            </Button>
+          </div>
           <QuizFlow
             questions={questions}
             setQuestions={setQuestions}
@@ -143,7 +157,6 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
         </>
       );
     }
-    
     // Tabs navigation
     return (
       <motion.div
@@ -179,5 +192,4 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
     </div>
   );
 };
-
 export default Index;

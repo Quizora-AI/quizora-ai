@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -27,40 +26,32 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
   const [isChangingTab, setIsChangingTab] = useState(false);
   
   useEffect(() => {
-    // Set active tab based on URL if it exists
     const pathParts = location.pathname.split('/');
     const lastPart = pathParts[pathParts.length - 1];
-    
+
     if (lastPart === 'history') setActiveTab('history');
     else if (lastPart === 'assistant') setActiveTab('assistant');
     else if (lastPart === 'settings') setActiveTab('settings');
     else setActiveTab('generate');
-    
-    // Check if user has premium subscription
+
     const userSettings = localStorage.getItem("userSettings");
     if (userSettings) {
       const settings = JSON.parse(userSettings);
       setIsPremium(settings.isPremium === true);
     }
   }, [location.pathname]);
-  
+
   const handleTabChange = (value: string) => {
-    // Prevent rapid tab switching
     if (isChangingTab) return;
-    
     setIsChangingTab(true);
     setActiveTab(value);
-    
-    // Handle special case for assistant when user isn't premium
+
     if (value === "assistant" && !isPremium) {
       navigate('/settings?tab=premium');
-      setTimeout(() => {
-        setIsChangingTab(false);
-      }, 300);
+      setTimeout(() => setIsChangingTab(false), 300);
       return;
     }
-    
-    // Update URL based on active tab
+
     switch (value) {
       case 'history':
         navigate('/history');
@@ -75,13 +66,9 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
         navigate('/');
         break;
     }
-    
-    // Add a small delay to prevent tab content from rendering incorrectly
-    setTimeout(() => {
-      setIsChangingTab(false);
-    }, 300);
+    setTimeout(() => setIsChangingTab(false), 300);
   };
-  
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -110,6 +97,24 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
           value={activeTab}
           onValueChange={handleTabChange}
         >
+          <div className="flex justify-between max-w-md w-[90%] mx-auto my-4">
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="gap-2"
+              onClick={() => navigate(-1)}
+            >
+              <span className="hidden sm:inline">Back</span>
+            </Button>
+            <Button 
+              variant="default"
+              size="sm"
+              className="gap-2"
+              onClick={() => { window.location.href = "/"; setActiveTab("generate"); }}
+            >
+              Create New Quiz
+            </Button>
+          </div>
           <TabsList className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 grid grid-cols-4 max-w-md w-[90%] shadow-lg border border-border/20">
             <TabsTrigger value="generate" className="flex items-center" disabled={isChangingTab}>
               <BrainCircuit className={tabIconStyle} />
@@ -129,7 +134,7 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
             </TabsTrigger>
           </TabsList>
           
-          <div className="pb-20"> {/* Add padding at the bottom to prevent content from being hidden behind the fixed tab bar */}
+          <div className="pb-20">
             <TabsContent value="generate" className="mt-0">
               <QuizGenerator onQuizGenerated={onQuizGenerated} />
             </TabsContent>

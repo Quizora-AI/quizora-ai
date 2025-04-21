@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { LegalPages } from "@/components/LegalPages";
 import { useNavigate } from "react-router-dom";
@@ -19,9 +18,6 @@ export const LegalContentWrapper = () => {
     stiffness: 300,
     damping: 30,
   };
-
-  // The email needs to be updated in LegalPages.tsx which is a read-only file
-  // We'll leave a note about this below
 
   return (
     <motion.div
@@ -45,7 +41,6 @@ export const LegalContentWrapper = () => {
       
       <LegalPages />
       
-      {/* Email update info - since we can't edit LegalPages.tsx directly */}
       <div className="mt-8 p-4 bg-muted/50 rounded-lg border border-border/50">
         <h3 className="font-medium mb-2">Contact Information Update</h3>
         <p>For the most current contact information, please email us at: <a href="mailto:quizoraaihelp@gmail.com" className="text-primary underline">quizoraaihelp@gmail.com</a></p>
