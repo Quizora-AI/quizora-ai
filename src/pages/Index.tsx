@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from "uuid";
 import { LegalPages } from "@/components/LegalPages";
 import { supabase } from "@/integrations/supabase/client";
+import { Json } from "@/integrations/supabase/types";
 
 enum AppState {
   CREATE,
@@ -114,7 +115,7 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
             .eq("id", user.id)
             .maybeSingle();
 
-          const isPremium = profile?.isPremium;
+          const isPremium = profile?.isPremium || false;
           const maxFree = 2;
           if (!isPremium && (existingAttempts?.length ?? 0) >= maxFree) {
             toast({
@@ -126,11 +127,20 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
           }
 
           const correctAnswers = getCorrectAnswersCount();
+          
+          const questionsJson: Json = questions.map(q => ({
+            question: q.question,
+            options: q.options,
+            correctAnswer: q.correctAnswer,
+            explanation: q.explanation,
+            timeLimit: q.timeLimit
+          }));
+          
           await supabase.from("quiz_attempts").insert({
             user_id: user.id,
             title: quizTitle,
-            questions: questions,
-            user_answers: userAnswers,
+            questions: questionsJson,
+            user_answers: userAnswers as unknown as Json,
             score: Math.round((correctAnswers / questions.length) * 100),
             total_questions: questions.length,
             correct_answers: correctAnswers
