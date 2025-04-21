@@ -46,7 +46,7 @@ export function FlashcardsHistory() {
     return date.toLocaleDateString();
   };
 
-  const handleRetakeFlashcards = (setId: string) => {
+  const handleReviewFlashcards = (setId: string) => {
     const selectedSet = flashcardSets.find(set => set.id === setId);
     if (selectedSet) {
       localStorage.setItem("flashcardsToReview", JSON.stringify(selectedSet));
@@ -109,7 +109,7 @@ export function FlashcardsHistory() {
                       </div>
                     </div>
                     <Button
-                      onClick={() => handleRetakeFlashcards(set.id)}
+                      onClick={() => handleReviewFlashcards(set.id)}
                       className="bg-primary/90 hover:bg-primary text-primary-foreground shadow-sm"
                       size="sm"
                     >
