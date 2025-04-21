@@ -1,196 +1,174 @@
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { corsHeaders } from '../_shared/cors.ts';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
-const apiKey = Deno.env.get("AIMLAPI_KEY");
-
-if (!apiKey) {
-  console.warn("AIMLAPI_KEY environment variable not set!");
-}
-
-const prepareContent = (document: string, course: string, subject: string, topic: string) => {
-  let content = '';
-  if (document) {
-    content = `Document content:\n${document}\n`;
-  } else {
-    content = `Course: ${course}\nSubject: ${subject}\n`;
-    if (topic) {
-      content += `Topic: ${topic}\n`;
-    }
-  }
-  return content;
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const selectAPI = (document: string, course: string, subject: string, topic: string, prompt: string) => {
-  if (prompt) {
-    return "custom";
-  }
-  if (document || course || subject || topic) {
-    return "content";
-  }
-  return "general";
-};
-
-const processDocument = async (req: Request) => {
-  try {
-    const { type = "quiz", document, course, subject, topic, questionCount = 5, fileType, prompt } = await req.json();
-    
-    // Validate request data
-    if (!subject && !document && !prompt) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required data - need document or subject or custom prompt' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-    
-    // Prepare system prompt based on type
-    let systemPrompt = '';
-    if (type === "quiz") {
-      systemPrompt = `You are an AI quiz generator for students. Generate ${questionCount} multiple choice quiz questions based on the following information.`;
-    } else if (type === "flashcards") {
-      systemPrompt = `You are an AI flashcard generator for students. Generate ${questionCount} flashcards based on the following information. Each flashcard should have a clear question on the front and a concise answer on the back.`;
-    }
-    
-    let content = prepareContent(document, course, subject, topic);
-    const apiType = selectAPI(document, course, subject, topic, prompt);
-
-    if (apiType === "custom") {
-      content = prompt;
-    }
-
-    systemPrompt += `\n${content}`;
-
-    let formattingInstructions = '';
-    if (type === "quiz") {
-      formattingInstructions = `Format your response as a JSON array of objects. Each object should have these properties:
-      - "question": The question text
-      - "options": An array of 4 possible answers
-      - "correctAnswer": The index of the correct answer (0-3)
-      
-      Example:
-      [
-        {
-          "question": "What is the capital of France?",
-          "options": ["London", "Berlin", "Paris", "Madrid"],
-          "correctAnswer": 2
-        },
-        ...
-      ]`;
-    } else if (type === "flashcards") {
-      formattingInstructions = `Format your response as a JSON array of objects. Each object should have these properties:
-      - "question": The front side of the flashcard (the question)
-      - "correctAnswer": The back side of the flashcard (the answer)
-      
-      Example:
-      [
-        {
-          "question": "What is the capital of France?",
-          "correctAnswer": "Paris"
-        },
-        ...
-      ]`;
-    }
-
-    systemPrompt += `\n${formattingInstructions}`;
-
-    console.log("System Prompt:", systemPrompt);
-    console.log("API Key exists:", !!apiKey);
-
-    // AIMLAPI endpoint
-    const response = await fetch("https://api.aimlapi.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "gpt-3.5-turbo-16k",
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 1000
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AIMLAPI error response:", response.status, errorText);
-      return new Response(
-        JSON.stringify({ 
-          error: `AIMLAPI returned status ${response.status}`, 
-          details: errorText 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 502 }
-      );
-    }
-
-    const data = await response.json();
-    console.log("Response from AIMLAPI received, parsing data...");
-    
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      console.error("Invalid response format from AIMLAPI:", JSON.stringify(data));
-      return new Response(
-        JSON.stringify({ 
-          error: "Invalid response format from AIMLAPI", 
-          details: JSON.stringify(data) 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 502 }
-      );
-    }
-    
-    const responseText = data.choices[0].message.content;
-    console.log("Response text received, length:", responseText?.length || 0);
-
-    let parsedQuestions;
-    try {
-      parsedQuestions = JSON.parse(responseText || "[]");
-      console.log("Successfully parsed JSON response, items:", parsedQuestions.length);
-    } catch (parseError) {
-      console.error("Failed to parse JSON response:", parseError);
-      console.error("Response causing the error:", responseText);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Failed to parse JSON response from AIMLAPI', 
-          rawResponse: responseText,
-          parseError: parseError.message
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
-    }
-    
-    return new Response(
-      JSON.stringify({ questions: parsedQuestions }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error) {
-    console.error("Error processing document:", error);
-    return new Response(
-      JSON.stringify({ error: error.message, stack: error.stack }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    );
-  }
-};
+const AIMLAPI_KEY = Deno.env.get('AIMLAPI_KEY');
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders,
-    });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    return await processDocument(req);
-  } catch (e) {
-    console.error("Unhandled exception:", e);
+    if (!AIMLAPI_KEY) {
+      console.error("Missing API key: AIMLAPI_KEY");
+      throw new Error("API key is not configured. Please contact the administrator.");
+    }
+    
+    const requestData = await req.json();
+    console.log("Received request:", JSON.stringify(requestData));
+    
+    if (requestData.type === 'flashcards') {
+      console.log("Processing flashcard generation request");
+      
+      // Extract parameters
+      const { course, subject, topic, questionCount } = requestData;
+      
+      if (!subject) {
+        throw new Error("Subject is required for flashcard generation");
+      }
+      
+      // Build the system prompt
+      const systemPrompt = `You are an expert educator specialized in creating flashcards. Create ${questionCount} flashcards about ${subject}${topic ? ` focusing on ${topic}` : ''}${course ? ` for the course ${course}` : ''}.`;
+      
+      // Build the user prompt
+      const userPrompt = `Generate ${questionCount} flashcards for studying ${subject}${topic ? ` on the topic of ${topic}` : ''}. 
+      Each flashcard should have a question on the front and the answer on the back. 
+      Return the data in this exact JSON format: 
+      {
+        "questions": [
+          {
+            "question": "question text for front of card",
+            "correctAnswer": "answer text for back of card"
+          }
+        ]
+      }`;
+      
+      console.log("System prompt:", systemPrompt);
+      console.log("User prompt:", userPrompt);
+      
+      // Call AIML API
+      const response = await fetch("https://api.aimlapi.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${AIMLAPI_KEY}`
+        },
+        body: JSON.stringify({
+          model: "mistralai/Mistral-7B-Instruct-v0.2",
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt
+            },
+            {
+              role: "user",
+              content: userPrompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 2000
+        })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("AIML API error:", response.status, errorText);
+        throw new Error(`AIML API returned an error: ${response.status} ${errorText}`);
+      }
+      
+      const responseData = await response.json();
+      console.log("AIML API response:", JSON.stringify(responseData));
+      
+      if (!responseData.choices || !responseData.choices[0] || !responseData.choices[0].message) {
+        throw new Error("Invalid response format from AIML API");
+      }
+      
+      const content = responseData.choices[0].message.content;
+      console.log("Content from API:", content);
+      
+      try {
+        // Extract the JSON part from the response
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new Error("Could not extract JSON from the API response");
+        }
+        
+        const jsonContent = jsonMatch[0];
+        const parsedContent = JSON.parse(jsonContent);
+        
+        if (!parsedContent.questions || !Array.isArray(parsedContent.questions)) {
+          throw new Error("Invalid flashcard data format");
+        }
+        
+        return new Response(JSON.stringify(parsedContent), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } catch (jsonError) {
+        console.error("Error parsing JSON from API response:", jsonError);
+        try {
+          // Fallback: Try to parse the entire content as JSON
+          const parsedContent = JSON.parse(content);
+          if (parsedContent.questions) {
+            return new Response(JSON.stringify(parsedContent), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          } else {
+            throw new Error("Invalid flashcard data format in parsed content");
+          }
+        } catch (fallbackError) {
+          console.error("Fallback JSON parsing failed:", fallbackError);
+          
+          // Last resort: Try to extract questions manually from the text
+          const questions = [];
+          const lines = content.split("\n");
+          
+          let currentQuestion = null;
+          for (const line of lines) {
+            if (line.includes("question") && line.includes(":")) {
+              if (currentQuestion) {
+                questions.push(currentQuestion);
+              }
+              currentQuestion = { question: "", correctAnswer: "" };
+              const questionText = line.split(":")[1].trim().replace(/["""]/g, "");
+              currentQuestion.question = questionText;
+            } else if (currentQuestion && line.includes("answer") && line.includes(":")) {
+              const answerText = line.split(":")[1].trim().replace(/["""]/g, "");
+              currentQuestion.correctAnswer = answerText;
+              questions.push(currentQuestion);
+              currentQuestion = null;
+            }
+          }
+          
+          if (questions.length > 0) {
+            return new Response(JSON.stringify({ questions }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          
+          throw new Error("Could not extract flashcard data from the API response");
+        }
+      }
+    } else {
+      throw new Error(`Unsupported request type: ${requestData.type}`);
+    }
+  } catch (error) {
+    console.error("Error in process-document function:", error);
     return new Response(
-      JSON.stringify({ error: "Unhandled server error", details: e.message, stack: e.stack }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      JSON.stringify({
+        error: error.message || "An unexpected error occurred",
+        details: error.stack || "No additional details available"
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
     );
   }
 });

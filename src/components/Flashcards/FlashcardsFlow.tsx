@@ -21,6 +21,7 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [title, setTitle] = useState("Flashcards");
   const [setId, setSetId] = useState<string | null>(null); // track set ID for DB saves
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -38,21 +39,34 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
         }
       } catch (error) {
         console.error("Error loading flashcards to review:", error);
+        setError("Failed to load flashcards data");
         localStorage.removeItem("flashcardsToReview");
       }
     }
   }, []);
 
   const handleFlashcardsGenerated = (generatedFlashcards: Flashcard[], setMeta?: { title?: string, id?: string }) => {
+    if (!generatedFlashcards || !generatedFlashcards.length) {
+      setError("No flashcards were generated. Please try again.");
+      toast({
+        title: "Error",
+        description: "No flashcards were generated. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setFlashcards(generatedFlashcards);
     if (setMeta?.title) setTitle(setMeta.title);
     if (setMeta?.id) setSetId(setMeta.id);
     setAppState(FlashcardsState.REVIEW);
+    setError(null);
   };
 
   const handleBackToCreate = () => {
     setFlashcards([]);
     setSetId(null);
+    setError(null);
     setAppState(FlashcardsState.CREATE);
     onBackToCreate();
   };
@@ -60,44 +74,59 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
   const handleSaveProgress = async (updatedFlashcards: Flashcard[]) => {
     setFlashcards(updatedFlashcards);
 
-    // Update in local storage
-    const flashcardsHistory = localStorage.getItem("flashcardsHistory");
-    if (flashcardsHistory) {
-      try {
-        const history = JSON.parse(flashcardsHistory);
-        const index = history.findIndex((set: any) =>
-          JSON.stringify(set.cards.map((c: any) => c.id)) ===
-          JSON.stringify(updatedFlashcards.map(c => c.id))
-        );
-        if (index !== -1) {
-          history[index].cards = updatedFlashcards;
-          localStorage.setItem("flashcardsHistory", JSON.stringify(history));
+    try {
+      // Update in local storage
+      const flashcardsHistory = localStorage.getItem("flashcardsHistory");
+      if (flashcardsHistory) {
+        try {
+          const history = JSON.parse(flashcardsHistory);
+          const index = history.findIndex((set: any) =>
+            JSON.stringify(set.cards.map((c: any) => c.id)) ===
+            JSON.stringify(updatedFlashcards.map(c => c.id))
+          );
+          if (index !== -1) {
+            history[index].cards = updatedFlashcards;
+            localStorage.setItem("flashcardsHistory", JSON.stringify(history));
+          }
+        } catch (error) {
+          console.error("Error updating flashcards progress in local storage:", error);
         }
-      } catch (error) {
-        console.error("Error updating flashcards progress in local storage:", error);
       }
-    }
 
-    // Update in Supabase if user is logged in
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user && setId) {
-      try {
+      // Update in Supabase if user is logged in
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && setId) {
         // Convert Flashcard[] to Json type before saving to Supabase
-        const cardsJson = updatedFlashcards.map(card => ({
+        const cardsJson: Json = updatedFlashcards.map(card => ({
           id: card.id,
           front: card.front,
           back: card.back,
           status: card.status
-        })) as unknown as Json;
+        }));
         
-        await supabase
+        const { error } = await supabase
           .from("flashcard_sets")
           .update({ cards: cardsJson })
           .eq("id", setId)
           .eq("user_id", user.id);
-      } catch (error) {
-        console.error("Error updating flashcards progress in database:", error);
+          
+        if (error) {
+          console.error("Error updating flashcards in Supabase:", error);
+          throw error;
+        }
       }
+      
+      toast({
+        title: "Progress Saved",
+        description: "Your flashcard progress has been updated.",
+      });
+    } catch (error) {
+      console.error("Error updating flashcards progress:", error);
+      toast({
+        title: "Save Failed",
+        description: "There was a problem saving your progress.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -112,6 +141,21 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
     stiffness: 300,
     damping: 30,
   };
+
+  if (error) {
+    return (
+      <div className="p-4 border border-destructive/50 bg-destructive/10 rounded-md text-center">
+        <h2 className="text-lg font-semibold mb-2">Error</h2>
+        <p className="mb-4">{error}</p>
+        <button 
+          className="px-4 py-2 bg-primary text-primary-foreground rounded"
+          onClick={() => setError(null)}
+        >
+          Dismiss
+        </button>
+      </div>
+    );
+  }
 
   switch (appState) {
     case FlashcardsState.CREATE:

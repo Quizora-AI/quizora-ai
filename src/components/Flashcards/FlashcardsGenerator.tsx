@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -61,13 +61,17 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
   });
 
   // Check premium status from local storage
-  useState(() => {
+  useEffect(() => {
     const userSettings = localStorage.getItem("userSettings");
     if (userSettings) {
-      const settings = JSON.parse(userSettings);
-      setIsPremium(settings.isPremium === true);
+      try {
+        const settings = JSON.parse(userSettings);
+        setIsPremium(settings.isPremium === true);
+      } catch (error) {
+        console.error("Error parsing user settings:", error);
+      }
     }
-  });
+  }, []);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
@@ -106,24 +110,32 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
       console.log("Response from process-document:", responseData);
       
       if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${responseData.error || "Unknown error"}`);
+        const errorMessage = responseData.error || `Error ${response.status}: Unknown error`;
+        console.error("API error:", errorMessage);
+        throw new Error(errorMessage);
       }
 
       if (responseData.error) {
+        console.error("Response contains error:", responseData.error);
         throw new Error(responseData.error);
       }
 
       if (!responseData.questions || !Array.isArray(responseData.questions)) {
+        console.error("Invalid response format:", responseData);
         throw new Error("Invalid response format: missing questions array");
       }
 
       // Build flashcards from response
       const flashcards: Flashcard[] = responseData.questions.map((q: any, idx: number) => ({
-        id: `card-${idx}`,
+        id: `card-${idx}-${Date.now()}`,
         front: q.question,
         back: q.correctAnswer,
         status: "unread"
       }));
+
+      if (flashcards.length === 0) {
+        throw new Error("No flashcards were generated. Please try again.");
+      }
 
       // Save to Supabase if user logged in
       let setId: string | null = null;
@@ -163,19 +175,23 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
             
           if (error) {
             console.error("Supabase insert error:", error);
-            throw new Error(error.message);
+          } else {
+            setId = flashcardsSet.id;
           }
-          setId = flashcardsSet.id;
         } catch (error: any) {
           console.error("Failed to save flashcards to database:", error);
         }
       }
 
       // Save in local storage
-      const existingHistory = localStorage.getItem("flashcardsHistory");
-      const history = existingHistory ? JSON.parse(existingHistory) : [];
-      history.unshift(flashcardsSet);
-      localStorage.setItem("flashcardsHistory", JSON.stringify(history));
+      try {
+        const existingHistory = localStorage.getItem("flashcardsHistory");
+        const history = existingHistory ? JSON.parse(existingHistory) : [];
+        history.unshift(flashcardsSet);
+        localStorage.setItem("flashcardsHistory", JSON.stringify(history));
+      } catch (storageError) {
+        console.error("Failed to save to local storage:", storageError);
+      }
 
       // Pass metadata up so it can be saved in flow state for further updates
       onFlashcardsGenerated(flashcards, { title: flashcardsSet.title, id: setId || flashcardsSet.id });
