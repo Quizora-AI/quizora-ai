@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -11,6 +10,7 @@ import { Question } from "@/components/FileUpload";
 import { motion } from "framer-motion";
 import { BrainCircuit, History, MessageSquare, Settings } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TabNavigationProps {
   onQuizGenerated: (questions: Question[]) => void;
@@ -32,12 +32,21 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
     else if (lastPart === 'settings') setActiveTab('settings');
     else setActiveTab('generate');
     
-    // Check if user has premium subscription
-    const userSettings = localStorage.getItem("userSettings");
-    if (userSettings) {
-      const settings = JSON.parse(userSettings);
-      setIsPremium(settings.isPremium === true);
-    }
+    // Check if user has premium subscription from Supabase
+    const checkPremiumStatus = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("isPremium")
+          .eq("id", data.session.user.id)
+          .maybeSingle();
+          
+        setIsPremium(!!profile?.isPremium);
+      }
+    };
+    
+    checkPremiumStatus();
   }, [location.pathname]);
   
   const handleTabChange = (value: string) => {

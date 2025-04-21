@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Question } from "@/components/FileUpload";
@@ -44,14 +43,17 @@ export function useQuizLogic(quizTitleInitial = "Quizora Quiz") {
         
         setIsPremium(profile?.isPremium === true);
         
-        // Count existing quizzes
-        const { data: quizzes, error } = await supabase
-          .from("quiz_attempts")
-          .select("id")
-          .eq("user_id", data.session.user.id);
-          
-        if (!error && quizzes) {
-          setQuizCount(quizzes.length);
+        // Only count quizzes if not premium
+        if (!profile?.isPremium) {
+          // Count existing quizzes
+          const { data: quizzes, error } = await supabase
+            .from("quiz_attempts")
+            .select("id")
+            .eq("user_id", data.session.user.id);
+            
+          if (!error && quizzes) {
+            setQuizCount(quizzes.length);
+          }
         }
       } else {
         // Redirect to login if not authenticated
@@ -63,7 +65,7 @@ export function useQuizLogic(quizTitleInitial = "Quizora Quiz") {
   }, [navigate]);
 
   const handleQuizGenerated = (generatedQuestions: Question[]) => {
-    // Check if user can generate a quiz
+    // Check if user can generate a quiz - only if not premium and already has 2+ quizzes
     if (!isPremium && quizCount >= 2) {
       toast({
         title: "Free Limit Reached",
@@ -136,23 +138,26 @@ export function useQuizLogic(quizTitleInitial = "Quizora Quiz") {
           
           const userIsPremium = profile?.isPremium === true;
           
-          // Get count of existing quizzes
-          const { data: existingQuizzes } = await supabase
-            .from("quiz_attempts")
-            .select("id")
-            .eq("user_id", data.session.user.id);
-          
-          const quizzesTaken = existingQuizzes?.length || 0;
-          
-          // Only allow saving if premium or under free limit
-          if (!userIsPremium && quizzesTaken >= 2) {
-            toast({
-              title: "Free Limit Reached",
-              description: "You've reached the limit of 2 free quizzes. Upgrade to premium to save more quizzes!",
-              variant: "destructive"
-            });
-            navigate("/settings?tab=premium");
-            return;
+          // Only check quiz count if not premium
+          if (!userIsPremium) {
+            // Get count of existing quizzes
+            const { data: existingQuizzes } = await supabase
+              .from("quiz_attempts")
+              .select("id")
+              .eq("user_id", data.session.user.id);
+            
+            const quizzesTaken = existingQuizzes?.length || 0;
+            
+            // Only allow saving if premium or under free limit
+            if (quizzesTaken >= 2) {
+              toast({
+                title: "Free Limit Reached",
+                description: "You've reached the limit of 2 free quizzes. Upgrade to premium to save more quizzes!",
+                variant: "destructive"
+              });
+              navigate("/settings?tab=premium");
+              return;
+            }
           }
 
           const correctAnswers = getCorrectAnswersCount();
@@ -226,6 +231,7 @@ export function useQuizLogic(quizTitleInitial = "Quizora Quiz") {
     handleNewQuiz,
     getCorrectAnswersCount,
     location,
-    isPremium
+    isPremium,
+    quizCount
   };
 }

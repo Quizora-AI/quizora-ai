@@ -5,10 +5,17 @@ import { useNavigate } from "react-router-dom";
 
 interface Props {
   itemVariants: any;
+  isPremium: boolean;
 }
 
-export function QuizHistoryWarning({ itemVariants }: Props) {
+export function QuizHistoryWarning({ itemVariants, isPremium }: Props) {
   const navigate = useNavigate();
+  
+  // Don't render anything if the user is premium
+  if (isPremium) {
+    return null;
+  }
+  
   return (
     <motion.div
       variants={itemVariants}

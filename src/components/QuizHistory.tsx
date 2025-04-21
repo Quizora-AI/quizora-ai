@@ -1,116 +1,54 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Card, CardContent } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Question } from "@/components/FileUpload";
 import { QuizHistoryHeader } from "./QuizHistoryHeader";
-import { QuizHistoryWarning } from "./QuizHistoryWarning";
-import { QuizHistoryEmpty } from "./QuizHistoryEmpty";
 import { QuizHistoryList } from "./QuizHistoryList";
-
-interface QuizHistoryEntry {
-  id: string;
-  date: string;
-  title: string;
-  questionsCount: number;
-  score: number;
-  questions: Question[];
-  attempts?: number;
-}
+import { QuizHistoryEmpty } from "./QuizHistoryEmpty";
+import { QuizHistoryWarning } from "./QuizHistoryWarning";
+import { supabase } from "@/integrations/supabase/client";
 
 export function QuizHistory() {
-  const [history, setHistory] = useState<QuizHistoryEntry[]>([]);
+  const [quizzes, setQuizzes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showFreeWarning, setShowFreeWarning] = useState(false);
-  const { toast } = useToast();
-  const navigate = useNavigate();
+  const [isPremium, setIsPremium] = useState(false);
 
   useEffect(() => {
-    const fetchHistory = async () => {
-      setLoading(true);
+    const fetchQuizzes = async () => {
       try {
-        const user = (await supabase.auth.getUser()).data.user;
-        if(!user) {
-          setHistory([]);
+        // Check user's premium status first
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData.session?.user) {
           setLoading(false);
           return;
         }
-        const { data, error } = await supabase
-          .from("quiz_attempts")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
 
-        if (error) throw error;
-
-        const output = data?.map((quiz: any) => ({
-          ...quiz,
-          attempts: quiz.user_answers ? 1 : 0
-        })) || [];
-        setHistory(output);
-
-        const profileData = await supabase
+        // Get premium status
+        const { data: profile } = await supabase
           .from("profiles")
           .select("isPremium")
-          .eq("id", user.id)
+          .eq("id", sessionData.session.user.id)
           .maybeSingle();
-        
-        const isPremium = profileData.data?.isPremium === true;
-        
-        if (!isPremium && output.length >= 2) setShowFreeWarning(true);
-        else setShowFreeWarning(false);
+          
+        setIsPremium(profile?.isPremium === true);
 
+        // Get quiz attempts
+        const { data } = await supabase
+          .from("quiz_attempts")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (data) {
+          setQuizzes(data);
+        }
+        setLoading(false);
       } catch (error) {
-        console.error("Failed to load quiz history:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load quiz history",
-          variant: "destructive"
-        });
-      } finally {
+        console.error("Error fetching quiz history:", error);
         setLoading(false);
       }
     };
 
-    fetchHistory();
-  }, [toast]);
-
-  const deleteHistoryEntry = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      const updatedHistory = history.filter(entry => entry.id !== id);
-      localStorage.setItem("quizHistory", JSON.stringify(updatedHistory));
-      setHistory(updatedHistory);
-      toast({
-        title: "Deleted",
-        description: "Quiz history entry removed",
-      });
-    } catch (error) {
-      console.error("Failed to delete quiz history entry:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete quiz history entry",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const viewQuiz = (entry: QuizHistoryEntry) => {
-    localStorage.setItem("selectedQuiz", JSON.stringify(entry));
-    if (!entry.attempts) {
-      entry.attempts = 1;
-    } else {
-      entry.attempts += 1;
-    }
-    const updatedHistory = history.map(item => 
-      item.id === entry.id ? entry : item
-    );
-    localStorage.setItem("quizHistory", JSON.stringify(updatedHistory));
-    navigate(`/history/${entry.id}`);
-  };
+    fetchQuizzes();
+  }, []);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -128,59 +66,33 @@ export function QuizHistory() {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { 
-        type: "spring",
-        stiffness: 300,
-        damping: 24
-      }
+      transition: { type: "spring", stiffness: 300, damping: 24 }
     }
   };
 
-  const createNewQuiz = () => {
-    const userSettings = localStorage.getItem("userSettings");
-    if (userSettings) {
-      const settings = JSON.parse(userSettings);
-      if (!settings.isPremium && history.length >= 2) {
-        navigate('/settings?tab=premium');
-        toast({
-          title: "Free Quiz Limit Reached",
-          description: "Upgrade to premium for unlimited quizzes!"
-        });
-        return;
-      }
-    }
-    navigate('/');
-  };
+  // Show warning only if not premium and has 2+ quizzes
+  const showWarning = !isPremium && quizzes.length >= 2;
 
   return (
-    <motion.div 
-      className="w-full max-w-4xl mx-auto"
+    <motion.div
+      className="max-w-4xl mx-auto"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
-      <Card className="bg-card/50 backdrop-blur-sm border border-primary/10 shadow-lg">
-        <QuizHistoryHeader />
-        <CardContent>
-          {showFreeWarning && (
-            <QuizHistoryWarning itemVariants={itemVariants} />
-          )}
-          {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-            </div>
-          ) : history.length === 0 ? (
-            <QuizHistoryEmpty onCreateQuiz={createNewQuiz} itemVariants={itemVariants} />
-          ) : (
-            <QuizHistoryList
-              history={history}
-              itemVariants={itemVariants}
-              onDelete={deleteHistoryEntry}
-              onView={viewQuiz}
-            />
-          )}
-        </CardContent>
-      </Card>
+      <QuizHistoryHeader />
+      
+      {showWarning && <QuizHistoryWarning itemVariants={itemVariants} isPremium={isPremium} />}
+      
+      {loading ? (
+        <div className="flex justify-center py-10">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+        </div>
+      ) : quizzes.length > 0 ? (
+        <QuizHistoryList quizzes={quizzes} itemVariants={itemVariants} />
+      ) : (
+        <QuizHistoryEmpty />
+      )}
     </motion.div>
   );
 }
