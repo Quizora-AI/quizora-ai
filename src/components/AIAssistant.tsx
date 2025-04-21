@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -34,7 +33,6 @@ export function AIAssistant() {
   }, [messages]);
 
   useEffect(() => {
-    // Load previous conversation from localStorage
     const savedMessages = localStorage.getItem("assistantMessages");
     if (savedMessages) {
       try {
@@ -48,22 +46,21 @@ export function AIAssistant() {
       const welcomeMessage: Message = {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: "Hello! I'm your Quizora Assistant. How can I help you with your medical studies today?",
+        content: "Hello! I'm your Quizora Assistant. How can I help you with your learning today?",
         timestamp: new Date(),
       };
       setMessages([welcomeMessage]);
     }
-    // Check if user has premium subscription
     const userSettings = localStorage.getItem("userSettings");
     if (userSettings) {
       const settings = JSON.parse(userSettings);
       setIsPremium(settings.isPremium === true);
       if (settings.course) {
-        setCourse(settings.course);
+        setCourse("");
       }
     }
   }, []);
-  
+
   useEffect(() => {
     if (messages.length > 0) {
       localStorage.setItem("assistantMessages", JSON.stringify(messages));
@@ -95,7 +92,6 @@ export function AIAssistant() {
     setIsLoading(true);
 
     try {
-      // Show a typing indicator
       const tempId = crypto.randomUUID();
       setMessages(prev => [...prev, {
         id: tempId,
@@ -104,11 +100,10 @@ export function AIAssistant() {
         timestamp: new Date(),
       }]);
 
-      // Use AIMLAPI instead of OpenAI
       const { response } = await fetch("https://api.aimlapi.com/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${import.meta.env.VITE_AIMLAPI_KEY || ""}`, // Optionally pass via env var, or implement as per your backend's integration
+          "Authorization": `Bearer ${import.meta.env.VITE_AIMLAPI_KEY || ""}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
@@ -124,7 +119,6 @@ export function AIAssistant() {
         })
       }).then(r => r.json());
 
-      // Remove typing indicator
       setMessages(prev => prev.filter(m => m.id !== tempId));
 
       const aiResponse: Message = {
@@ -179,7 +173,7 @@ export function AIAssistant() {
     const welcomeMessage: Message = {
       id: crypto.randomUUID(),
       role: "assistant",
-      content: "Hello! I'm your Quizora Assistant. How can I help you with your medical studies today?",
+      content: "Hello! I'm your Quizora Assistant. How can I help you with your learning today?",
       timestamp: new Date(),
     };
     setMessages([welcomeMessage]);
@@ -214,7 +208,7 @@ export function AIAssistant() {
                   Quizora Assistant
                 </CardTitle>
                 <CardDescription>
-                  Ask questions about any medical subject and get personalized learning assistance
+                  Ask questions about any subject and get personalized learning assistance
                 </CardDescription>
               </div>
             </div>
@@ -238,7 +232,6 @@ export function AIAssistant() {
               transition={{ delay: 0.2 }}
               className="relative"
             >
-              {/* Blurred preview of the assistant interface */}
               <div className="filter blur-sm pointer-events-none">
                 <div className="space-y-4 mb-4 h-[40vh] overflow-hidden">
                   <div className="flex gap-3">
@@ -246,31 +239,27 @@ export function AIAssistant() {
                       <BrainCircuit className="h-4 w-4 text-primary-foreground" />
                     </div>
                     <div className="rounded-lg p-3 max-w-[80%] bg-muted text-muted-foreground">
-                      Hello! I'm your Quizora Assistant. How can I help you with your studies today?
+                      Hello! I'm your Quizora Assistant. How can I help you with your learning today?
                     </div>
                   </div>
-                  
                   <div className="flex gap-3 flex-row-reverse">
                     <div className="bg-accent p-2 rounded-full">
                       <User className="h-4 w-4" />
                     </div>
                     <div className="rounded-lg p-3 max-w-[80%] bg-primary text-primary-foreground">
-                      Can you explain photosynthesis to me?
+                      Can you explain Newton's Laws to me?
                     </div>
                   </div>
-                  
                   <div className="flex gap-3">
                     <div className="bg-primary p-2 rounded-full">
                       <BrainCircuit className="h-4 w-4 text-primary-foreground" />
                     </div>
                     <div className="rounded-lg p-3 max-w-[80%] bg-muted text-muted-foreground">
-                      Photosynthesis is the process by which plants convert light energy into chemical energy...
+                      Newton's laws describe the relationship between motion of an object and the forces acting on it...
                     </div>
                   </div>
                 </div>
               </div>
-              
-              {/* Premium overlay */}
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
                 <div className="bg-amber-500/10 p-4 rounded-full mb-4">
                   <Lock className="h-8 w-8 text-amber-500" />
@@ -367,7 +356,7 @@ export function AIAssistant() {
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={isPremium ? "Ask about your medical queries..." : "Upgrade to premium to use Quizora Assistant"}
+              placeholder={isPremium ? "Ask about your queries..." : "Upgrade to premium to use Quizora Assistant"}
               className="flex-1"
               disabled={isLoading || !isPremium}
             />
@@ -385,4 +374,3 @@ export function AIAssistant() {
     </motion.div>
   );
 }
-// This file is getting long. Please ask me to refactor AIAssistant into smaller files after you're done reviewing these changes.

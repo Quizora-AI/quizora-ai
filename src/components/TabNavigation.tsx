@@ -10,7 +10,7 @@ import { AIAssistant } from "@/components/AIAssistant";
 import { SettingsPanel } from "@/components/SettingsPanel";
 import { Question } from "@/components/FileUpload";
 import { motion } from "framer-motion";
-import { BrainCircuit, History, MessageSquare, Settings, ArrowLeft } from "lucide-react";
+import { BrainCircuit, History, MessageSquare, Settings } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -47,18 +47,15 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
 
   const handleTabChange = (value: string) => {
     if (isChangingTab) return;
-    
     setIsChangingTab(true);
     setActiveTab(value);
 
-    // Check premium access for assistant tab
     if (value === "assistant" && !isPremium) {
       navigate('/settings?tab=premium');
       setTimeout(() => setIsChangingTab(false), 300);
       return;
     }
 
-    // Handle navigation based on selected tab
     switch (value) {
       case 'history':
         navigate('/history');
@@ -73,16 +70,12 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
         navigate('/');
         break;
     }
-    
+
     setTimeout(() => setIsChangingTab(false), 300);
   };
 
-  const handleGoBack = () => {
-    navigate(-1);
-  };
-
+  // Only show "Create New Quiz" button on generate tab (bottom mobile bar)
   const handleCreateNewQuiz = () => {
-    // Check if user has reached free limit
     const userSettings = localStorage.getItem("userSettings");
     const quizHistory = localStorage.getItem("quizHistory");
     const historyData = quizHistory ? JSON.parse(quizHistory) : [];
@@ -98,10 +91,7 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
         return;
       }
     }
-    
-    // Clear any existing data for a fresh quiz
     localStorage.removeItem("quizToRetake");
-    // Don't use window.location.href as it causes a full page refresh
     navigate("/");
     setActiveTab("generate");
   };
@@ -134,27 +124,7 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
           value={activeTab}
           onValueChange={handleTabChange}
         >
-          <div className="flex justify-between max-w-md w-[90%] mx-auto my-4">
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="flex gap-2 items-center border-border hover:bg-muted"
-              onClick={handleGoBack}
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Back</span>
-            </Button>
-            {activeTab !== 'history' && (
-              <Button 
-                variant="default"
-                size="sm"
-                className="gap-2"
-                onClick={handleCreateNewQuiz}
-              >
-                Create New Quiz
-              </Button>
-            )}
-          </div>
+          {/* Removed top area with back button & duplicate Create New Quiz button */}
           <TabsList className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 grid grid-cols-4 max-w-md w-[90%] shadow-lg border border-border/20">
             <TabsTrigger value="generate" className="flex items-center" disabled={isChangingTab}>
               <BrainCircuit className={tabIconStyle} />
@@ -176,13 +146,22 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
           
           <div className="pb-20">
             <TabsContent value="generate" className="mt-0">
+              {/* Add Create New Quiz button in contextually correct location below, if needed */}
+              <div className="flex justify-end mb-3">
+                <Button 
+                  variant="default"
+                  size="sm"
+                  className="gap-2"
+                  onClick={handleCreateNewQuiz}
+                >
+                  Create New Quiz
+                </Button>
+              </div>
               <QuizGenerator onQuizGenerated={onQuizGenerated} />
             </TabsContent>
-            
             <TabsContent value="history" className="mt-0">
               <QuizHistory />
             </TabsContent>
-            
             <TabsContent value="assistant" className="mt-0">
               {isPremium ? (
                 <AIAssistant key="assistant-component" />
@@ -208,7 +187,6 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
                 </Card>
               )}
             </TabsContent>
-            
             <TabsContent value="settings" className="mt-0">
               <SettingsPanel />
             </TabsContent>
@@ -218,3 +196,4 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
     </TooltipProvider>
   );
 }
+// This file is getting quite long. Please consider refactoring TabNavigation into smaller components for cleanliness.

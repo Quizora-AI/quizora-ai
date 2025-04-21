@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -78,6 +77,50 @@ export function AnalyticsPanel({ isPremium, quizHistory, navigate }: AnalyticsPa
   const categoryPerformance = analyzeCategoryPerformance(quizHistory);
   const conceptualChallenges = analyzeChallenges(quizHistory);
   
+  // New: Structure for course, subject, topic breakdown
+  const courseAnalysis = {};
+  const subjectAnalysis = {};
+  const topicAnalysis = {};
+
+  quizHistory.forEach((quiz) => {
+    // This example treats course/subject/topic as repeat of the extraction logic.
+    // Replace with real hierarchy if available.
+    const course = extractCourse(quiz.title);
+    const subject = extractSubject(quiz.title);
+    const topic = extractTopic(quiz.title);
+
+    // Aggregate for course
+    if (!courseAnalysis[course]) courseAnalysis[course] = { total: 0, count: 0 };
+    courseAnalysis[course].total += quiz.score;
+    courseAnalysis[course].count += 1;
+
+    // Aggregate for subject
+    if (!subjectAnalysis[subject]) subjectAnalysis[subject] = { total: 0, count: 0 };
+    subjectAnalysis[subject].total += quiz.score;
+    subjectAnalysis[subject].count += 1;
+
+    // Aggregate for topic
+    if (!topicAnalysis[topic]) topicAnalysis[topic] = { total: 0, count: 0 };
+    topicAnalysis[topic].total += quiz.score;
+    topicAnalysis[topic].count += 1;
+  });
+
+  // Helper for display of each category
+  function getAnalysisArr(analysisObj: Record<string, { total: number; count: number }>) {
+    return Object.entries(analysisObj)
+      .filter(([_, data]) => data.count > 0)
+      .map(([label, data]) => ({
+        label,
+        avg: Math.round(data.total / data.count),
+        count: data.count,
+      }))
+      .sort((a, b) => b.avg - a.avg);
+  }
+
+  const courseArr = getAnalysisArr(courseAnalysis);
+  const subjectArr = getAnalysisArr(subjectAnalysis);
+  const topicArr = getAnalysisArr(topicAnalysis).slice(0, 5); // top 5 topics
+  
   // Convert performance data for visualization
   const topicPerformanceData = Object.entries(analyzedTopics).map(([topic, data]) => ({
     name: topic,
@@ -91,38 +134,68 @@ export function AnalyticsPanel({ isPremium, quizHistory, navigate }: AnalyticsPa
       <motion.div variants={itemVariants} className="text-center">
         <h2 className="text-xl font-bold mb-2">Performance Overview</h2>
         <p className="text-muted-foreground text-sm">
-          Track your learning progress and identify areas for improvement
+          See your course-wise, subject-wise, and topic-wise performance at a glance
         </p>
       </motion.div>
       {quizHistory.length > 0 ? (
         <>
+          {/* Course-wise Analysis */}
           <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold">{quizHistory.length}</div>
-                  <p className="text-sm text-muted-foreground">Total Quizzes Taken</p>
-                </div>
+              <CardHeader>
+                <CardTitle>Course Overview</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {courseArr.length ? (
+                  <ul>
+                    {courseArr.map((data, i) => (
+                      <li key={i} className="flex justify-between mb-1">
+                        <span>{data.label}</span>
+                        <span className="font-medium">{data.avg}%</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground">No data</p>
+                )}
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold">
-                    {Math.round(quizHistory.reduce((avg, quiz) => avg + quiz.score, 0) / quizHistory.length || 0)}%
-                  </div>
-                  <p className="text-sm text-muted-foreground">Average Score</p>
-                </div>
+              <CardHeader>
+                <CardTitle>Subject Overview</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {subjectArr.length ? (
+                  <ul>
+                    {subjectArr.map((data, i) => (
+                      <li key={i} className="flex justify-between mb-1">
+                        <span>{data.label}</span>
+                        <span className="font-medium">{data.avg}%</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground">No data</p>
+                )}
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold">
-                    {quizHistory.reduce((total, quiz) => total + quiz.questionsCount, 0)}
-                  </div>
-                  <p className="text-sm text-muted-foreground">Total Questions Answered</p>
-                </div>
+              <CardHeader>
+                <CardTitle>Top Topics</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {topicArr.length ? (
+                  <ul>
+                    {topicArr.map((data, i) => (
+                      <li key={i} className="flex justify-between mb-1">
+                        <span>{data.label}</span>
+                        <span className="font-medium">{data.avg}%</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground">No data</p>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -506,6 +579,28 @@ function extractTopic(title: string): string {
   // Otherwise, just return the first word or the whole string if it's short
   const words = cleanTitle.split(' ');
   return words[0] || "General";
+}
+
+// Add these helpers to extract course/subject/topic from titles.
+// In real-world, you'd want quiz.question/course/subject info on the object
+function extractCourse(title: string): string {
+  // Example: extract by looking for known keywords, or fallback to start
+  if (title.toLowerCase().includes("engineering")) return "Engineering";
+  if (title.toLowerCase().includes("medical")) return "Medical";
+  if (title.toLowerCase().includes("upsc")) return "UPSC";
+  if (title.toLowerCase().includes("class 1")) return "Class 1";
+  return "Other";
+}
+
+function extractSubject(title: string): string {
+  if (title.toLowerCase().includes("anatomy")) return "Anatomy";
+  if (title.toLowerCase().includes("physics")) return "Physics";
+  if (title.toLowerCase().includes("history")) return "History";
+  if (title.toLowerCase().includes("mathematics")) return "Mathematics";
+  if (title.toLowerCase().includes("physiology")) return "Physiology";
+  if (title.toLowerCase().includes("biochemistry")) return "Biochemistry";
+  if (title.toLowerCase().includes("upsc")) return "UPSC";
+  return "General";
 }
 
 // New helper functions for enhanced analytics
