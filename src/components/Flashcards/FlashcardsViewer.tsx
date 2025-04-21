@@ -1,10 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { ArrowDown, ArrowUp, BookOpen, Progress as ProgressIcon } from "lucide-react";
 import { Flashcard } from "./FlashcardsGenerator";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +26,6 @@ export function FlashcardsViewer({
   const [completed, setCompleted] = useState(0);
   const { toast } = useToast();
 
-  // Calculate completed percentage based on cards that are marked as 'known'
   useEffect(() => {
     const knownCount = cards.filter(c => c.status === 'known').length;
     setCompleted(knownCount / cards.length * 100);
@@ -58,10 +54,8 @@ export function FlashcardsViewer({
     updatedCards[currentIndex].status = status;
     setCards(updatedCards);
     
-    // Save progress
     onSaveProgress(updatedCards);
 
-    // Move to next card if not the last one
     if (currentIndex < cards.length - 1) {
       handleNext();
     } else {

@@ -19,6 +19,7 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
   const [appState, setAppState] = useState<FlashcardsState>(FlashcardsState.CREATE);
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [title, setTitle] = useState("Flashcards");
+  const [setId, setSetId] = useState<string | null>(null); // track set ID for DB saves
   const { toast } = useToast();
 
   useEffect(() => {
@@ -26,9 +27,10 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
     const flashcardsToReview = localStorage.getItem("flashcardsToReview");
     if (flashcardsToReview) {
       try {
-        const { cards, title: savedTitle } = JSON.parse(flashcardsToReview);
+        const { cards, title: savedTitle, id } = JSON.parse(flashcardsToReview);
         if (cards && cards.length) {
           setFlashcards(cards);
+          setSetId(id || null);
           if (savedTitle) setTitle(savedTitle);
           setAppState(FlashcardsState.REVIEW);
           localStorage.removeItem("flashcardsToReview");
@@ -40,29 +42,32 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
     }
   }, []);
 
-  const handleFlashcardsGenerated = (generatedFlashcards: Flashcard[]) => {
+  const handleFlashcardsGenerated = (generatedFlashcards: Flashcard[], setMeta?: { title?: string, id?: string }) => {
     setFlashcards(generatedFlashcards);
+    if (setMeta?.title) setTitle(setMeta.title);
+    if (setMeta?.id) setSetId(setMeta.id);
     setAppState(FlashcardsState.REVIEW);
   };
 
   const handleBackToCreate = () => {
     setFlashcards([]);
+    setSetId(null);
     setAppState(FlashcardsState.CREATE);
     onBackToCreate();
   };
 
   const handleSaveProgress = async (updatedFlashcards: Flashcard[]) => {
     setFlashcards(updatedFlashcards);
-    
+
     // Update in local storage
     const flashcardsHistory = localStorage.getItem("flashcardsHistory");
     if (flashcardsHistory) {
       try {
         const history = JSON.parse(flashcardsHistory);
-        const index = history.findIndex((set: any) => 
-          JSON.stringify(set.cards.map((c: any) => c.id)) === 
-          JSON.stringify(updatedFlashcards.map(c => c.id)));
-        
+        const index = history.findIndex((set: any) =>
+          JSON.stringify(set.cards.map((c: any) => c.id)) ===
+          JSON.stringify(updatedFlashcards.map(c => c.id))
+        );
         if (index !== -1) {
           history[index].cards = updatedFlashcards;
           localStorage.setItem("flashcardsHistory", JSON.stringify(history));
@@ -71,27 +76,16 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
         console.error("Error updating flashcards progress in local storage:", error);
       }
     }
-    
+
     // Update in Supabase if user is logged in
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
+    if (user && setId) {
       try {
-        // Find the set ID from local storage
-        const flashcardsHistory = localStorage.getItem("flashcardsHistory");
-        if (flashcardsHistory) {
-          const history = JSON.parse(flashcardsHistory);
-          const setItem = history.find((set: any) => 
-            JSON.stringify(set.cards.map((c: any) => c.id)) === 
-            JSON.stringify(updatedFlashcards.map(c => c.id)));
-          
-          if (setItem && setItem.id) {
-            await supabase
-              .from('flashcard_sets')
-              .update({ cards: updatedFlashcards })
-              .eq('id', setItem.id)
-              .eq('user_id', user.id);
-          }
-        }
+        await supabase
+          .from("flashcard_sets")
+          .update({ cards: updatedFlashcards })
+          .eq("id", setId)
+          .eq("user_id", user.id);
       } catch (error) {
         console.error("Error updating flashcards progress in database:", error);
       }
