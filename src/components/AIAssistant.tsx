@@ -36,14 +36,27 @@ export function AIAssistant() {
 
   useEffect(() => {
     // Check if user has premium subscription
-    const userSettings = localStorage.getItem("userSettings");
-    if (userSettings) {
-      const settings = JSON.parse(userSettings);
-      setIsPremium(settings.isPremium === true);
-      if (settings.name) {
-        setUserName(settings.name);
+    const fetchUserDetails = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('isPremium, name')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          setIsPremium(profile?.isPremium === true);
+          if (profile?.name) {
+            setUserName(profile.name);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user details:", error);
       }
-    }
+    };
+
+    fetchUserDetails();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -137,7 +150,7 @@ export function AIAssistant() {
                 Quizora Assistant
               </CardTitle>
               <CardDescription>
-                Ask questions about medical concepts and get personalized guidance
+                Ask questions about your academic subjects and get personalized guidance
               </CardDescription>
             </div>
           </motion.div>
@@ -168,7 +181,7 @@ export function AIAssistant() {
                       <User className="h-4 w-4" />
                     </div>
                     <div className="rounded-lg p-3 max-w-[80%] bg-primary text-primary-foreground">
-                      Can you explain photosynthesis to me?
+                      Can you explain this topic to me?
                     </div>
                   </div>
                   
@@ -177,7 +190,7 @@ export function AIAssistant() {
                       <BrainCircuit className="h-4 w-4 text-primary-foreground" />
                     </div>
                     <div className="rounded-lg p-3 max-w-[80%] bg-muted text-muted-foreground">
-                      Photosynthesis is the process by which plants convert light energy into chemical energy...
+                      I'd be happy to explain that topic to you in detail...
                     </div>
                   </div>
                 </div>

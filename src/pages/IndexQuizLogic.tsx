@@ -13,7 +13,7 @@ export enum AppState {
   ANALYTICS
 }
 
-export function useQuizLogic(quizTitleInitial = "Medical Quiz") {
+export function useQuizLogic(quizTitleInitial = "Quizora Quiz") {
   const [appState, setAppState] = useState<AppState>(AppState.CREATE);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -21,18 +21,66 @@ export function useQuizLogic(quizTitleInitial = "Medical Quiz") {
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [endTime, setEndTime] = useState<Date | null>(null);
   const [quizTitle, setQuizTitle] = useState<string>(quizTitleInitial);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
+  const [quizCount, setQuizCount] = useState(0);
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Check authentication and get user data
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.user) {
+        setUserId(data.session.user.id);
+        
+        // Get user profile to check premium status
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("isPremium")
+          .eq("id", data.session.user.id)
+          .maybeSingle();
+        
+        setIsPremium(profile?.isPremium === true);
+        
+        // Count existing quizzes
+        const { data: quizzes, error } = await supabase
+          .from("quiz_attempts")
+          .select("id")
+          .eq("user_id", data.session.user.id);
+          
+        if (!error && quizzes) {
+          setQuizCount(quizzes.length);
+        }
+      } else {
+        // Redirect to login if not authenticated
+        navigate("/settings?tab=profile");
+      }
+    };
+    
+    fetchUserData();
+  }, [navigate]);
+
   const handleQuizGenerated = (generatedQuestions: Question[]) => {
+    // Check if user can generate a quiz
+    if (!isPremium && quizCount >= 2) {
+      toast({
+        title: "Free Limit Reached",
+        description: "You've reached the limit of 2 free quizzes. Upgrade to premium for unlimited quizzes!",
+        variant: "destructive"
+      });
+      navigate("/settings?tab=premium");
+      return;
+    }
+    
     setQuestions(generatedQuestions);
     setCurrentQuestionIndex(0);
     setUserAnswers([]);
     setStartTime(new Date());
     setEndTime(null);
     const now = new Date();
-    setQuizTitle(`Medical Quiz - ${now.toLocaleDateString()}`);
+    setQuizTitle(`Quiz - ${now.toLocaleDateString()}`);
     setAppState(AppState.QUIZ);
   };
 
@@ -76,28 +124,34 @@ export function useQuizLogic(quizTitleInitial = "Medical Quiz") {
     if (appState === AppState.RESULTS && questions.length > 0 && userAnswers.length > 0) {
       (async () => {
         try {
-          const user = (await supabase.auth.getUser()).data.user;
-          if (!user) return;
+          const { data } = await supabase.auth.getSession();
+          if (!data.session?.user) return;
 
-          const { data: existingAttempts } = await supabase
+          // Check if user is premium or has used less than 2 free quizzes
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("isPremium")
+            .eq("id", data.session.user.id)
+            .maybeSingle();
+          
+          const userIsPremium = profile?.isPremium === true;
+          
+          // Get count of existing quizzes
+          const { data: existingQuizzes } = await supabase
             .from("quiz_attempts")
             .select("id")
-            .eq("user_id", user.id);
-
-          const { data: profile, error: profileError } = await supabase
-            .from("profiles")
-            .select("isPremium,free_quizzes_used")
-            .eq("id", user.id)
-            .maybeSingle();
-
-          const isPremium = profile?.isPremium === true;
-          const maxFree = 2;
-          if (!isPremium && (existingAttempts?.length ?? 0) >= maxFree) {
+            .eq("user_id", data.session.user.id);
+          
+          const quizzesTaken = existingQuizzes?.length || 0;
+          
+          // Only allow saving if premium or under free limit
+          if (!userIsPremium && quizzesTaken >= 2) {
             toast({
-              title: "Upgrade Required",
-              description: "Upgrade to premium to save more than 2 quizzes!",
+              title: "Free Limit Reached",
+              description: "You've reached the limit of 2 free quizzes. Upgrade to premium to save more quizzes!",
               variant: "destructive"
             });
+            navigate("/settings?tab=premium");
             return;
           }
 
@@ -112,7 +166,7 @@ export function useQuizLogic(quizTitleInitial = "Medical Quiz") {
           })) as Json;
 
           await supabase.from("quiz_attempts").insert({
-            user_id: user.id,
+            user_id: data.session.user.id,
             title: quizTitle,
             questions: questionsJson,
             user_answers: userAnswers as unknown as Json,
@@ -135,18 +189,20 @@ export function useQuizLogic(quizTitleInitial = "Medical Quiz") {
         }
       })();
     }
-  }, [appState, questions, userAnswers, quizTitle, toast]);
+  }, [appState, questions, userAnswers, quizTitle, toast, navigate]);
 
   useEffect(() => {
-    if (appState === AppState.QUIZ && questions.length > 10) {
+    // Limit questions count for non-premium users
+    if (!isPremium && questions.length > 10) {
+      const trimmedQuestions = questions.slice(0, 10);
+      setQuestions(trimmedQuestions);
       toast({
-        title: "Too many questions",
-        description: "You can only have up to 10 questions in a quiz.",
+        title: "Question limit",
+        description: "Free users are limited to 10 questions per quiz. Upgrade to premium for up to 50 questions.",
         variant: "destructive"
       });
-      setAppState(AppState.CREATE);
     }
-  }, [appState, questions]);
+  }, [questions, isPremium, toast]);
 
   return {
     appState,
@@ -169,6 +225,7 @@ export function useQuizLogic(quizTitleInitial = "Medical Quiz") {
     handleRetakeQuiz,
     handleNewQuiz,
     getCorrectAnswersCount,
-    location
+    location,
+    isPremium
   };
 }

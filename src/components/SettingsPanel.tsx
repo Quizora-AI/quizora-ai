@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -11,7 +12,6 @@ import {
   Settings, 
   User, 
   Info, 
-  Globe, 
   Book, 
   Check, 
   Crown, 
@@ -22,22 +22,15 @@ import {
   BarChart
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { ResetPassword } from "./ResetPassword";
 
 interface UserSettings {
   name: string;
   email: string;
-  language: string;
   course: string;
   autoSave: boolean;
   theme: "light" | "dark" | "system";
@@ -49,30 +42,6 @@ interface UserSettings {
   expiryDate?: string;
 }
 
-const languages = [
-  { value: "en", label: "English", flag: "🇺🇸" },
-  { value: "hi", label: "Hindi", flag: "🇮🇳" },
-  { value: "gu", label: "Gujarati", flag: "🇮🇳" },
-  { value: "bn", label: "Bengali", flag: "🇧🇩" },
-  { value: "ta", label: "Tamil", flag: "🇮🇳" },
-  { value: "te", label: "Telugu", flag: "🇮🇳" },
-  { value: "ml", label: "Malayalam", flag: "🇮🇳" },
-  { value: "kn", label: "Kannada", flag: "🇮🇳" },
-  { value: "mr", label: "Marathi", flag: "🇮🇳" },
-  { value: "pa", label: "Punjabi", flag: "🇮🇳" },
-  { value: "ur", label: "Urdu", flag: "🇮🇳" },
-  { value: "es", label: "Spanish", flag: "🇪🇸" },
-  { value: "fr", label: "French", flag: "🇫🇷" },
-  { value: "de", label: "German", flag: "🇩🇪" },
-  { value: "it", label: "Italian", flag: "🇮🇹" },
-  { value: "pt", label: "Portuguese", flag: "🇵🇹" },
-  { value: "ru", label: "Russian", flag: "🇷🇺" },
-  { value: "ja", label: "Japanese", flag: "🇯🇵" },
-  { value: "ko", label: "Korean", flag: "🇰🇷" },
-  { value: "zh", label: "Chinese", flag: "🇨🇳" },
-  { value: "ar", label: "Arabic", flag: "🇸🇦" },
-];
-
 export function SettingsPanel() {
   const [searchParams] = useSearchParams();
   const defaultTab = searchParams.get("tab") || "profile";
@@ -80,8 +49,7 @@ export function SettingsPanel() {
   const [settings, setSettings] = useState<UserSettings>({
     name: "",
     email: "",
-    language: "en",
-    course: "medical",
+    course: "",
     autoSave: true,
     theme: "system",
     difficulty: "medium",
@@ -96,6 +64,8 @@ export function SettingsPanel() {
   const [authLoading, setAuthLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [isResetEmailSent, setIsResetEmailSent] = useState(false);
+  const [isSendingReset, setIsSendingReset] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -118,15 +88,6 @@ export function SettingsPanel() {
       if (historyStr) {
         setQuizHistory(JSON.parse(historyStr));
       }
-      
-      const userEmail = localStorage.getItem("userEmail");
-      setIsLoggedIn(!!userEmail);
-      if (userEmail) {
-        setSettings(prev => ({
-          ...prev,
-          email: userEmail
-        }));
-      }
     } catch (error) {
       console.error("Failed to load settings:", error);
     }
@@ -140,9 +101,9 @@ export function SettingsPanel() {
       setIsLoggedIn(!!session?.user);
       setAuthLoading(false);
 
-      // Optionally fetch profile here
+      // Fetch user profile if logged in
       if (session?.user) {
-        // Optionally fetch from profiles table here if needed
+        fetchUserProfile(session.user.id);
       }
     });
 
@@ -152,15 +113,58 @@ export function SettingsPanel() {
       setSupabaseUser(session?.user ?? null);
       setIsLoggedIn(!!session?.user);
       setAuthLoading(false);
+      
+      // Fetch user profile if logged in
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+  
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (error) throw error;
+      
+      if (data) {
+        setSettings(prev => ({
+          ...prev,
+          name: data.name || prev.name,
+          email: data.email || prev.email,
+          course: data.course || prev.course,
+          isPremium: data.isPremium || false
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    }
+  };
 
-  const saveSettings = () => {
+  const saveSettings = async () => {
     try {
       localStorage.setItem("userSettings", JSON.stringify(settings));
       localStorage.setItem("autoSave", settings.autoSave.toString());
+      
+      if (isLoggedIn && supabaseUser) {
+        // Update profile in Supabase
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            name: settings.name,
+            course: settings.course,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', supabaseUser.id);
+        
+        if (error) throw error;
+      }
       
       toast({
         title: "Settings saved",
@@ -189,18 +193,29 @@ export function SettingsPanel() {
       return;
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      if (error.message?.toLowerCase().includes("invalid login")) {
-        toast({ title: "Login failed", description: "Invalid email or password.", variant: "destructive" });
-      } else {
-        toast({ title: "Login failed", description: error.message, variant: "destructive" });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        if (error.message?.toLowerCase().includes("invalid login")) {
+          toast({ title: "Login failed", description: "Invalid email or password.", variant: "destructive" });
+        } else {
+          toast({ title: "Login failed", description: error.message, variant: "destructive" });
+        }
+        setErrorMessage(error.message);
+        return;
       }
-      setErrorMessage(error.message);
-    } else {
-      toast({ title: "Login successful", description: `Welcome, ${settings.name || email}` });
+      
+      toast({ title: "Login successful", description: `Welcome back!` });
       setIsLoggedIn(true);
       setActiveTab("profile");
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast({ 
+        title: "Login error", 
+        description: error?.message || "An unexpected error occurred", 
+        variant: "destructive" 
+      });
+      setErrorMessage(error?.message || "An unexpected error occurred");
     }
   };
 
@@ -226,135 +241,146 @@ export function SettingsPanel() {
       return;
     }
 
-    // Call Supabase signup
-    const { data, error } = await supabase.auth.signUp({
-      email: settings.email,
-      password,
-      options: {
-        data: { name: settings.name, course: settings.course }
-      }
-    });
+    try {
+      // Call Supabase signup
+      const { data, error } = await supabase.auth.signUp({
+        email: settings.email,
+        password,
+        options: {
+          data: { name: settings.name, course: settings.course }
+        }
+      });
 
-    if (error) {
-      if (error.message?.includes("already registered")) {
-        toast({ title: "Account exists", description: error.message, variant: "destructive" });
-      } else {
-        toast({ title: "Signup error", description: error.message, variant: "destructive" });
+      if (error) {
+        if (error.message?.includes("already registered")) {
+          toast({ title: "Account exists", description: error.message, variant: "destructive" });
+        } else {
+          toast({ title: "Signup error", description: error.message, variant: "destructive" });
+        }
+        setErrorMessage(error.message);
+        return;
       }
-      setErrorMessage(error.message);
-      return;
+      toast({ title: "Registration successful", description: "Please check your email to verify your account." });
+      setIsLoggedIn(true);
+      setActiveTab("profile");
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      toast({ 
+        title: "Registration error", 
+        description: error?.message || "An unexpected error occurred", 
+        variant: "destructive" 
+      });
+      setErrorMessage(error?.message || "An unexpected error occurred");
     }
-    toast({ title: "Registration successful", description: "Please check your email to verify your account." });
-    setIsLoggedIn(true);
-    setActiveTab("profile");
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!forgotPasswordEmail) {
-      toast({
-        title: "Reset failed",
-        description: "Please enter your email address.",
-        variant: "destructive"
+    setIsSendingReset(true);
+    
+    try {
+      if (!forgotPasswordEmail) {
+        toast({
+          title: "Reset failed",
+          description: "Please enter your email address.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // This will send a password reset link to the user's email
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
+        redirectTo: `${window.location.origin}/reset-password`
       });
-      return;
-    }
-    const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail);
-    if (error) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
+      
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else {
+        setIsResetEmailSent(true);
+        toast({
+          title: "Reset Email Sent",
+          description: "Check your inbox for reset instructions."
+        });
+      }
+    } catch (error: any) {
+      console.error("Password reset error:", error);
+      toast({ 
+        title: "Password reset error", 
+        description: error?.message || "An unexpected error occurred", 
+        variant: "destructive" 
       });
-    } else {
-      toast({
-        title: "Reset Email Sent",
-        description: "Check your inbox for reset instructions."
-      });
-      setActiveTab("profile");
+    } finally {
+      setIsSendingReset(false);
     }
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setSupabaseUser(null);
-    setSupabaseSession(null);
-    setIsLoggedIn(false);
-    toast({ title: "Logged out", description: "You have been logged out successfully" });
-  };
-
-  const activatePremium = (tier: string) => {
-    if (window.Razorpay) {
-      const options = {
-        key: "rzp_test_YourTestKey",
-        amount: tier === 'monthly' ? 249 * 100 : 1500 * 100,
-        currency: "INR",
-        name: "Quizora AI",
-        description: tier === 'monthly' ? "Monthly Premium Subscription" : "Annual Premium Subscription",
-        image: "https://example.com/your_logo",
-        handler: function (response: any) {
-          console.log("Payment ID: " + response.razorpay_payment_id);
-          
-          const updatedSettings = {
-            ...settings,
-            isPremium: true,
-            premiumTier: tier,
-            paymentId: response.razorpay_payment_id,
-            subscriptionDate: new Date().toISOString(),
-            expiryDate: tier === 'monthly' 
-              ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() 
-              : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-          };
-          
-          setSettings(updatedSettings);
-          localStorage.setItem("userSettings", JSON.stringify(updatedSettings));
-          
-          toast({
-            title: "Premium activated",
-            description: `Thank you for subscribing to Quizora AI Premium!`
-          });
-        },
-        prefill: {
-          email: settings.email,
-          name: settings.name
-        },
-        theme: {
-          color: "#6366F1"
-        }
-      };
-      
-      try {
-        const paymentObject = new window.Razorpay(options);
-        paymentObject.open();
-      } catch (error) {
-        console.error("Razorpay error:", error);
-        
-        simulatePremiumActivation(tier);
-      }
-    } else {
-      simulatePremiumActivation(tier);
+    try {
+      await supabase.auth.signOut();
+      setSupabaseUser(null);
+      setSupabaseSession(null);
+      setIsLoggedIn(false);
+      toast({ title: "Logged out", description: "You have been logged out successfully" });
+    } catch (error: any) {
+      console.error("Logout error:", error);
+      toast({ 
+        title: "Logout error", 
+        description: error?.message || "An unexpected error occurred", 
+        variant: "destructive" 
+      });
     }
   };
-  
-  const simulatePremiumActivation = (tier: string) => {
-    const updatedSettings = {
-      ...settings,
-      isPremium: true,
-      premiumTier: tier,
-      paymentId: `demo-${Date.now()}`,
-      subscriptionDate: new Date().toISOString(),
-      expiryDate: tier === 'monthly' 
-        ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() 
-        : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-    };
-    
-    setSettings(updatedSettings);
-    localStorage.setItem("userSettings", JSON.stringify(updatedSettings));
-    
-    toast({
-      title: "Premium activated (Demo)",
-      description: `Your premium subscription has been activated for demonstration purposes.`
-    });
+
+  const activatePremium = async (tier: string) => {
+    try {
+      if (!isLoggedIn || !supabaseUser) {
+        toast({
+          title: "Login Required",
+          description: "Please log in before upgrading to premium",
+          variant: "destructive"
+        });
+        setActiveTab("profile");
+        return;
+      }
+      
+      const updatedSettings = {
+        ...settings,
+        isPremium: true,
+        premiumTier: tier,
+        paymentId: `demo-${Date.now()}`,
+        subscriptionDate: new Date().toISOString(),
+        expiryDate: tier === 'monthly' 
+          ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() 
+          : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+      };
+      
+      // Update in Supabase
+      const { error } = await supabase
+        .from('profiles')
+        .update({ isPremium: true })
+        .eq('id', supabaseUser.id);
+      
+      if (error) throw error;
+      
+      setSettings(updatedSettings);
+      localStorage.setItem("userSettings", JSON.stringify(updatedSettings));
+      
+      toast({
+        title: "Premium activated (Demo)",
+        description: `Your premium subscription has been activated for demonstration purposes.`
+      });
+    } catch (error: any) {
+      console.error("Premium activation error:", error);
+      toast({ 
+        title: "Premium activation error", 
+        description: error?.message || "An unexpected error occurred", 
+        variant: "destructive" 
+      });
+    }
   };
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -399,6 +425,11 @@ export function SettingsPanel() {
   const handleGoToPremium = () => {
     setActiveTab("premium");
   };
+  
+  // Check for reset-password route
+  if (activeTab === "reset-password" || searchParams.has("access_token")) {
+    return <ResetPassword />;
+  }
   
   return (
     <motion.div 
@@ -550,23 +581,74 @@ export function SettingsPanel() {
                 variants={containerVariants}
                 className="space-y-6"
               >
-                <form onSubmit={handleForgotPassword}>
-                  <div className="space-y-2">
-                    <Label htmlFor="forgot-email">Enter your email</Label>
-                    <Input
-                      id="forgot-email"
-                      name="forgot-email"
-                      type="email"
-                      value={forgotPasswordEmail}
-                      onChange={e => setForgotPasswordEmail(e.target.value)}
-                      placeholder="your.email@example.com"
-                      required
-                    />
+                {isResetEmailSent ? (
+                  <div className="text-center py-6 space-y-4">
+                    <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                      <Check className="h-6 w-6 text-primary" />
+                    </div>
+                    <h3 className="text-xl font-medium">Check your email</h3>
+                    <p className="text-muted-foreground mb-4">
+                      We've sent a password reset link to {forgotPasswordEmail}
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setIsResetEmailSent(false);
+                        setActiveTab("profile");
+                      }}
+                    >
+                      Back to login
+                    </Button>
                   </div>
-                  <div className="pt-4">
-                    <Button type="submit" className="w-full">Send Reset Email</Button>
-                  </div>
-                </form>
+                ) : (
+                  <form onSubmit={handleForgotPassword}>
+                    <div className="space-y-6">
+                      <div className="text-center mb-2">
+                        <h2 className="text-xl font-bold mb-1">Reset Password</h2>
+                        <p className="text-sm text-muted-foreground">
+                          Enter your email and we'll send you a link to reset your password
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="forgot-email">Email Address</Label>
+                        <Input
+                          id="forgot-email"
+                          name="forgot-email"
+                          type="email"
+                          value={forgotPasswordEmail}
+                          onChange={e => setForgotPasswordEmail(e.target.value)}
+                          placeholder="your.email@example.com"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Button 
+                          type="submit" 
+                          className="w-full"
+                          disabled={isSendingReset}
+                        >
+                          {isSendingReset ? (
+                            <>
+                              <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                              Sending...
+                            </>
+                          ) : (
+                            "Send Reset Link"
+                          )}
+                        </Button>
+                      </div>
+                      <div className="text-center">
+                        <Button
+                          variant="link"
+                          type="button"
+                          onClick={() => setActiveTab("profile")}
+                        >
+                          Back to login
+                        </Button>
+                      </div>
+                    </div>
+                  </form>
+                )}
               </motion.div>
             </TabsContent>
             
@@ -650,67 +732,17 @@ export function SettingsPanel() {
                 className="space-y-6"
               >
                 <motion.div variants={itemVariants}>
-                  <Label className="block mb-3">Language</Label>
-                  <Select 
-                    value={settings.language}
-                    onValueChange={(value) => updateSetting('language', value)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {languages.map((language) => (
-                        <SelectItem key={language.value} value={language.value}>
-                          <div className="flex items-center">
-                            <span className="mr-2">{language.flag}</span>
-                            {language.label}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </motion.div>
-                
-                <motion.div variants={itemVariants}>
                   <Label className="block mb-3">Course</Label>
-                  <RadioGroup 
-                    value={settings.course}
-                    onValueChange={(value) => updateSetting('course', value)}
-                    className="grid grid-cols-2 gap-2 sm:grid-cols-3"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="medical" id="medical" />
-                      <Label htmlFor="medical">Medical</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="engineering" id="engineering" />
-                      <Label htmlFor="engineering">Engineering</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="science" id="science" />
-                      <Label htmlFor="science">Science</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="arts" id="arts" />
-                      <Label htmlFor="arts">Arts</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="commerce" id="commerce" />
-                      <Label htmlFor="commerce">Commerce</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="upsc" id="upsc" />
-                      <Label htmlFor="upsc">UPSC</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="school" id="school" />
-                      <Label htmlFor="school">K-12</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="competitive" id="competitive" />
-                      <Label htmlFor="competitive">Competitive</Label>
-                    </div>
-                  </RadioGroup>
+                  <Input 
+                    id="course" 
+                    name="course" 
+                    value={settings.course} 
+                    onChange={handleChange}
+                    placeholder="Enter your course or field of study"
+                  />
+                  <p className="text-sm text-muted-foreground mt-2">
+                    This helps personalize quiz questions and assistant responses
+                  </p>
                 </motion.div>
                 
                 <motion.div variants={itemVariants}>
@@ -1069,6 +1101,9 @@ export function SettingsPanel() {
                         </p>
                         <p className="text-sm text-muted-foreground">
                           © 2025 Quizora AI. All rights reserved.
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-4">
+                          For support: quizoraaihelp@gmail.com
                         </p>
                       </div>
                     </CardContent>

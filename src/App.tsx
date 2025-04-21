@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import * as React from "react";
 import QuizReview from "./pages/QuizReview";
+import { ResetPassword } from "./components/ResetPassword";
+import { supabase } from "@/integrations/supabase/client";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -25,17 +27,24 @@ const PremiumRoute: React.FC<{element: React.ReactNode}> = ({ element }) => {
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    // Check if user has premium subscription from localStorage
-    const userSettings = localStorage.getItem("userSettings");
-    if (userSettings) {
-      try {
-        const settings = JSON.parse(userSettings);
-        setIsPremium(settings.isPremium === true);
-      } catch (error) {
-        console.error("Error parsing user settings:", error);
+    const checkPremium = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        setLoading(false);
+        return;
       }
-    }
-    setLoading(false);
+      
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("isPremium")
+        .eq("id", data.session.user.id)
+        .maybeSingle();
+        
+      setIsPremium(profile?.isPremium === true);
+      setLoading(false);
+    };
+    
+    checkPremium();
   }, []);
 
   if (loading) return null;
@@ -44,6 +53,37 @@ const PremiumRoute: React.FC<{element: React.ReactNode}> = ({ element }) => {
     <>{element}</>
   ) : (
     <Navigate to="/settings?tab=premium" replace />
+  );
+};
+
+// Auth route guard component
+const AuthRoute: React.FC<{element: React.ReactNode}> = ({ element }) => {
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      setIsLoggedIn(!!data.session);
+      setLoading(false);
+    };
+    
+    checkAuth();
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session);
+      setLoading(false);
+    });
+    
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (loading) return null;
+
+  return isLoggedIn ? (
+    <>{element}</>
+  ) : (
+    <Navigate to="/settings?tab=profile" replace />
   );
 };
 
@@ -56,12 +96,13 @@ const App = () => {
             <Toaster />
             <Sonner />
             <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/quiz" element={<Index initialTab="generate" />} />
-              <Route path="/history" element={<Index initialTab="history" />} />
-              <Route path="/history/:quizId" element={<QuizReview />} />
+              <Route path="/" element={<AuthRoute element={<Index />} />} />
+              <Route path="/quiz" element={<AuthRoute element={<Index initialTab="generate" />} />} />
+              <Route path="/history" element={<AuthRoute element={<Index initialTab="history" />} />} />
+              <Route path="/history/:quizId" element={<AuthRoute element={<QuizReview />} />} />
               <Route path="/assistant" element={<PremiumRoute element={<Index initialTab="assistant" />} />} />
               <Route path="/settings" element={<Index initialTab="settings" />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/legal" element={<Index />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
