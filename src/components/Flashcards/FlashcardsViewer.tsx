@@ -7,7 +7,7 @@ import { Flashcard } from "./FlashcardsGenerator";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { BookOpen, ArrowDown, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowUp, BookOpen } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 interface FlashcardsViewerProps {

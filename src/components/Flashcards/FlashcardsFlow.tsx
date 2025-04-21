@@ -83,7 +83,12 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
     if (user && setId) {
       try {
         // Convert Flashcard[] to Json type before saving to Supabase
-        const cardsJson = updatedFlashcards as unknown as Json;
+        const cardsJson = updatedFlashcards.map(card => ({
+          id: card.id,
+          front: card.front,
+          back: card.back,
+          status: card.status
+        })) as unknown as Json;
         
         await supabase
           .from("flashcard_sets")

@@ -8,8 +8,6 @@ if (!apiKey) {
   console.warn("AIMLAPI_KEY environment variable not set!");
 }
 
-const baseURL = "https://api.aimlapi.com/v1";
-
 const prepareContent = (document: string, course: string, subject: string, topic: string) => {
   let content = '';
   if (document) {
@@ -96,8 +94,9 @@ const processDocument = async (req: Request) => {
     systemPrompt += `\n${formattingInstructions}`;
 
     console.log("System Prompt:", systemPrompt);
+    console.log("API Key exists:", !!apiKey);
 
-    // Call AIMLAPI instead of OpenAI
+    // AIMLAPI endpoint
     const response = await fetch("https://api.aimlapi.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -105,7 +104,7 @@ const processDocument = async (req: Request) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo-16k", // Using GPT 3.5 Turbo for similar capability
+        model: "gpt-3.5-turbo-16k",
         messages: [
           {
             role: "system",
@@ -118,31 +117,47 @@ const processDocument = async (req: Request) => {
     });
 
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error("AIMLAPI error response:", response.status, errorData);
+      const errorText = await response.text();
+      console.error("AIMLAPI error response:", response.status, errorText);
       return new Response(
         JSON.stringify({ 
           error: `AIMLAPI returned status ${response.status}`, 
-          details: errorData 
+          details: errorText 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 502 }
       );
     }
 
     const data = await response.json();
-    console.log("Response from AIMLAPI:", JSON.stringify(data));
+    console.log("Response from AIMLAPI received, parsing data...");
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error("Invalid response format from AIMLAPI:", JSON.stringify(data));
+      return new Response(
+        JSON.stringify({ 
+          error: "Invalid response format from AIMLAPI", 
+          details: JSON.stringify(data) 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 502 }
+      );
+    }
     
     const responseText = data.choices[0].message.content;
-    console.log("Response Text:", responseText);
+    console.log("Response text received, length:", responseText?.length || 0);
 
     let parsedQuestions;
     try {
       parsedQuestions = JSON.parse(responseText || "[]");
+      console.log("Successfully parsed JSON response, items:", parsedQuestions.length);
     } catch (parseError) {
       console.error("Failed to parse JSON response:", parseError);
       console.error("Response causing the error:", responseText);
       return new Response(
-        JSON.stringify({ error: 'Failed to parse JSON response from AIMLAPI', rawResponse: responseText }),
+        JSON.stringify({ 
+          error: 'Failed to parse JSON response from AIMLAPI', 
+          rawResponse: responseText,
+          parseError: parseError.message
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
@@ -154,7 +169,7 @@ const processDocument = async (req: Request) => {
   } catch (error) {
     console.error("Error processing document:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message, stack: error.stack }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
@@ -169,5 +184,13 @@ serve(async (req) => {
     });
   }
 
-  return processDocument(req);
+  try {
+    return await processDocument(req);
+  } catch (e) {
+    console.error("Unhandled exception:", e);
+    return new Response(
+      JSON.stringify({ error: "Unhandled server error", details: e.message, stack: e.stack }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
 });

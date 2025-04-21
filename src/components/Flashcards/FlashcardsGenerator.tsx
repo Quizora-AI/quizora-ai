@@ -113,6 +113,10 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
         throw new Error(responseData.error);
       }
 
+      if (!responseData.questions || !Array.isArray(responseData.questions)) {
+        throw new Error("Invalid response format: missing questions array");
+      }
+
       // Build flashcards from response
       const flashcards: Flashcard[] = responseData.questions.map((q: any, idx: number) => ({
         id: `card-${idx}`,
