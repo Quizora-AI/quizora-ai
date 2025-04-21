@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -30,8 +29,13 @@ export default function LandingPage() {
       setIsLoading(false);
     }, 1500);
     
+    // Check if user is authenticated and redirect if needed
+    if (isAuthenticated) {
+      navigate('/quiz');
+    }
+    
     return () => clearTimeout(timer);
-  }, []);
+  }, [isAuthenticated, navigate]);
   
   const handleStartLearning = () => {
     if (isAuthenticated) {
@@ -42,7 +46,7 @@ export default function LandingPage() {
       // If not authenticated, redirect to Auth0 login
       console.log("User is not authenticated, redirecting to Auth0 login");
       loginWithRedirect({
-        appState: { returnTo: '/quiz' }
+        appState: { returnTo: window.location.origin + '/quiz' }
       });
     }
   };
@@ -52,7 +56,7 @@ export default function LandingPage() {
       navigate('/flashcards');
     } else {
       loginWithRedirect({
-        appState: { returnTo: '/flashcards' }
+        appState: { returnTo: window.location.origin + '/flashcards' }
       });
     }
   };

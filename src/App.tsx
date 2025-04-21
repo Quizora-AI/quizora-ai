@@ -90,7 +90,9 @@ const LoginRedirect: React.FC = () => {
   const { loginWithRedirect } = useAuth0();
   
   React.useEffect(() => {
-    loginWithRedirect();
+    loginWithRedirect({
+      appState: { returnTo: window.location.origin + '/quiz' }
+    });
   }, [loginWithRedirect]);
   
   return (
@@ -129,7 +131,7 @@ const App = () => {
           clientId={auth0ClientId}
           authorizationParams={{
             redirect_uri: origin,
-            appState: { returnTo: origin }
+            appState: { returnTo: origin + '/quiz' }
           }}
           cacheLocation="localstorage"
         >
@@ -147,6 +149,13 @@ const App = () => {
 // Separate component for routes to access Auth0 context
 const AppRoutes: React.FC<{isFirstVisit: boolean}> = ({ isFirstVisit }) => {
   const { isAuthenticated, isLoading } = useAuth0();
+  const [initialized, setInitialized] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isLoading) {
+      setInitialized(true);
+    }
+  }, [isLoading]);
 
   if (isLoading) {
     return (
@@ -161,7 +170,20 @@ const AppRoutes: React.FC<{isFirstVisit: boolean}> = ({ isFirstVisit }) => {
       <Toaster />
       <SonnerToaster />
       <Routes>
-        <Route path="/" element={isFirstVisit || !isAuthenticated ? <Navigate to="/landing" /> : <Navigate to="/quiz" />} />
+        <Route 
+          path="/" 
+          element={
+            initialized ? (
+              isFirstVisit || !isAuthenticated ? 
+                <Navigate to="/landing" /> : 
+                <Navigate to="/quiz" />
+            ) : (
+              <div className="flex items-center justify-center h-screen">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            )
+          } 
+        />
         <Route path="/landing" element={<LandingPage />} />
         <Route path="/login" element={<LoginRedirect />} />
         
