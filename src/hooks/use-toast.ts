@@ -184,13 +184,13 @@ function toast(props: ToastParams) {
       type: actionTypes.UPDATE_TOAST,
       toast: { ...props, id },
     })
+
   const dismiss = () => dispatch({ type: actionTypes.DISMISS_TOAST, toastId: id })
 
   dispatch({
     type: actionTypes.ADD_TOAST,
     toast: {
       ...props,
-      id,
       open: true,
       onOpenChange: (open) => {
         if (!open) dismiss()
