@@ -1,53 +1,22 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Question } from "@/components/FileUpload";
-import { QuizQuestion } from "@/components/QuizQuestion";
-import { QuizResults } from "@/components/QuizResults";
-import { QuizAnalytics } from "@/components/QuizAnalytics";
 import { Header } from "@/components/Header";
 import { TabNavigation } from "@/components/TabNavigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
-import { v4 as uuidv4 } from "uuid";
-import { LegalPages } from "@/components/LegalPages";
+import { QuizFlow, AppState as QuizAppState } from "@/components/QuizFlow";
+import { LegalContentWrapper } from "@/components/LegalContentWrapper";
 
-enum AppState {
-  CREATE,
-  QUIZ,
-  RESULTS,
-  ANALYTICS
-}
-
-interface QuizHistory {
-  id: string;
-  date: string;
-  title: string;
-  questionsCount: number;
-  score: number;
-  questions: Question[];
-  userAnswers?: number[];
-  attempts?: number;
-}
-
-interface IndexProps {
-  initialTab?: string;
-}
-
-const Index = ({ initialTab = "generate" }: IndexProps) => {
-  const [appState, setAppState] = useState<AppState>(AppState.CREATE);
+const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
+  const [appState, setAppState] = useState<number>(0); // 0: CREATE, 1: QUIZ
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [userAnswers, setUserAnswers] = useState<number[]>([]);
-  const [startTime, setStartTime] = useState<Date | null>(null);
-  const [endTime, setEndTime] = useState<Date | null>(null);
   const [quizTitle, setQuizTitle] = useState<string>("Medical Quiz");
-  const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  
+  const { toast } = useToast();
+
   useEffect(() => {
-    // Check if there's a quiz to retake from localStorage
     const quizToRetake = localStorage.getItem("quizToRetake");
     if (quizToRetake) {
       try {
@@ -55,15 +24,9 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
         if (questions && questions.length > 0) {
           setQuestions(questions);
           if (title) setQuizTitle(title);
-          setCurrentQuestionIndex(0);
-          setUserAnswers([]);
-          setStartTime(new Date());
-          setEndTime(null);
-          setAppState(AppState.QUIZ);
-          
-          // Clear the retake data after loading
+          setAppState(1);
           localStorage.removeItem("quizToRetake");
-          
+
           toast({
             title: "Quiz Loaded",
             description: "You're retaking a previous quiz"
@@ -74,216 +37,61 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
         localStorage.removeItem("quizToRetake");
       }
     }
-  }, [toast]);
-  
+    // eslint-disable-next-line
+  }, []);
+
   const handleQuizGenerated = (generatedQuestions: Question[]) => {
     setQuestions(generatedQuestions);
-    setCurrentQuestionIndex(0);
-    setUserAnswers([]);
-    setStartTime(new Date());
-    setEndTime(null);
-    
-    const now = new Date();
-    setQuizTitle(`Medical Quiz - ${now.toLocaleDateString()}`);
-    
-    setAppState(AppState.QUIZ);
-    
+    setQuizTitle(
+      `Medical Quiz - ${new Date().toLocaleDateString()}`
+    );
+    setAppState(1);
     toast({
       title: "Quiz Generated",
-      description: `${generatedQuestions.length} questions ready for you`
+      description: `${generatedQuestions.length} questions ready for you`,
     });
   };
-  
-  const handleNextQuestion = (selectedOption: number) => {
-    const newUserAnswers = [...userAnswers, selectedOption];
-    setUserAnswers(newUserAnswers);
-    
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else {
-      setEndTime(new Date());
-      setAppState(AppState.RESULTS);
-    }
-  };
-  
-  const handleViewAnalytics = () => {
-    setAppState(AppState.ANALYTICS);
-  };
-  
-  const handleRetakeQuiz = () => {
-    setCurrentQuestionIndex(0);
-    setUserAnswers([]);
-    setStartTime(new Date());
-    setEndTime(null);
-    setAppState(AppState.QUIZ);
-    
-    toast({
-      title: "Quiz Restarted",
-      description: "Good luck on your retake!"
-    });
-  };
-  
-  const handleNewQuiz = () => {
+
+  const handleBackToCreate = () => {
     setQuestions([]);
-    setCurrentQuestionIndex(0);
-    setUserAnswers([]);
-    setStartTime(null);
-    setEndTime(null);
-    setAppState(AppState.CREATE);
-    navigate('/');
-    
-    toast({
-      title: "Create New Quiz",
-      description: "Choose a file or use AI to generate questions"
-    });
-  };
-  
-  const getCorrectAnswersCount = () => {
-    return userAnswers.reduce((count, answer, index) => {
-      return count + (answer === questions[index].correctAnswer ? 1 : 0);
-    }, 0);
+    setAppState(0);
+    navigate("/");
   };
 
-  useEffect(() => {
-    if (appState === AppState.RESULTS && questions.length > 0 && userAnswers.length > 0) {
-      const userSettingsStr = localStorage.getItem("userSettings");
-      const userSettings = userSettingsStr ? JSON.parse(userSettingsStr) : {};
-      const autoSave = localStorage.getItem("autoSave") !== "false";
-      
-      if (autoSave) {
-        const correctAnswers = getCorrectAnswersCount();
-        const score = Math.round((correctAnswers / questions.length) * 100);
-
-        const existingHistoryString = localStorage.getItem("quizHistory");
-        const existingHistory: QuizHistory[] = existingHistoryString 
-          ? JSON.parse(existingHistoryString) 
-          : [];
-        
-        const newQuizEntry: QuizHistory = {
-          id: uuidv4(),
-          date: new Date().toISOString(),
-          title: quizTitle,
-          questionsCount: questions.length,
-          score,
-          questions,
-          userAnswers,
-          attempts: 1
-        };
-        
-        const updatedHistory = [newQuizEntry, ...existingHistory];
-        localStorage.setItem("quizHistory", JSON.stringify(updatedHistory));
-        
-        toast({
-          title: "Quiz saved",
-          description: `Your quiz has been saved to history.`
-        });
-      }
-    }
-  }, [appState, questions, userAnswers, quizTitle, toast]);
-
-  const pageVariants = {
-    initial: { opacity: 0, x: 50 },
-    in: { opacity: 1, x: 0 },
-    out: { opacity: 0, x: -50 }
-  };
-  
-  const pageTransition = {
-    type: "spring",
-    stiffness: 300,
-    damping: 30
-  };
-  
-  // Only render the appropriate content based on the current URL path and app state
   const renderContent = () => {
-    // If on legal page path, show legal content
+    // Legal page route
     if (location.pathname === "/legal") {
+      return <LegalContentWrapper />;
+    }
+    // Quiz flow (QUIZ/RESULTS/ANALYTICS)
+    if (appState === 1 && questions && questions.length > 0) {
       return (
-        <motion.div
-          initial="initial"
-          animate="in"
-          exit="out"
-          variants={pageVariants}
-          transition={pageTransition}
-          className="w-full"
-        >
-          <LegalPages />
-        </motion.div>
+        <QuizFlow
+          questions={questions}
+          setQuestions={setQuestions}
+          quizTitle={quizTitle}
+          setQuizTitle={setQuizTitle}
+          onBackToCreate={handleBackToCreate}
+          initialAppState={QuizAppState.QUIZ}
+        />
       );
     }
-    
-    // For quiz flow states
-    if (appState !== AppState.CREATE) {
-      switch (appState) {
-        case AppState.QUIZ:
-          return (
-            <motion.div
-              initial="initial"
-              animate="in"
-              exit="out"
-              variants={pageVariants}
-              transition={pageTransition}
-            >
-              <QuizQuestion
-                question={questions[currentQuestionIndex]}
-                onNext={handleNextQuestion}
-                currentQuestionNumber={currentQuestionIndex + 1}
-                totalQuestions={questions.length}
-              />
-            </motion.div>
-          );
-          
-        case AppState.RESULTS:
-          const correctAnswers = getCorrectAnswersCount();
-          return (
-            <motion.div
-              initial="initial"
-              animate="in"
-              exit="out"
-              variants={pageVariants}
-              transition={pageTransition}
-            >
-              <QuizResults
-                totalQuestions={questions.length}
-                correctAnswers={correctAnswers}
-                onRetakeQuiz={handleRetakeQuiz}
-                onNewFile={handleNewQuiz}
-                onViewAnalytics={handleViewAnalytics}
-              />
-            </motion.div>
-          );
-          
-        case AppState.ANALYTICS:
-          const correctCount = getCorrectAnswersCount();
-          return (
-            <motion.div
-              initial="initial"
-              animate="in"
-              exit="out"
-              variants={pageVariants}
-              transition={pageTransition}
-            >
-              <QuizAnalytics
-                questions={questions}
-                correctAnswers={correctCount}
-                incorrectAnswers={questions.length - correctCount}
-                userAnswers={userAnswers}
-              />
-            </motion.div>
-          );
-          
-        default:
-          return null;
-      }
-    }
-    
-    // For tab-based navigation in CREATE state
+    // Tabs navigation
     return (
       <motion.div
         initial="initial"
         animate="in"
         exit="out"
-        variants={pageVariants}
-        transition={pageTransition}
+        variants={{
+          initial: { opacity: 0, x: 50 },
+          in: { opacity: 1, x: 0 },
+          out: { opacity: 0, x: -50 },
+        }}
+        transition={{
+          type: "spring",
+          stiffness: 300,
+          damping: 30,
+        }}
         className="w-full"
         key={location.pathname}
       >
@@ -291,14 +99,12 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
       </motion.div>
     );
   };
-  
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background/90 flex flex-col">
       <Header />
       <main className="flex-1 px-4 py-8 pb-28">
-        <AnimatePresence mode="wait">
-          {renderContent()}
-        </AnimatePresence>
+        <AnimatePresence mode="wait">{renderContent()}</AnimatePresence>
       </main>
     </div>
   );

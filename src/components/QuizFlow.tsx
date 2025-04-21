@@ -1,0 +1,219 @@
+
+import { useState, useEffect } from "react";
+import { QuizQuestion } from "@/components/QuizQuestion";
+import { QuizResults } from "@/components/QuizResults";
+import { QuizAnalytics } from "@/components/QuizAnalytics";
+import { motion } from "framer-motion";
+import { useToast } from "@/hooks/use-toast";
+import { v4 as uuidv4 } from "uuid";
+import { Question } from "@/components/FileUpload";
+import { useNavigate } from "react-router-dom";
+
+export enum AppState {
+  QUIZ,
+  RESULTS,
+  ANALYTICS,
+}
+
+interface QuizHistory {
+  id: string;
+  date: string;
+  title: string;
+  questionsCount: number;
+  score: number;
+  questions: Question[];
+  userAnswers?: number[];
+  attempts?: number;
+}
+
+interface QuizFlowProps {
+  questions: Question[];
+  setQuestions: (q: Question[]) => void;
+  quizTitle: string;
+  setQuizTitle: (t: string) => void;
+  onBackToCreate: () => void;
+  initialAppState: AppState;
+}
+
+export const QuizFlow = ({
+  questions,
+  setQuestions,
+  quizTitle,
+  setQuizTitle,
+  onBackToCreate,
+  initialAppState,
+}: QuizFlowProps) => {
+  const [appState, setAppState] = useState<AppState>(initialAppState);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [userAnswers, setUserAnswers] = useState<number[]>([]);
+  const [startTime, setStartTime] = useState<Date | null>(null);
+  const [endTime, setEndTime] = useState<Date | null>(null);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setAppState(initialAppState);
+    // eslint-disable-next-line
+  }, [initialAppState]);
+
+  const getCorrectAnswersCount = () =>
+    userAnswers.reduce((count, answer, idx) =>
+      count + (answer === questions[idx].correctAnswer ? 1 : 0), 0
+    );
+
+  const handleNextQuestion = (selectedOption: number) => {
+    const newUserAnswers = [...userAnswers, selectedOption];
+    setUserAnswers(newUserAnswers);
+
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else {
+      setEndTime(new Date());
+      setAppState(AppState.RESULTS);
+    }
+  };
+
+  const handleViewAnalytics = () => setAppState(AppState.ANALYTICS);
+
+  const handleRetakeQuiz = () => {
+    setCurrentQuestionIndex(0);
+    setUserAnswers([]);
+    setStartTime(new Date());
+    setEndTime(null);
+    setAppState(AppState.QUIZ);
+
+    toast({
+      title: "Quiz Restarted",
+      description: "Good luck on your retake!",
+    });
+  };
+
+  const handleNewQuiz = () => {
+    setQuestions([]);
+    setCurrentQuestionIndex(0);
+    setUserAnswers([]);
+    setStartTime(null);
+    setEndTime(null);
+    setAppState(AppState.QUIZ);
+    setTimeout(() => {
+      onBackToCreate();
+    }, 100);
+    toast({
+      title: "Create New Quiz",
+      description: "Choose a file or use AI to generate questions",
+    });
+  };
+
+  useEffect(() => {
+    // Save to history on RESULTS
+    if (appState === AppState.RESULTS && questions.length && userAnswers.length) {
+      const autoSave = localStorage.getItem("autoSave") !== "false";
+      if (autoSave) {
+        const correctAnswers = getCorrectAnswersCount();
+        const score = Math.round((correctAnswers / questions.length) * 100);
+
+        const existingHistoryString = localStorage.getItem("quizHistory");
+        const existingHistory: QuizHistory[] = existingHistoryString
+          ? JSON.parse(existingHistoryString)
+          : [];
+
+        const newQuizEntry: QuizHistory = {
+          id: uuidv4(),
+          date: new Date().toISOString(),
+          title: quizTitle,
+          questionsCount: questions.length,
+          score,
+          questions,
+          userAnswers,
+          attempts: 1,
+        };
+
+        const updatedHistory = [newQuizEntry, ...existingHistory];
+        localStorage.setItem("quizHistory", JSON.stringify(updatedHistory));
+
+        toast({
+          title: "Quiz saved",
+          description: `Your quiz has been saved to history.`,
+        });
+      }
+    }
+    // eslint-disable-next-line
+  }, [appState, questions, userAnswers, quizTitle]);
+
+  const pageVariants = {
+    initial: { opacity: 0, x: 50 },
+    in: { opacity: 1, x: 0 },
+    out: { opacity: 0, x: -50 },
+  };
+
+  const pageTransition = {
+    type: "spring",
+    stiffness: 300,
+    damping: 30,
+  };
+
+  if (!questions || questions.length === 0) {
+    onBackToCreate();
+    return null;
+  }
+
+  switch (appState) {
+    case AppState.QUIZ:
+      return (
+        <motion.div
+          initial="initial"
+          animate="in"
+          exit="out"
+          variants={pageVariants}
+          transition={pageTransition}
+        >
+          <QuizQuestion
+            question={questions[currentQuestionIndex]}
+            onNext={handleNextQuestion}
+            currentQuestionNumber={currentQuestionIndex + 1}
+            totalQuestions={questions.length}
+          />
+        </motion.div>
+      );
+    case AppState.RESULTS:
+      const correctAnswers = getCorrectAnswersCount();
+      return (
+        <motion.div
+          initial="initial"
+          animate="in"
+          exit="out"
+          variants={pageVariants}
+          transition={pageTransition}
+        >
+          <QuizResults
+            totalQuestions={questions.length}
+            correctAnswers={correctAnswers}
+            onRetakeQuiz={handleRetakeQuiz}
+            onNewFile={handleNewQuiz}
+            onViewAnalytics={handleViewAnalytics}
+          />
+        </motion.div>
+      );
+    case AppState.ANALYTICS:
+      const correctCount = getCorrectAnswersCount();
+      return (
+        <motion.div
+          initial="initial"
+          animate="in"
+          exit="out"
+          variants={pageVariants}
+          transition={pageTransition}
+        >
+          <QuizAnalytics
+            questions={questions}
+            correctAnswers={correctCount}
+            incorrectAnswers={questions.length - correctCount}
+            userAnswers={userAnswers}
+          />
+        </motion.div>
+      );
+    default:
+      return null;
+  }
+};
+
