@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as SonnerToaster } from "@/components/ui/sonner";
+import { Toaster as SonnerToaster } from "sonner";
 
 // Create a client with better error handling
 const queryClient = new QueryClient({
@@ -103,7 +103,7 @@ const LoginRedirect: React.FC = () => {
 
 const App = () => {
   const [isFirstVisit, setIsFirstVisit] = React.useState(false);
-
+  
   React.useEffect(() => {
     const hasVisited = localStorage.getItem("hasVisitedBefore");
     if (hasVisited === "true") {
@@ -114,8 +114,12 @@ const App = () => {
     }
   }, []);
 
+  // Auth0 configuration
   const auth0Domain = "dev-w8auibvz6z81ccym.us.auth0.com";
   const auth0ClientId = "WVWRkUb2GKhcO2A5Wt3eMpjomsQhGwWv";
+  
+  // Get the current origin for redirect URIs
+  const origin = window.location.origin;
 
   return (
     <React.StrictMode>
@@ -124,7 +128,8 @@ const App = () => {
           domain={auth0Domain}
           clientId={auth0ClientId}
           authorizationParams={{
-            redirect_uri: window.location.origin
+            redirect_uri: origin,
+            appState: { returnTo: origin }
           }}
           cacheLocation="localstorage"
         >
