@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -20,6 +19,7 @@ import { PremiumTab } from "./settings/PremiumTab";
 import { AnalyticsTab } from "./settings/AnalyticsTab";
 import { LegalTab } from "./settings/LegalTab";
 import { useSettingsAuth } from "./settings/useSettingsAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 export function SettingsPanel() {
   // Use the useSettingsAuth hook
