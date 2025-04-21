@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { BrainCircuit, Book, ArrowRight, Sparkles } from 'lucide-react';
+import { useAuth0 } from '@auth0/auth0-react';
 
 const quotes = [
   "Knowledge is power.",
@@ -17,6 +18,7 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const [quote, setQuote] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const { isAuthenticated, loginWithRedirect } = useAuth0();
   
   useEffect(() => {
     // Select a random quote
@@ -30,6 +32,30 @@ export default function LandingPage() {
     
     return () => clearTimeout(timer);
   }, []);
+  
+  const handleStartLearning = () => {
+    if (isAuthenticated) {
+      // If user is already authenticated, navigate directly to the quiz page
+      console.log("User is authenticated, navigating to /quiz");
+      navigate('/quiz');
+    } else {
+      // If not authenticated, redirect to Auth0 login
+      console.log("User is not authenticated, redirecting to Auth0 login");
+      loginWithRedirect({
+        appState: { returnTo: '/quiz' }
+      });
+    }
+  };
+  
+  const handleCreateFlashcards = () => {
+    if (isAuthenticated) {
+      navigate('/flashcards');
+    } else {
+      loginWithRedirect({
+        appState: { returnTo: '/flashcards' }
+      });
+    }
+  };
   
   if (isLoading) {
     return (
@@ -141,7 +167,7 @@ export default function LandingPage() {
           >
             <Button 
               size="lg" 
-              onClick={() => navigate('/quiz')}
+              onClick={handleStartLearning}
               className="gap-2 bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700 transition-all duration-300 transform hover:scale-105"
             >
               <Sparkles className="h-4 w-4 animate-pulse" />
@@ -151,7 +177,7 @@ export default function LandingPage() {
             <Button 
               variant="outline" 
               size="lg" 
-              onClick={() => navigate('/flashcards')}
+              onClick={handleCreateFlashcards}
               className="transition-all duration-300 transform hover:scale-105"
             >
               <Book className="h-4 w-4 mr-2" />

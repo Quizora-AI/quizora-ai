@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -35,16 +34,13 @@ const PremiumRoute: React.FC<{element: React.ReactNode}> = ({ element }) => {
   const { isAuthenticated, user } = useAuth0();
 
   React.useEffect(() => {
-    // If user is authenticated, check premium status from Auth0 metadata
     if (isAuthenticated && user) {
-      // Try to get premium status from user metadata
       const userPremium = user['https://quizora.app/premium'] === true;
       setIsPremium(userPremium);
       setLoading(false);
       return;
     }
 
-    // Fallback to localStorage for non-authenticated users
     const userSettings = localStorage.getItem("userSettings");
     if (userSettings) {
       try {
@@ -104,25 +100,20 @@ const LoginRedirect: React.FC = () => {
 };
 
 const App = () => {
-  // Check if this is user's first visit
   const [isFirstVisit, setIsFirstVisit] = React.useState(false);
 
   React.useEffect(() => {
-    // Check if user has visited before
     const hasVisited = localStorage.getItem("hasVisitedBefore");
     if (hasVisited === "true") {
       setIsFirstVisit(false);
     } else {
-      // Set flag for future visits
       localStorage.setItem("hasVisitedBefore", "true");
       setIsFirstVisit(true);
     }
   }, []);
 
-  // Get Auth0 credentials from environment variables or use placeholders
-  // Users should replace these with their actual Auth0 credentials
-  const auth0Domain = import.meta.env.VITE_AUTH0_DOMAIN || "dev-example.us.auth0.com";
-  const auth0ClientId = import.meta.env.VITE_AUTH0_CLIENT_ID || "YourAuth0ClientId";
+  const auth0Domain = "dev-w8auibvz6z81ccym.us.auth0.com";
+  const auth0ClientId = "WVWRkUb2GKhcO2A5Wt3eMpjomsQhGwWv";
 
   return (
     <React.StrictMode>
@@ -150,7 +141,6 @@ const App = () => {
 const AppRoutes: React.FC<{isFirstVisit: boolean}> = ({ isFirstVisit }) => {
   const { isAuthenticated, isLoading } = useAuth0();
 
-  // If still loading auth state, show loading
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -165,7 +155,6 @@ const AppRoutes: React.FC<{isFirstVisit: boolean}> = ({ isFirstVisit }) => {
       <Route path="/landing" element={<LandingPage />} />
       <Route path="/login" element={<LoginRedirect />} />
       
-      {/* Protected routes */}
       <Route path="/quiz" element={<AuthGuard element={<Index initialTab="generate" />} />} />
       <Route path="/flashcards" element={<AuthGuard element={<Index initialTab="flashcards" />} />} />
       <Route path="/history" element={<AuthGuard element={<Index initialTab="history" />} />} />
