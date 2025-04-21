@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { BookOpen, BookPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Flashcard } from "./FlashcardsGenerator";
+import { useToast } from "@/hooks/use-toast";
 
 interface FlashcardsSetHistory {
   id: string;
@@ -21,6 +22,7 @@ interface FlashcardsSetHistory {
 export function FlashcardsHistory() {
   const [flashcardSets, setFlashcardSets] = useState<FlashcardsSetHistory[]>([]);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     // Load flashcards history
@@ -29,6 +31,7 @@ export function FlashcardsHistory() {
       try {
         const parsedSets = JSON.parse(savedFlashcards);
         setFlashcardSets(parsedSets);
+        console.log("Loaded flashcard sets:", parsedSets);
       } catch (error) {
         console.error("Error loading flashcard history:", error);
       }
@@ -49,11 +52,27 @@ export function FlashcardsHistory() {
   const handleReviewFlashcards = (setId: string) => {
     const selectedSet = flashcardSets.find(set => set.id === setId);
     if (selectedSet) {
-      // Save the selected flashcard set to localStorage to be used by FlashcardsFlow
-      localStorage.setItem("currentFlashcardSet", JSON.stringify(selectedSet));
-      
-      // Navigate to the flashcards page
-      navigate("/flashcards");
+      try {
+        // Save the selected flashcard set to localStorage to be used by FlashcardsFlow
+        localStorage.setItem("currentFlashcardSet", JSON.stringify(selectedSet));
+        console.log("Selected flashcard set saved for review:", selectedSet);
+        
+        // Toast notification to confirm action
+        toast({
+          title: "Flashcards Ready",
+          description: `Loading ${selectedSet.cards.length} flashcards for review`,
+        });
+        
+        // Navigate to the flashcards page
+        navigate("/flashcards");
+      } catch (error) {
+        console.error("Error setting up flashcard review:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load flashcards for review",
+          variant: "destructive"
+        });
+      }
     }
   };
 

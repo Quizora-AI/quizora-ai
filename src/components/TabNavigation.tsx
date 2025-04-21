@@ -24,15 +24,13 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
     // Determine active tab from URL path
     const path = location.pathname;
     
-    if (path === '/history') setActiveTab('history');
+    if (path.includes('/history')) setActiveTab('history');
     else if (path === '/flashcards') setActiveTab('flashcards');
     else if (path === '/settings') setActiveTab('settings');
-    else if (path === '/quiz') setActiveTab('generate');
-    else if (path === '/') setActiveTab('generate');
-    else setActiveTab('generate');
-
+    else if (path === '/quiz' || path === '/') setActiveTab('generate');
+    
     // Log current path for debugging
-    console.log("Current path:", path, "Active tab set to:", activeTab);
+    console.log("Current path in TabNavigation:", path, "Active tab set to:", activeTab);
 
     // Check premium status from local storage
     const userSettings = localStorage.getItem("userSettings");
@@ -54,28 +52,28 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
     console.log("Tab changed to:", value);
 
     // Improve tab changing responsiveness
-    requestAnimationFrame(() => {
+    setTimeout(() => {
       switch (value) {
         case 'history':
-          navigate('/history', { replace: false });
+          navigate('/history');
           break;
         case 'flashcards':
-          navigate('/flashcards', { replace: false });
+          navigate('/flashcards');
           break;
         case 'settings':
-          navigate('/settings', { replace: false });
+          navigate('/settings');
           break;
         case 'generate':
-          navigate('/quiz', { replace: false });
+          navigate('/quiz');
           break;
         default:
-          navigate('/quiz', { replace: false });
+          navigate('/quiz');
           break;
       }
       
       // Use a proper delay to prevent rapid clicks
       setTimeout(() => setIsChangingTab(false), 300);
-    });
+    }, 0);
   };
 
   const tabIconStyle = "h-4 w-4";

@@ -58,6 +58,16 @@ const App = () => {
   // Log all route changes for debugging
   React.useEffect(() => {
     console.log("App loaded with initial path:", window.location.pathname);
+    
+    // Add listener for route changes
+    const handleRouteChange = () => {
+      console.log("Route changed to:", window.location.pathname);
+    };
+    
+    window.addEventListener('popstate', handleRouteChange);
+    return () => {
+      window.removeEventListener('popstate', handleRouteChange);
+    };
   }, []);
 
   return (
@@ -73,7 +83,7 @@ const App = () => {
             <Route path="/history" element={<History />} />
             <Route path="/history/:quizId" element={<QuizReview />} />
             <Route path="/settings" element={<Index initialTab="settings" />} />
-            <Route path="/legal" element={<Index initialTab="generate" />} />
+            <Route path="/legal" element={<Index initialTab="legal" />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

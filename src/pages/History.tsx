@@ -11,7 +11,7 @@ const History = () => {
   const [activeTab, setActiveTab] = useState<string>("quizzes");
 
   return (
-    <div className="max-w-4xl mx-auto w-full">
+    <div className="max-w-4xl mx-auto w-full pb-20">
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -49,11 +49,11 @@ const History = () => {
                 </TabsTrigger>
               </TabsList>
               
-              <TabsContent value="quizzes" className="mt-0">
+              <TabsContent value="quizzes" className="mt-0 pt-2">
                 <QuizHistory />
               </TabsContent>
               
-              <TabsContent value="flashcards" className="mt-0">
+              <TabsContent value="flashcards" className="mt-0 pt-2">
                 <FlashcardsHistory />
               </TabsContent>
             </Tabs>
