@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Question } from "@/components/FileUpload";
@@ -25,6 +26,7 @@ interface QuizHistory {
   questionsCount: number;
   score: number;
   questions: Question[];
+  userAnswers?: number[];
 }
 
 interface IndexProps {
@@ -42,6 +44,36 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  
+  useEffect(() => {
+    // Check if there's a quiz to retake from localStorage
+    const quizToRetake = localStorage.getItem("quizToRetake");
+    if (quizToRetake) {
+      try {
+        const { questions, title } = JSON.parse(quizToRetake);
+        if (questions && questions.length > 0) {
+          setQuestions(questions);
+          if (title) setQuizTitle(title);
+          setCurrentQuestionIndex(0);
+          setUserAnswers([]);
+          setStartTime(new Date());
+          setEndTime(null);
+          setAppState(AppState.QUIZ);
+          
+          // Clear the retake data after loading
+          localStorage.removeItem("quizToRetake");
+          
+          toast({
+            title: "Quiz Loaded",
+            description: "You're retaking a previous quiz"
+          });
+        }
+      } catch (error) {
+        console.error("Error loading quiz to retake:", error);
+        localStorage.removeItem("quizToRetake");
+      }
+    }
+  }, [toast]);
   
   const handleQuizGenerated = (generatedQuestions: Question[]) => {
     setQuestions(generatedQuestions);
@@ -87,6 +119,7 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
     setStartTime(null);
     setEndTime(null);
     setAppState(AppState.CREATE);
+    navigate('/');
   };
   
   const getCorrectAnswersCount = () => {
@@ -116,7 +149,8 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
           title: quizTitle,
           questionsCount: questions.length,
           score,
-          questions: questions
+          questions,
+          userAnswers
         };
         
         const updatedHistory = [newQuizEntry, ...existingHistory];

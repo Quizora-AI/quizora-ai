@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Question } from "@/components/FileUpload";
 import { useToast } from "@/hooks/use-toast";
-import { History, BookOpen, Trash2, ArrowRight, BarChart } from "lucide-react";
+import { History, BookOpen, Trash2, ArrowRight, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
@@ -16,6 +16,7 @@ interface QuizHistoryEntry {
   questionsCount: number;
   score: number;
   questions: Question[];
+  userAnswers?: number[];
   attempts?: number;
 }
 
@@ -108,6 +109,36 @@ export function QuizHistory() {
     
     // Navigate to a quiz review page
     navigate(`/history/${entry.id}`);
+  };
+
+  const retakeQuiz = (entry: QuizHistoryEntry, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the parent onClick
+
+    // Save quiz data for retaking
+    localStorage.setItem("quizToRetake", JSON.stringify({
+      questions: entry.questions,
+      title: entry.title
+    }));
+
+    // Increment attempts count
+    const updatedEntry = {
+      ...entry,
+      attempts: (entry.attempts || 0) + 1
+    };
+
+    // Update history
+    const updatedHistory = history.map(item =>
+      item.id === entry.id ? updatedEntry : item
+    );
+    localStorage.setItem("quizHistory", JSON.stringify(updatedHistory));
+
+    // Show toast and navigate to home to start the quiz
+    toast({
+      title: "Quiz Ready",
+      description: "You're about to retake this quiz"
+    });
+    
+    navigate('/');
   };
 
   const containerVariants = {
@@ -249,6 +280,15 @@ export function QuizHistory() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => retakeQuiz(entry, e)}
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Retake</span>
+                      </Button>
                       <Button
                         variant="ghost" 
                         size="icon"
