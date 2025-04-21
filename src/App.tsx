@@ -1,4 +1,3 @@
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
@@ -10,6 +9,8 @@ import { Auth0Provider, useAuth0 } from "@auth0/auth0-react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { ThemeProvider } from "next-themes";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 
 // Create a client with better error handling
 const queryClient = new QueryClient({
@@ -151,8 +152,9 @@ const AppRoutes: React.FC<{isFirstVisit: boolean}> = ({ isFirstVisit }) => {
 
   return (
     <>
-      {/* Import Toasters inside the component tree */}
-      <ToastProviders />
+      {/* Add Toasters inside the component tree */}
+      <Toaster />
+      <SonnerToaster />
       <Routes>
         <Route path="/" element={isFirstVisit || !isAuthenticated ? <Navigate to="/landing" /> : <Navigate to="/quiz" />} />
         <Route path="/landing" element={<LandingPage />} />
@@ -166,20 +168,6 @@ const AppRoutes: React.FC<{isFirstVisit: boolean}> = ({ isFirstVisit }) => {
         <Route path="/legal" element={<Index initialTab="generate" />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
-    </>
-  );
-};
-
-// Separate component to handle toast providers
-const ToastProviders = () => {
-  // Import these components dynamically to ensure they're used within a proper React component
-  const { Toaster } = require("@/components/ui/toaster");
-  const { Toaster: SonnerToaster } = require("@/components/ui/sonner");
-  
-  return (
-    <>
-      <Toaster />
-      <SonnerToaster />
     </>
   );
 };
