@@ -58,6 +58,7 @@ export function LegalPanel({ navigate }: LegalPanelProps) {
               <h3 className="text-lg font-medium mb-2">Quizora AI</h3>
               <p className="text-sm text-muted-foreground mb-2">Version 1.0.1</p>
               <p className="text-sm text-muted-foreground">© 2025 Quizora AI. All rights reserved.</p>
+              <p className="text-sm text-muted-foreground mt-2">Email: quizoraaihelp@gmail.com</p>
             </div>
           </CardContent>
         </Card>

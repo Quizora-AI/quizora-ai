@@ -103,7 +103,28 @@ const QuizReview = () => {
       title: quiz.title
     }));
     
-    navigate("/quiz");
+    // Update attempt count in history
+    const historyString = localStorage.getItem("quizHistory");
+    if (historyString && quiz.id) {
+      const historyData = JSON.parse(historyString);
+      const updatedHistory = historyData.map((entry: QuizHistoryEntry) => {
+        if (entry.id === quiz.id) {
+          return {
+            ...entry,
+            attempts: (entry.attempts || 0) + 1
+          };
+        }
+        return entry;
+      });
+      localStorage.setItem("quizHistory", JSON.stringify(updatedHistory));
+    }
+    
+    navigate("/");
+    
+    toast({
+      title: "Quiz Ready",
+      description: "You're about to retake this quiz"
+    });
   };
   
   const getCorrectAnswersCount = () => {

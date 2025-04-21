@@ -1,229 +1,203 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Question } from "@/components/FileUpload";
-import { QuizQuestion } from "@/components/QuizQuestion";
-import { QuizResults } from "@/components/QuizResults";
-import { QuizAnalytics } from "@/components/QuizAnalytics";
 import { Header } from "@/components/Header";
 import { TabNavigation } from "@/components/TabNavigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
-import { v4 as uuidv4 } from "uuid";
-import { LegalPages } from "@/components/LegalPages";
+import { QuizFlow, AppState as QuizAppState } from "@/components/QuizFlow";
+import { LegalContentWrapper } from "@/components/LegalContentWrapper";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
-enum AppState {
-  CREATE,
-  QUIZ,
-  RESULTS,
-  ANALYTICS
-}
-
-interface QuizHistory {
-  id: string;
-  date: string;
-  title: string;
-  questionsCount: number;
-  score: number;
-  questions: Question[];
-}
-
-interface IndexProps {
-  initialTab?: string;
-}
-
-const Index = ({ initialTab = "generate" }: IndexProps) => {
-  const [appState, setAppState] = useState<AppState>(AppState.CREATE);
+const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
+  const [appState, setAppState] = useState<number>(0);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [userAnswers, setUserAnswers] = useState<number[]>([]);
-  const [startTime, setStartTime] = useState<Date | null>(null);
-  const [endTime, setEndTime] = useState<Date | null>(null);
   const [quizTitle, setQuizTitle] = useState<string>("Medical Quiz");
-  const { toast } = useToast();
+  const [quizInProgress, setQuizInProgress] = useState<boolean>(false);
+  const [showQuizResumeDialog, setShowQuizResumeDialog] = useState<boolean>(false);
   const navigate = useNavigate();
   const location = useLocation();
-  
-  const handleQuizGenerated = (generatedQuestions: Question[]) => {
-    setQuestions(generatedQuestions);
-    setCurrentQuestionIndex(0);
-    setUserAnswers([]);
-    setStartTime(new Date());
-    setEndTime(null);
-    
-    const now = new Date();
-    setQuizTitle(`Medical Quiz - ${now.toLocaleDateString()}`);
-    
-    setAppState(AppState.QUIZ);
-  };
-  
-  const handleNextQuestion = (selectedOption: number) => {
-    const newUserAnswers = [...userAnswers, selectedOption];
-    setUserAnswers(newUserAnswers);
-    
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else {
-      setEndTime(new Date());
-      setAppState(AppState.RESULTS);
-    }
-  };
-  
-  const handleViewAnalytics = () => {
-    setAppState(AppState.ANALYTICS);
-  };
-  
-  const handleRetakeQuiz = () => {
-    setCurrentQuestionIndex(0);
-    setUserAnswers([]);
-    setStartTime(new Date());
-    setEndTime(null);
-    setAppState(AppState.QUIZ);
-  };
-  
-  const handleNewQuiz = () => {
-    setQuestions([]);
-    setCurrentQuestionIndex(0);
-    setUserAnswers([]);
-    setStartTime(null);
-    setEndTime(null);
-    setAppState(AppState.CREATE);
-  };
-  
-  const getCorrectAnswersCount = () => {
-    return userAnswers.reduce((count, answer, index) => {
-      return count + (answer === questions[index].correctAnswer ? 1 : 0);
-    }, 0);
-  };
+  const { toast } = useToast();
 
   useEffect(() => {
-    if (appState === AppState.RESULTS && questions.length > 0 && userAnswers.length > 0) {
-      const userSettingsStr = localStorage.getItem("userSettings");
-      const userSettings = userSettingsStr ? JSON.parse(userSettingsStr) : {};
-      const autoSave = localStorage.getItem("autoSave") !== "false";
-      
-      if (autoSave) {
-        const correctAnswers = getCorrectAnswersCount();
-        const score = Math.round((correctAnswers / questions.length) * 100);
-
-        const existingHistoryString = localStorage.getItem("quizHistory");
-        const existingHistory: QuizHistory[] = existingHistoryString 
-          ? JSON.parse(existingHistoryString) 
-          : [];
-        
-        const newQuizEntry: QuizHistory = {
-          id: uuidv4(),
-          date: new Date().toISOString(),
-          title: quizTitle,
-          questionsCount: questions.length,
-          score,
-          questions: questions
-        };
-        
-        const updatedHistory = [newQuizEntry, ...existingHistory];
-        localStorage.setItem("quizHistory", JSON.stringify(updatedHistory));
-        
-        toast({
-          title: "Quiz saved",
-          description: `Your quiz has been saved to history.`
-        });
+    // Check for saved quiz in progress
+    const savedQuizState = localStorage.getItem("quizInProgress");
+    if (savedQuizState && location.pathname === '/') {
+      try {
+        const { questions, title } = JSON.parse(savedQuizState);
+        if (questions && questions.length > 0) {
+          setQuestions(questions);
+          if (title) setQuizTitle(title);
+          // Ask user if they want to resume instead of auto-resuming
+          setShowQuizResumeDialog(true);
+        }
+      } catch (error) {
+        console.error("Error loading saved quiz:", error);
+        localStorage.removeItem("quizInProgress");
       }
     }
-  }, [appState, questions, userAnswers, quizTitle, toast]);
+    
+    // Check for quiz to retake
+    const quizToRetake = localStorage.getItem("quizToRetake");
+    if (quizToRetake) {
+      try {
+        const { questions, title } = JSON.parse(quizToRetake);
+        if (questions && questions.length > 0) {
+          setQuestions(questions);
+          if (title) setQuizTitle(title);
+          setAppState(1);
+          localStorage.removeItem("quizToRetake");
 
-  const pageVariants = {
-    initial: { opacity: 0, x: 50 },
-    in: { opacity: 1, x: 0 },
-    out: { opacity: 0, x: -50 }
-  };
-  
-  const pageTransition = {
-    type: "spring",
-    stiffness: 300,
-    damping: 30
-  };
-  
-  const renderContent = () => {
-    switch (appState) {
-      case AppState.CREATE:
-        return (
-          <motion.div
-            initial="initial"
-            animate="in"
-            exit="out"
-            variants={pageVariants}
-            transition={pageTransition}
-            className="w-full"
-          >
-            {location.pathname === "/legal" ? (
-              <LegalPages />
-            ) : (
-              <TabNavigation onQuizGenerated={handleQuizGenerated} />
-            )}
-          </motion.div>
-        );
-        
-      case AppState.QUIZ:
-        return (
-          <motion.div
-            initial="initial"
-            animate="in"
-            exit="out"
-            variants={pageVariants}
-            transition={pageTransition}
-          >
-            <QuizQuestion
-              question={questions[currentQuestionIndex]}
-              onNext={handleNextQuestion}
-              currentQuestionNumber={currentQuestionIndex + 1}
-              totalQuestions={questions.length}
-            />
-          </motion.div>
-        );
-        
-      case AppState.RESULTS:
-        const correctAnswers = getCorrectAnswersCount();
-        return (
-          <motion.div
-            initial="initial"
-            animate="in"
-            exit="out"
-            variants={pageVariants}
-            transition={pageTransition}
-          >
-            <QuizResults
-              totalQuestions={questions.length}
-              correctAnswers={correctAnswers}
-              onRetakeQuiz={handleRetakeQuiz}
-              onNewFile={handleNewQuiz}
-              onViewAnalytics={handleViewAnalytics}
-            />
-          </motion.div>
-        );
-        
-      case AppState.ANALYTICS:
-        const correctCount = getCorrectAnswersCount();
-        return (
-          <motion.div
-            initial="initial"
-            animate="in"
-            exit="out"
-            variants={pageVariants}
-            transition={pageTransition}
-          >
-            <QuizAnalytics
-              questions={questions}
-              correctAnswers={correctCount}
-              incorrectAnswers={questions.length - correctCount}
-              userAnswers={userAnswers}
-            />
-          </motion.div>
-        );
-        
-      default:
-        return null;
+          toast({
+            title: "Quiz Loaded",
+            description: "You're retaking a previous quiz"
+          });
+        }
+      } catch (error) {
+        console.error("Error loading quiz to retake:", error);
+        localStorage.removeItem("quizToRetake");
+      }
     }
+    // eslint-disable-next-line
+  }, []);
+
+  const handleResumeQuiz = () => {
+    setAppState(1);
+    setQuizInProgress(true);
+    setShowQuizResumeDialog(false);
+    toast({
+      title: "Quiz Resumed",
+      description: "You can continue your quiz from where you left off"
+    });
   };
   
+  const handleDiscardQuiz = () => {
+    localStorage.removeItem("quizInProgress");
+    setQuestions([]);
+    setShowQuizResumeDialog(false);
+    toast({
+      title: "Quiz Discarded",
+      description: "Starting with a fresh quiz"
+    });
+  };
+
+  const handleQuizGenerated = (generatedQuestions: Question[]) => {
+    setQuestions(generatedQuestions);
+    setQuizTitle(
+      `Medical Quiz - ${new Date().toLocaleDateString()}`
+    );
+    setAppState(1);
+    setQuizInProgress(true);
+    toast({
+      title: "Quiz Generated",
+      description: `${generatedQuestions.length} questions ready for you`,
+    });
+    // Save initial quiz state
+    localStorage.setItem("quizInProgress", JSON.stringify({
+      questions: generatedQuestions,
+      title: quizTitle,
+      currentIndex: 0,
+      userAnswers: [],
+    }));
+  };
+
+  const handleBackToCreate = () => {
+    setQuestions([]);
+    setAppState(0);
+    setQuizInProgress(false);
+    localStorage.removeItem("quizInProgress");
+    navigate("/");
+  };
+
+  const handleExitQuiz = () => {
+    // Save quiz state if in progress
+    if (questions?.length) {
+      localStorage.setItem("quizInProgress", JSON.stringify({
+        questions,
+        title: quizTitle,
+        // Optionally can add more state (currentIndex, etc)
+      }));
+    }
+    setQuizInProgress(false);
+    setAppState(0);
+    navigate("/");
+    toast({
+      title: "Quiz saved",
+      description: "Your progress has been saved. You can resume later."
+    });
+  };
+
+  const renderContent = () => {
+    // Legal page route
+    if (location.pathname === "/legal") {
+      return (
+        <>
+          <div className="flex items-center mb-4">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex items-center gap-2 border-border hover:bg-muted" 
+              onClick={() => navigate("/")}
+            >
+              <ArrowLeft className="h-4 w-4" /> Back to home
+            </Button>
+          </div>
+          <LegalContentWrapper />
+        </>
+      );
+    }
+    // Quiz flow (QUIZ/RESULTS/ANALYTICS)
+    if (appState === 1 && questions && questions.length > 0) {
+      return (
+        <>
+          <div className="flex items-center mb-4">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex items-center gap-2 border-border hover:bg-muted" 
+              onClick={handleExitQuiz}
+            >
+              <ArrowLeft className="h-4 w-4" /> Exit quiz
+            </Button>
+          </div>
+          <QuizFlow
+            questions={questions}
+            setQuestions={setQuestions}
+            quizTitle={quizTitle}
+            setQuizTitle={setQuizTitle}
+            onBackToCreate={handleBackToCreate}
+            initialAppState={QuizAppState.QUIZ}
+          />
+        </>
+      );
+    }
+    // Tabs navigation
+    return (
+      <motion.div
+        initial="initial"
+        animate="in"
+        exit="out"
+        variants={{
+          initial: { opacity: 0, x: 50 },
+          in: { opacity: 1, x: 0 },
+          out: { opacity: 0, x: -50 },
+        }}
+        transition={{
+          type: "spring",
+          stiffness: 300,
+          damping: 30,
+        }}
+        className="w-full"
+        key={`tab-content-${location.pathname}`}
+      >
+        <TabNavigation onQuizGenerated={handleQuizGenerated} />
+      </motion.div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background/90 flex flex-col">
       <Header />
@@ -232,8 +206,39 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
           {renderContent()}
         </AnimatePresence>
       </main>
+
+      {/* Quiz Resume Dialog */}
+      <Dialog open={showQuizResumeDialog} onOpenChange={setShowQuizResumeDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Resume Quiz?</DialogTitle>
+            <DialogDescription>
+              You have an unfinished quiz. Would you like to continue where you left off?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col space-y-4 my-4">
+            <p className="text-center text-sm text-muted-foreground">
+              {quizTitle}
+            </p>
+          </div>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleDiscardQuiz}
+              className="sm:flex-1"
+            >
+              Start new quiz
+            </Button>
+            <Button 
+              onClick={handleResumeQuiz}
+              className="sm:flex-1"
+            >
+              Resume quiz
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
-
 export default Index;
