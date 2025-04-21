@@ -6,6 +6,7 @@ import { FlashcardsViewer } from "./FlashcardsViewer";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Json } from "@/integrations/supabase/types";
+import { useLocation } from "react-router-dom";
 
 export enum FlashcardsState {
   CREATE,
@@ -23,6 +24,7 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
   const [setId, setSetId] = useState<string | null>(null); // track set ID for DB saves
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const location = useLocation();
 
   useEffect(() => {
     // Check for flashcards to review
@@ -102,7 +104,7 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
           front: card.front,
           back: card.back,
           status: card.status
-        }));
+        })) as unknown as Json;
         
         const { error } = await supabase
           .from("flashcard_sets")

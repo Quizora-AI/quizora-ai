@@ -54,106 +54,123 @@ serve(async (req) => {
       console.log("User prompt:", userPrompt);
       
       // Call AIML API
-      const response = await fetch("https://api.aimlapi.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${AIMLAPI_KEY}`
-        },
-        body: JSON.stringify({
-          model: "mistralai/Mistral-7B-Instruct-v0.2",
-          messages: [
-            {
-              role: "system",
-              content: systemPrompt
-            },
-            {
-              role: "user",
-              content: userPrompt
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 2000
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("AIML API error:", response.status, errorText);
-        throw new Error(`AIML API returned an error: ${response.status} ${errorText}`);
-      }
-      
-      const responseData = await response.json();
-      console.log("AIML API response:", JSON.stringify(responseData));
-      
-      if (!responseData.choices || !responseData.choices[0] || !responseData.choices[0].message) {
-        throw new Error("Invalid response format from AIML API");
-      }
-      
-      const content = responseData.choices[0].message.content;
-      console.log("Content from API:", content);
-      
       try {
-        // Extract the JSON part from the response
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-          throw new Error("Could not extract JSON from the API response");
+        const response = await fetch("https://api.aimlapi.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${AIMLAPI_KEY}`
+          },
+          body: JSON.stringify({
+            model: "gpt-3.5-turbo", // Updated to use a widely supported model
+            messages: [
+              {
+                role: "system",
+                content: systemPrompt
+              },
+              {
+                role: "user",
+                content: userPrompt
+              }
+            ],
+            temperature: 0.7,
+            max_tokens: 2000
+          })
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("AIML API error:", response.status, errorText);
+          throw new Error(`AIML API returned an error: ${response.status} ${errorText}`);
         }
         
-        const jsonContent = jsonMatch[0];
-        const parsedContent = JSON.parse(jsonContent);
+        const responseData = await response.json();
+        console.log("AIML API response:", JSON.stringify(responseData));
         
-        if (!parsedContent.questions || !Array.isArray(parsedContent.questions)) {
-          throw new Error("Invalid flashcard data format");
+        if (!responseData.choices || !responseData.choices[0] || !responseData.choices[0].message) {
+          throw new Error("Invalid response format from AIML API");
         }
         
-        return new Response(JSON.stringify(parsedContent), {
+        const content = responseData.choices[0].message.content;
+        console.log("Content from API:", content);
+        
+        try {
+          // Extract the JSON part from the response
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          if (!jsonMatch) {
+            throw new Error("Could not extract JSON from the API response");
+          }
+          
+          const jsonContent = jsonMatch[0];
+          const parsedContent = JSON.parse(jsonContent);
+          
+          if (!parsedContent.questions || !Array.isArray(parsedContent.questions)) {
+            throw new Error("Invalid flashcard data format");
+          }
+          
+          return new Response(JSON.stringify(parsedContent), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        } catch (jsonError) {
+          console.error("Error parsing JSON from API response:", jsonError);
+          try {
+            // Fallback: Try to parse the entire content as JSON
+            const parsedContent = JSON.parse(content);
+            if (parsedContent.questions) {
+              return new Response(JSON.stringify(parsedContent), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            } else {
+              throw new Error("Invalid flashcard data format in parsed content");
+            }
+          } catch (fallbackError) {
+            console.error("Fallback JSON parsing failed:", fallbackError);
+            
+            // Last resort: Try to extract questions manually from the text
+            const questions = [];
+            const lines = content.split("\n");
+            
+            let currentQuestion = null;
+            for (const line of lines) {
+              if (line.includes("question") && line.includes(":")) {
+                if (currentQuestion) {
+                  questions.push(currentQuestion);
+                }
+                currentQuestion = { question: "", correctAnswer: "" };
+                const questionText = line.split(":")[1].trim().replace(/["""]/g, "");
+                currentQuestion.question = questionText;
+              } else if (currentQuestion && line.includes("answer") && line.includes(":")) {
+                const answerText = line.split(":")[1].trim().replace(/["""]/g, "");
+                currentQuestion.correctAnswer = answerText;
+                questions.push(currentQuestion);
+                currentQuestion = null;
+              }
+            }
+            
+            if (questions.length > 0) {
+              return new Response(JSON.stringify({ questions }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
+            
+            // Fall back to generating sample flashcards
+            const fallbackCards = generateFallbackFlashcards(subject, topic, questionCount);
+            return new Response(JSON.stringify({ questions: fallbackCards }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+        }
+      } catch (apiError) {
+        console.error("API call failed:", apiError);
+        
+        // Generate fallback flashcards when the API call fails
+        const fallbackCards = generateFallbackFlashcards(subject, topic, questionCount);
+        return new Response(JSON.stringify({ 
+          questions: fallbackCards,
+          _warning: "Used fallback cards due to API error"
+        }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
-      } catch (jsonError) {
-        console.error("Error parsing JSON from API response:", jsonError);
-        try {
-          // Fallback: Try to parse the entire content as JSON
-          const parsedContent = JSON.parse(content);
-          if (parsedContent.questions) {
-            return new Response(JSON.stringify(parsedContent), {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
-          } else {
-            throw new Error("Invalid flashcard data format in parsed content");
-          }
-        } catch (fallbackError) {
-          console.error("Fallback JSON parsing failed:", fallbackError);
-          
-          // Last resort: Try to extract questions manually from the text
-          const questions = [];
-          const lines = content.split("\n");
-          
-          let currentQuestion = null;
-          for (const line of lines) {
-            if (line.includes("question") && line.includes(":")) {
-              if (currentQuestion) {
-                questions.push(currentQuestion);
-              }
-              currentQuestion = { question: "", correctAnswer: "" };
-              const questionText = line.split(":")[1].trim().replace(/["""]/g, "");
-              currentQuestion.question = questionText;
-            } else if (currentQuestion && line.includes("answer") && line.includes(":")) {
-              const answerText = line.split(":")[1].trim().replace(/["""]/g, "");
-              currentQuestion.correctAnswer = answerText;
-              questions.push(currentQuestion);
-              currentQuestion = null;
-            }
-          }
-          
-          if (questions.length > 0) {
-            return new Response(JSON.stringify({ questions }), {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
-          }
-          
-          throw new Error("Could not extract flashcard data from the API response");
-        }
       }
     } else {
       throw new Error(`Unsupported request type: ${requestData.type}`);
@@ -172,3 +189,19 @@ serve(async (req) => {
     );
   }
 });
+
+// Helper function to generate fallback flashcards when the API fails
+function generateFallbackFlashcards(subject: string, topic?: string, count = 5) {
+  const cards = [];
+  const topicText = topic || subject;
+  
+  // Generate simple flashcards based on the topic
+  for (let i = 1; i <= Math.min(count, 5); i++) {
+    cards.push({
+      question: `Sample question ${i} about ${topicText}?`,
+      correctAnswer: `Sample answer ${i} about ${topicText}.`
+    });
+  }
+  
+  return cards;
+}

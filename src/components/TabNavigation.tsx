@@ -51,12 +51,8 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
     setIsChangingTab(true);
     setActiveTab(value);
 
-    if (value === "flashcards" && !isPremium) {
-      // Free users can use flashcards with limited functionality
-      navigate('/flashcards');
-      setTimeout(() => setIsChangingTab(false), 300);
-      return;
-    }
+    // Store current path to return after potential premium check
+    const currentPath = location.pathname;
 
     switch (value) {
       case 'history':
