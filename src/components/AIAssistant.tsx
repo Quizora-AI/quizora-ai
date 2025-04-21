@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -92,6 +93,7 @@ export function AIAssistant() {
     setIsLoading(true);
 
     try {
+      // Add a "thinking" message
       const tempId = crypto.randomUUID();
       setMessages(prev => [...prev, {
         id: tempId,
@@ -99,6 +101,15 @@ export function AIAssistant() {
         content: "Thinking...",
         timestamp: new Date(),
       }]);
+      
+      console.log("Calling AI assistant edge function with:", {
+        message: input.trim(),
+        course: course || "",
+        context: messages.slice(-4).map(m => ({
+          role: m.role,
+          content: m.content
+        }))
+      });
 
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`, {
         method: "POST",
@@ -114,14 +125,28 @@ export function AIAssistant() {
             content: m.content
           }))
         })
-      }).then(r => r.json());
+      });
 
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error("Edge function error:", response.status, errorData);
+        throw new Error(`Error from assistant service: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("AI assistant response:", data);
+
+      // Remove the thinking message
       setMessages(prev => prev.filter(m => m.id !== tempId));
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
 
       const aiResponse: Message = {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: response?.response || "I'm sorry, I couldn't process your request at this time.",
+        content: data?.response || "I'm sorry, I couldn't process your request at this time.",
         timestamp: new Date(),
       };
 
@@ -132,8 +157,9 @@ export function AIAssistant() {
         description: "Got an answer to your question",
       });
     } catch (error:any) {
+      // Remove the thinking message and add error
       setMessages(prev => {
-        const filtered = prev.filter(m => m.content !== "Thinking...");
+        const filtered = prev.filter(m => m.id !== tempId);
         return [...filtered, {
           id: crypto.randomUUID(),
           role: "assistant",
@@ -141,9 +167,12 @@ export function AIAssistant() {
           timestamp: new Date(),
         }];
       });
+      
+      console.error("AI Assistant error:", error);
+      
       toast({
         title: "Error",
-        description: "Failed to get response from the assistant",
+        description: error.message || "Failed to get response from the assistant",
         variant: "destructive",
       });
     } finally {
