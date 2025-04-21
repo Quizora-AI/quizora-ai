@@ -1,15 +1,12 @@
 
 // This file integrates shadcn's toast functionality
-import { Toast, ToastActionElement, ToastProps } from "@/components/ui/toast"
-import {
-  useToast as useToastOriginal,
-} from "@radix-ui/react-toast"
+import { type ToastProps, type ToastActionElement } from "@/components/ui/toast"
 import * as React from "react"
 
 const TOAST_LIMIT = 5
 const TOAST_REMOVE_DELAY = 1000000
 
-type ToasterToast = Toast & {
+type ToasterToastProps = ToastProps & {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
@@ -35,11 +32,11 @@ type ActionType = typeof actionTypes
 type Action =
   | {
       type: ActionType["ADD_TOAST"]
-      toast: Omit<ToasterToast, "id">
+      toast: Omit<ToasterToastProps, "id">
     }
   | {
       type: ActionType["UPDATE_TOAST"]
-      toast: Partial<ToasterToast> & { id: string }
+      toast: Partial<ToasterToastProps> & { id: string }
     }
   | {
       type: ActionType["DISMISS_TOAST"]
@@ -51,7 +48,7 @@ type Action =
     }
 
 interface State {
-  toasts: ToasterToast[]
+  toasts: ToasterToastProps[]
 }
 
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
@@ -141,12 +138,12 @@ function dispatch(action: Action) {
   })
 }
 
-type Toast = Omit<ToasterToast, "id">
+type ToastProps = Omit<ToasterToastProps, "id">
 
-function toast({ ...props }: Toast) {
+function toast({ ...props }: ToastProps) {
   const id = genId()
 
-  const update = (props: Toast) =>
+  const update = (props: ToastProps) =>
     dispatch({
       type: actionTypes.UPDATE_TOAST,
       toast: { ...props, id },
