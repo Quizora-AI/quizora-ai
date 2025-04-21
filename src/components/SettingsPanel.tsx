@@ -1,30 +1,18 @@
+
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Settings, 
   User, 
   Info, 
   Book, 
-  Check, 
-  Crown, 
-  Lock,
-  ChevronDown,
-  CreditCard,
-  CheckCircle,
+  Crown,
   BarChart
 } from "lucide-react";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
 import { ResetPassword } from "./ResetPassword";
 import { ProfileTab } from "./settings/ProfileTab";
 import { PreferencesTab } from "./settings/PreferencesTab";
@@ -33,35 +21,26 @@ import { AnalyticsTab } from "./settings/AnalyticsTab";
 import { LegalTab } from "./settings/LegalTab";
 import { useSettingsAuth } from "./settings/useSettingsAuth";
 
-interface UserSettings {
-  name: string;
-  email: string;
-  course: string;
-  autoSave: boolean;
-  theme: "light" | "dark" | "system";
-  difficulty: "easy" | "medium" | "hard";
-  isPremium: boolean;
-  premiumTier?: string;
-  paymentId?: string;
-  subscriptionDate?: string;
-  expiryDate?: string;
-}
-
 export function SettingsPanel() {
-  // Use the new useSettingsAuth
+  // Use the useSettingsAuth hook
   const {
     settings, setSettings, activeTab, setActiveTab,
     isLoggedIn, setIsLoggedIn, quizHistory, setQuizHistory,
     supabaseUser, setSupabaseUser, supabaseSession, setSupabaseSession,
     authLoading, setAuthLoading
   } = useSettingsAuth();
+  
   const [searchParams] = useSearchParams();
   const defaultTab = searchParams.get("tab") || "profile";
   
+  // Initialize active tab from URL params
+  useEffect(() => {
+    if (defaultTab) {
+      setActiveTab(defaultTab);
+    }
+  }, [defaultTab, setActiveTab]);
+  
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
-  const [isResetEmailSent, setIsResetEmailSent] = useState(false);
-  const [isSendingReset, setIsSendingReset] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -134,105 +113,6 @@ export function SettingsPanel() {
         variant: "destructive" 
       });
       setErrorMessage(error?.message || "An unexpected error occurred");
-    }
-  };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMessage(null);
-
-    // Basic check
-    if (!settings.email || !settings.name) {
-      setErrorMessage("Name and email are required.");
-      return;
-    }
-    // Passwords must match (and have minimum requirements in a real app)
-    const form = e.target as HTMLFormElement;
-    const password = (form.elements.namedItem("password") as HTMLInputElement)?.value;
-    const confirm = (form.elements.namedItem("confirmPassword") as HTMLInputElement)?.value;
-    if (!password || password.length < 6) {
-      setErrorMessage("Password must be at least 6 characters.");
-      return;
-    }
-    if (password !== confirm) {
-      setErrorMessage("Passwords do not match.");
-      return;
-    }
-
-    try {
-      // Call Supabase signup
-      const { data, error } = await supabase.auth.signUp({
-        email: settings.email,
-        password,
-        options: {
-          data: { name: settings.name, course: settings.course }
-        }
-      });
-
-      if (error) {
-        if (error.message?.includes("already registered")) {
-          toast({ title: "Account exists", description: error.message, variant: "destructive" });
-        } else {
-          toast({ title: "Signup error", description: error.message, variant: "destructive" });
-        }
-        setErrorMessage(error.message);
-        return;
-      }
-      toast({ title: "Registration successful", description: "Please check your email to verify your account." });
-      setIsLoggedIn(true);
-      setActiveTab("profile");
-    } catch (error: any) {
-      console.error("Registration error:", error);
-      toast({ 
-        title: "Registration error", 
-        description: error?.message || "An unexpected error occurred", 
-        variant: "destructive" 
-      });
-      setErrorMessage(error?.message || "An unexpected error occurred");
-    }
-  };
-
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSendingReset(true);
-    
-    try {
-      if (!forgotPasswordEmail) {
-        toast({
-          title: "Reset failed",
-          description: "Please enter your email address.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // This will send a password reset link to the user's email
-      const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
-        redirectTo: `${window.location.origin}/reset-password`
-      });
-      
-      if (error) {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive"
-        });
-      } else {
-        setIsResetEmailSent(true);
-        toast({
-          title: "Reset Email Sent",
-          description: "Check your inbox for reset instructions."
-        });
-      }
-    } catch (error: any) {
-      console.error("Password reset error:", error);
-      toast({ 
-        title: "Password reset error", 
-        description: error?.message || "An unexpected error occurred", 
-        variant: "destructive" 
-      });
-    } finally {
-      setIsSendingReset(false);
     }
   };
 
@@ -309,7 +189,7 @@ export function SettingsPanel() {
     }));
   };
   
-  const updateSetting = (key: keyof UserSettings, value: any) => {
+  const updateSetting = (key: string, value: any) => {
     setSettings(prev => ({
       ...prev,
       [key]: value
@@ -340,12 +220,8 @@ export function SettingsPanel() {
     }
   };
 
-  const handleGoToPremium = () => {
-    setActiveTab("premium");
-  };
-  
   // Check for reset-password route
-  if (activeTab === "reset-password" || searchParams.has("access_token")) {
+  if (activeTab === "reset-password" || searchParams.has("access_token") || searchParams.get("type") === "recovery") {
     return <ResetPassword />;
   }
   

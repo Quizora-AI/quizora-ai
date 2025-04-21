@@ -6,16 +6,20 @@ import { QuizHistoryList } from "./QuizHistoryList";
 import { QuizHistoryEmpty } from "./QuizHistoryEmpty";
 import { QuizHistoryWarning } from "./QuizHistoryWarning";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export function QuizHistory() {
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPremium, setIsPremium] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchQuizzes = async () => {
       try {
-        // Check user's premium status first
+        setLoading(true);
+        
+        // Check user's session first
         const { data: sessionData } = await supabase.auth.getSession();
         if (!sessionData.session?.user) {
           setLoading(false);
@@ -32,23 +36,33 @@ export function QuizHistory() {
         setIsPremium(profile?.isPremium === true);
 
         // Get quiz attempts
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("quiz_attempts")
           .select("*")
+          .eq("user_id", sessionData.session.user.id)
           .order("created_at", { ascending: false });
+
+        if (error) {
+          throw error;
+        }
 
         if (data) {
           setQuizzes(data);
         }
-        setLoading(false);
       } catch (error) {
         console.error("Error fetching quiz history:", error);
+        toast({
+          title: "Error loading quiz history",
+          description: "Could not load your quiz history. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
         setLoading(false);
       }
     };
 
     fetchQuizzes();
-  }, []);
+  }, [toast]);
 
   const containerVariants = {
     hidden: { opacity: 0 },

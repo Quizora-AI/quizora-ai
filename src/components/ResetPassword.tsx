@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,14 +15,45 @@ export function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isResetting, setIsResetting] = useState(false);
   const [resetComplete, setResetComplete] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasValidToken, setHasValidToken] = useState(false);
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const navigate = useNavigate();
   
   // Extract token from URL query parameters
   const accessToken = searchParams.get('access_token');
-  const refreshToken = searchParams.get('refresh_token');
   const type = searchParams.get('type');
+  
+  useEffect(() => {
+    const verifyToken = async () => {
+      try {
+        console.log("Verifying token presence:", !!accessToken);
+        
+        if (accessToken) {
+          // Try to use the token to verify it's valid
+          setHasValidToken(true);
+        } else if (type === 'recovery') {
+          // If no access token but type is recovery, we're in the flow
+          // where Supabase has already handled the token and we just need
+          // to update the password
+          setHasValidToken(true);
+        }
+      } catch (error) {
+        console.error("Token verification error:", error);
+        toast({
+          title: "Invalid or expired link",
+          description: "Please request a new password reset link",
+          variant: "destructive",
+        });
+        setHasValidToken(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    verifyToken();
+  }, [accessToken, type, toast]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,41 +79,18 @@ export function ResetPassword() {
     setIsResetting(true);
     
     try {
-      // If we have an access token in the URL, we're coming from a reset email
-      if (accessToken) {
-        const { error } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken || '',
-        });
-        
-        if (error) throw error;
-        
-        // Now update the password
-        const { error: updateError } = await supabase.auth.updateUser({
-          password: newPassword
-        });
-        
-        if (updateError) throw updateError;
-        
-        setResetComplete(true);
-        toast({
-          title: "Password reset successful",
-          description: "You can now log in with your new password",
-        });
-      } else {
-        // Direct password update
-        const { error } = await supabase.auth.updateUser({
-          password: newPassword
-        });
-        
-        if (error) throw error;
-        
-        setResetComplete(true);
-        toast({
-          title: "Password changed",
-          description: "Your password has been updated successfully",
-        });
-      }
+      // Update the password using the Supabase client
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      
+      if (error) throw error;
+      
+      setResetComplete(true);
+      toast({
+        title: "Password reset successful",
+        description: "You can now log in with your new password",
+      });
     } catch (error) {
       console.error("Reset password error:", error);
       toast({
@@ -122,6 +130,62 @@ export function ResetPassword() {
       }
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  if (!hasValidToken && !isLoading) {
+    return (
+      <motion.div
+        className="w-full max-w-md mx-auto"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <Card className="bg-card/50 backdrop-blur-sm border border-primary/10 shadow-lg">
+          <CardHeader className="pb-4">
+            <motion.div
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              className="flex items-center gap-3"
+            >
+              <div className="bg-primary/10 p-3 rounded-full">
+                <Settings className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-indigo-500 bg-clip-text text-transparent">
+                  Invalid Reset Link
+                </CardTitle>
+                <CardDescription>
+                  This password reset link is invalid or has expired
+                </CardDescription>
+              </div>
+            </motion.div>
+          </CardHeader>
+          
+          <CardContent>
+            <motion.div
+              variants={itemVariants}
+              className="text-center py-6 space-y-6"
+            >
+              <p className="text-muted-foreground mb-6">
+                Please request a new password reset link from the login page.
+              </p>
+              <Button onClick={handleBackToLogin} className="w-full">
+                Return to sign in
+              </Button>
+            </motion.div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div

@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface SettingsAuthState {
   settings: any;
@@ -35,10 +36,19 @@ export function useSettingsAuth(defaultTab: string = "profile"): SettingsAuthSta
   const [supabaseUser, setSupabaseUser] = useState<any>(null);
   const [supabaseSession, setSupabaseSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const { toast } = useToast();
 
+  // Get stored settings on init
   useEffect(() => {
     const savedSettings = localStorage.getItem("userSettings");
-    if (savedSettings) setSettings(JSON.parse(savedSettings));
+    if (savedSettings) {
+      try {
+        setSettings(JSON.parse(savedSettings));
+      } catch (e) {
+        console.error("Error parsing stored settings:", e);
+      }
+    }
+    
     const savedAutoSave = localStorage.getItem("autoSave");
     if (savedAutoSave !== null) {
       setSettings((prev: any) => ({
@@ -46,35 +56,51 @@ export function useSettingsAuth(defaultTab: string = "profile"): SettingsAuthSta
         autoSave: savedAutoSave !== "false"
       }));
     }
+    
     const historyStr = localStorage.getItem("quizHistory");
-    if (historyStr) setQuizHistory(JSON.parse(historyStr));
+    if (historyStr) {
+      try {
+        setQuizHistory(JSON.parse(historyStr));
+      } catch (e) {
+        console.error("Error parsing stored quiz history:", e);
+      }
+    }
   }, []);
 
+  // Handle auth state changes
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Set up the auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth state changed:", event, session?.user?.email);
       setSupabaseSession(session);
       setSupabaseUser(session?.user ?? null);
       setIsLoggedIn(!!session?.user);
-      setAuthLoading(false);
+      
       if (session?.user) {
+        // Defer profile fetch with setTimeout to avoid Supabase deadlock
         setTimeout(() => fetchUserProfile(session.user.id), 0);
+      } else {
+        setAuthLoading(false);
       }
     });
 
+    // Then check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSupabaseSession(session);
       setSupabaseUser(session?.user ?? null);
       setIsLoggedIn(!!session?.user);
-      setAuthLoading(false);
+      
       if (session?.user) {
         fetchUserProfile(session.user.id);
+      } else {
+        setAuthLoading(false);
       }
     });
 
     return () => subscription.unsubscribe();
-    // eslint-disable-next-line
   }, []);
 
+  // Fetch user profile data from Supabase
   const fetchUserProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -93,8 +119,14 @@ export function useSettingsAuth(defaultTab: string = "profile"): SettingsAuthSta
         }));
       }
     } catch (e) {
-      // Console log on fail
       console.error("Error fetching user profile:", e);
+      toast({
+        title: "Profile Error",
+        description: "Could not load your profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setAuthLoading(false);
     }
   };
 
