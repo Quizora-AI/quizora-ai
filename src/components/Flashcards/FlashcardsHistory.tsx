@@ -7,6 +7,8 @@ import { Progress } from "@/components/ui/progress";
 import { BookOpen, BookPlus, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Flashcard } from "./FlashcardsGenerator";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FlashcardsSetHistory {
   id: string;
@@ -20,20 +22,58 @@ interface FlashcardsSetHistory {
 
 export function FlashcardsHistory() {
   const [flashcardSets, setFlashcardSets] = useState<FlashcardsSetHistory[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     // Load flashcards history
-    const savedFlashcards = localStorage.getItem("flashcardsHistory");
-    if (savedFlashcards) {
-      try {
-        const parsedSets = JSON.parse(savedFlashcards);
-        setFlashcardSets(parsedSets);
-      } catch (error) {
-        console.error("Error loading flashcard history:", error);
-      }
-    }
+    loadFlashcardSets();
   }, []);
+
+  const loadFlashcardSets = async () => {
+    setIsLoading(true);
+    
+    try {
+      // First try to load from Supabase if authenticated
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { data, error } = await supabase
+          .from("flashcard_sets")
+          .select("*")
+          .order("created_at", { ascending: false });
+          
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          setFlashcardSets(data);
+          setIsLoading(false);
+          return;
+        }
+      }
+      
+      // Fallback to localStorage if not authenticated or no data in Supabase
+      const savedFlashcards = localStorage.getItem("flashcardsHistory");
+      if (savedFlashcards) {
+        try {
+          const parsedSets = JSON.parse(savedFlashcards);
+          setFlashcardSets(parsedSets);
+        } catch (error) {
+          console.error("Error loading flashcard history:", error);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading flashcard sets:", error);
+      toast({
+        title: "Failed to load flashcard sets",
+        description: "Please try again later",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const calculateProgress = (cards: Flashcard[]) => {
     if (!cards || !cards.length) return 0;
@@ -54,13 +94,13 @@ export function FlashcardsHistory() {
     const selectedSet = flashcardSets.find(set => set.id === setId);
     if (selectedSet) {
       // Store the flashcard set to review in localStorage
-      localStorage.setItem("currentFlashcardSet", JSON.stringify({
+      localStorage.setItem("flashcardsToReview", JSON.stringify({
         id: selectedSet.id,
         title: selectedSet.title,
         cards: selectedSet.cards
       }));
       
-      // Navigate to the flashcards page
+      // Navigate to the flashcards page - this will trigger the review mode
       navigate("/flashcards");
     }
   };
@@ -81,17 +121,46 @@ export function FlashcardsHistory() {
     visible: { y: 0, opacity: 1 },
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 space-y-4">
+        <motion.div
+          animate={{ 
+            rotate: [0, 360],
+          }}
+          transition={{ 
+            duration: 2,
+            repeat: Infinity,
+            ease: "linear"
+          }}
+          className="w-12 h-12 rounded-full border-4 border-t-primary border-r-primary/30 border-b-primary/60 border-l-primary/10"
+        />
+        <p className="text-muted-foreground">Loading flashcards...</p>
+      </div>
+    );
+  }
+
   return (
     <>
       {flashcardSets.length === 0 ? (
-        <div className="text-center py-12">
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center py-12"
+        >
           <BookPlus className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h2 className="text-xl font-bold mb-2">No flashcards yet</h2>
           <p className="text-muted-foreground mb-6">
             Create flashcards to study and track your progress
           </p>
-          <Button onClick={() => navigate('/flashcards')}>Create Flashcards</Button>
-        </div>
+          <Button 
+            onClick={() => navigate('/flashcards')}
+            className="animate-pulse"
+          >
+            Create Flashcards
+          </Button>
+        </motion.div>
       ) : (
         <motion.div
           variants={containerVariants}
@@ -100,7 +169,14 @@ export function FlashcardsHistory() {
           className="space-y-4"
         >
           {flashcardSets.map((set) => (
-            <motion.div key={set.id} variants={itemVariants}>
+            <motion.div 
+              key={set.id} 
+              variants={itemVariants}
+              whileHover={{ 
+                y: -4, 
+                transition: { duration: 0.2 }
+              }}
+            >
               <Card className="overflow-hidden border border-primary/10 shadow-md hover:shadow-lg transition-all duration-200 bg-card/80 backdrop-blur-sm">
                 <CardContent className="p-5">
                   <div className="flex flex-col space-y-4">

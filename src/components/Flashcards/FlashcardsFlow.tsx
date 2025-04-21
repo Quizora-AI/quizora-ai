@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocation } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth0 } from "@auth0/auth0-react";
 
 export enum FlashcardsState {
   CREATE,
@@ -26,6 +27,7 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const location = useLocation();
+  const { isAuthenticated, user } = useAuth0();
 
   // Safer data loading with retry mechanism
   const loadFlashcardsData = useCallback(async () => {
@@ -52,26 +54,19 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
               title: "Flashcards Loaded",
               description: `${cards.length} cards ready for review`,
             });
-          } else {
-            throw new Error("Invalid flashcards data format");
+            return; // Exit early since we've loaded the cards
           }
         } catch (error) {
           console.error("Error loading flashcards to review:", error);
           setError("Failed to load flashcards data. Creating fresh flashcards instead.");
           localStorage.removeItem("flashcardsToReview");
-          setAppState(FlashcardsState.CREATE);
-          
-          // Notify user of the issue
-          toast({
-            title: "Error Loading Flashcards",
-            description: "Creating fresh flashcards instead",
-            variant: "destructive",
-          });
         }
-      } else {
-        // No saved flashcards to review, default to create state
-        setAppState(FlashcardsState.CREATE);
       }
+      
+      // If we get here, we either had no flashcards to review or there was an error
+      // Default to create state
+      setAppState(FlashcardsState.CREATE);
+      
     } catch (error) {
       console.error("Unexpected error in flashcards flow:", error);
       setError("Something went wrong loading flashcards");
@@ -85,7 +80,10 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
     loadFlashcardsData();
   }, [loadFlashcardsData]);
 
-  const handleFlashcardsGenerated = (generatedFlashcards: Flashcard[], setMeta?: { title?: string, id?: string }) => {
+  const handleFlashcardsGenerated = async (
+    generatedFlashcards: Flashcard[], 
+    setMeta?: { title?: string, id?: string, subject?: string, course?: string, topic?: string }
+  ) => {
     if (!generatedFlashcards || !generatedFlashcards.length) {
       setError("No flashcards were generated. Please try again.");
       toast({
@@ -98,7 +96,62 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
     
     setFlashcards(generatedFlashcards);
     if (setMeta?.title) setTitle(setMeta.title);
-    if (setMeta?.id) setSetId(setMeta.id);
+    
+    // If authenticated, save to Supabase
+    try {
+      if (isAuthenticated && user) {
+        // Prepare flashcard set data
+        const flashcardSet = {
+          title: setMeta?.title || "Untitled Flashcards",
+          subject: setMeta?.subject || "General",
+          course: setMeta?.course || null,
+          topic: setMeta?.topic || null,
+          cards: generatedFlashcards,
+          user_id: user.sub
+        };
+        
+        const { data, error } = await supabase
+          .from('flashcard_sets')
+          .insert(flashcardSet)
+          .select('id')
+          .single();
+          
+        if (error) {
+          console.error("Error saving flashcards to Supabase:", error);
+        } else if (data) {
+          // Set ID for future updates
+          setSetId(data.id);
+          
+          toast({
+            title: "Flashcards Saved",
+            description: "Your flashcards have been saved to your account"
+          });
+        }
+      } else {
+        // Save to localStorage for non-authenticated users
+        const newId = `local-${Date.now()}`;
+        setSetId(newId);
+        
+        // Save to history in localStorage
+        const historyItem = {
+          id: newId,
+          title: setMeta?.title || "Untitled Flashcards",
+          subject: setMeta?.subject || "General",
+          course: setMeta?.course || null,
+          topic: setMeta?.topic || null,
+          cards: generatedFlashcards,
+          created_at: new Date()
+        };
+        
+        const existingHistory = localStorage.getItem("flashcardsHistory");
+        const historyArray = existingHistory ? JSON.parse(existingHistory) : [];
+        historyArray.unshift(historyItem);
+        localStorage.setItem("flashcardsHistory", JSON.stringify(historyArray));
+      }
+    } catch (error) {
+      console.error("Error saving flashcards:", error);
+    }
+    
     setAppState(FlashcardsState.REVIEW);
     setError(null);
     
@@ -118,44 +171,33 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
     setFlashcards(updatedFlashcards);
 
     try {
-      // Update in local storage
-      const flashcardsHistory = localStorage.getItem("flashcardsHistory");
-      if (flashcardsHistory) {
-        try {
-          const history = JSON.parse(flashcardsHistory);
-          const index = history.findIndex((set: any) =>
-            JSON.stringify(set.cards.map((c: any) => c.id)) ===
-            JSON.stringify(updatedFlashcards.map(c => c.id))
-          );
-          if (index !== -1) {
-            history[index].cards = updatedFlashcards;
-            localStorage.setItem("flashcardsHistory", JSON.stringify(history));
-          }
-        } catch (error) {
-          console.error("Error updating flashcards progress in local storage:", error);
-        }
-      }
-
-      // Update in Supabase if user is logged in
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user && setId) {
-        // Convert Flashcard[] to a format Supabase can handle
-        const cardsForSupabase = updatedFlashcards.map(card => ({
-          id: card.id,
-          front: card.front,
-          back: card.back,
-          status: card.status
-        }));
-        
+      // If authenticated and we have a setId, update in Supabase
+      if (isAuthenticated && user && setId) {
         const { error } = await supabase
           .from("flashcard_sets")
-          .update({ cards: cardsForSupabase })
-          .eq("id", setId)
-          .eq("user_id", user.id);
+          .update({ 
+            cards: updatedFlashcards,
+          })
+          .eq("id", setId);
           
         if (error) {
           console.error("Error updating flashcards in Supabase:", error);
           throw error;
+        }
+      } else {
+        // Update in local storage
+        const flashcardsHistory = localStorage.getItem("flashcardsHistory");
+        if (flashcardsHistory) {
+          try {
+            const history = JSON.parse(flashcardsHistory);
+            const index = history.findIndex((set: any) => set.id === setId);
+            if (index !== -1) {
+              history[index].cards = updatedFlashcards;
+              localStorage.setItem("flashcardsHistory", JSON.stringify(history));
+            }
+          } catch (error) {
+            console.error("Error updating flashcards progress in local storage:", error);
+          }
         }
       }
       
