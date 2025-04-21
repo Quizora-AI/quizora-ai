@@ -1,20 +1,12 @@
 
 import { useState, useEffect } from "react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { FileUpload } from "@/components/FileUpload";
-import { QuizGenerator } from "@/components/QuizGenerator";
-import { QuizHistory } from "@/components/QuizHistory";
-import { FlashcardsFlow } from "@/components/Flashcards/FlashcardsFlow";
-import { FlashcardsHistory } from "@/components/Flashcards/FlashcardsHistory";
-import { SettingsPanel } from "@/components/SettingsPanel";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Question } from "@/components/FileUpload";
-import { motion, AnimatePresence } from "framer-motion";
 import { BrainCircuit, History, Book, Settings } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { motion } from "framer-motion";
 
 interface TabNavigationProps {
   onQuizGenerated: (questions: Question[]) => void;
@@ -30,19 +22,22 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
   
   useEffect(() => {
     // Determine active tab from URL path
-    const pathParts = location.pathname.split('/');
-    const lastPart = pathParts[pathParts.length - 1];
-
-    if (lastPart === 'history') setActiveTab('history');
-    else if (lastPart === 'flashcards') setActiveTab('flashcards');
-    else if (lastPart === 'settings') setActiveTab('settings');
+    const path = location.pathname;
+    
+    if (path === '/history') setActiveTab('history');
+    else if (path === '/flashcards') setActiveTab('flashcards');
+    else if (path === '/settings') setActiveTab('settings');
     else setActiveTab('generate');
 
     // Check premium status from local storage
     const userSettings = localStorage.getItem("userSettings");
     if (userSettings) {
-      const settings = JSON.parse(userSettings);
-      setIsPremium(settings.isPremium === true);
+      try {
+        const settings = JSON.parse(userSettings);
+        setIsPremium(settings.isPremium === true);
+      } catch (error) {
+        console.error("Error parsing user settings:", error);
+      }
     }
   }, [location.pathname]);
 
@@ -53,60 +48,26 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
     setIsChangingTab(true);
     setActiveTab(value);
 
-    // Pre-emptive active tab update to improve perceived responsiveness
-    setTimeout(() => {
+    // Improve tab changing responsiveness
+    requestAnimationFrame(() => {
       switch (value) {
         case 'history':
-          navigate('/history');
+          navigate('/history', { replace: false });
           break;
         case 'flashcards':
-          navigate('/flashcards');
+          navigate('/flashcards', { replace: false });
           break;
         case 'settings':
-          navigate('/settings');
+          navigate('/settings', { replace: false });
           break;
         default:
-          navigate('/');
+          navigate('/', { replace: false });
           break;
       }
       
-      // Shorter delay for better responsiveness
-      setTimeout(() => setIsChangingTab(false), 200);
-    }, 0);
-  };
-
-  // Only show "Create New Quiz" button on generate tab (bottom mobile bar)
-  const handleCreateNewQuiz = () => {
-    const userSettings = localStorage.getItem("userSettings");
-    const quizHistory = localStorage.getItem("quizHistory");
-    const historyData = quizHistory ? JSON.parse(quizHistory) : [];
-    
-    if (userSettings) {
-      const settings = JSON.parse(userSettings);
-      if (!settings.isPremium && historyData.length >= 2) {
-        toast({
-          title: "Free Quiz Limit Reached",
-          description: "Upgrade to premium for unlimited quizzes!"
-        });
-        navigate('/settings?tab=premium');
-        return;
-      }
-    }
-    localStorage.removeItem("quizToRetake");
-    navigate("/");
-    setActiveTab("generate");
-  };
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        when: "beforeChildren",
-        staggerChildren: 0.05, // Faster staggering
-        duration: 0.2 // Faster overall animation
-      }
-    }
+      // Use a proper delay to prevent rapid clicks
+      setTimeout(() => setIsChangingTab(false), 300);
+    });
   };
 
   const tabIconStyle = "h-4 w-4 mr-2";
@@ -115,9 +76,9 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
     <TooltipProvider>
       <motion.div 
         className="w-full"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
       >
         <Tabs 
           defaultValue="generate" 
@@ -143,8 +104,6 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
               <span className="hidden sm:inline">Settings</span>
             </TabsTrigger>
           </TabsList>
-          
-          {/* We're no longer rendering tab content here - this is now handled in Index.tsx */}
         </Tabs>
       </motion.div>
     </TooltipProvider>

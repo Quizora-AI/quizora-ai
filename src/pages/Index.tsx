@@ -8,6 +8,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { QuizFlow, AppState as QuizAppState } from "@/components/QuizFlow";
 import { FlashcardsFlow } from "@/components/Flashcards/FlashcardsFlow";
+import { QuizGenerator } from "@/components/QuizGenerator";
+import { QuizHistory } from "@/components/QuizHistory";
+import { SettingsPanel } from "@/components/SettingsPanel";
 import { LegalContentWrapper } from "@/components/LegalContentWrapper";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -165,20 +168,28 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
       );
     }
     
-    // For any route, we'll render the tab navigation
+    // For any route, we'll render the tab navigation component plus the content specific to each route
     return (
-      <motion.div
-        key={contentKey}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -10 }}
-        transition={{ duration: 0.2 }}
-        className="w-full"
-      >
+      <>
         <TabNavigation onQuizGenerated={handleQuizGenerated} />
         
         {/* Render route-specific content */}
         <AnimatePresence mode="wait">
+          {location.pathname === "/" && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.2 }}
+              key="generate-content"
+              className="w-full mt-4 mb-16"
+            >
+              <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading Quiz Generator...</div>}>
+                <QuizGenerator onQuizGenerated={handleQuizGenerated} />
+              </Suspense>
+            </motion.div>
+          )}
+          
           {location.pathname === "/flashcards" && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -186,15 +197,45 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.2 }}
               key="flashcards-content"
-              className="w-full mb-16"
+              className="w-full mt-4 mb-16"
             >
               <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading Flashcards...</div>}>
                 <FlashcardsFlow onBackToCreate={() => navigate('/')} />
               </Suspense>
             </motion.div>
           )}
+          
+          {location.pathname === "/history" && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.2 }}
+              key="history-content"
+              className="w-full mt-4 mb-16"
+            >
+              <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading History...</div>}>
+                <QuizHistory />
+              </Suspense>
+            </motion.div>
+          )}
+          
+          {location.pathname === "/settings" && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.2 }}
+              key="settings-content"
+              className="w-full mt-4 mb-16"
+            >
+              <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading Settings...</div>}>
+                <SettingsPanel />
+              </Suspense>
+            </motion.div>
+          )}
         </AnimatePresence>
-      </motion.div>
+      </>
     );
   };
 

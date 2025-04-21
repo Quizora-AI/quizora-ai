@@ -66,7 +66,7 @@ const App = () => {
             <Route path="/history" element={<Index initialTab="history" />} />
             <Route path="/history/:quizId" element={<QuizReview />} />
             <Route path="/settings" element={<Index initialTab="settings" />} />
-            <Route path="/legal" element={<Index />} />
+            <Route path="/legal" element={<Index initialTab="generate" />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
