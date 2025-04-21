@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, BookPlus } from "lucide-react";
+import { BookOpen, BookPlus, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Flashcard } from "./FlashcardsGenerator";
 
@@ -43,13 +43,24 @@ export function FlashcardsHistory() {
 
   const formatDate = (dateString: string | Date) => {
     const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-    return date.toLocaleDateString();
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    }).format(date);
   };
 
-  const handleRetakeFlashcards = (setId: string) => {
+  const handleReviewFlashcards = (setId: string) => {
     const selectedSet = flashcardSets.find(set => set.id === setId);
     if (selectedSet) {
-      localStorage.setItem("flashcardsToReview", JSON.stringify(selectedSet));
+      // Store the flashcard set to review in localStorage
+      localStorage.setItem("currentFlashcardSet", JSON.stringify({
+        id: selectedSet.id,
+        title: selectedSet.title,
+        cards: selectedSet.cards
+      }));
+      
+      // Navigate to the flashcards page
       navigate("/flashcards");
     }
   };
@@ -90,31 +101,45 @@ export function FlashcardsHistory() {
         >
           {flashcardSets.map((set) => (
             <motion.div key={set.id} variants={itemVariants}>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div className="flex-1">
-                      <h3 className="font-medium">{set.title}</h3>
+              <Card className="overflow-hidden border border-primary/10 shadow-md hover:shadow-lg transition-all duration-200 bg-card/80 backdrop-blur-sm">
+                <CardContent className="p-5">
+                  <div className="flex flex-col space-y-4">
+                    <div>
+                      <h3 className="text-lg font-medium text-foreground/90">{set.title}</h3>
                       <div className="text-sm text-muted-foreground flex flex-wrap gap-2 items-center">
                         <span>{formatDate(set.created_at)}</span>
-                        <span>•</span>
+                        <span className="inline-block w-1 h-1 rounded-full bg-muted-foreground"></span>
                         <span>{set.cards.length} cards</span>
-                      </div>
-                      <div className="mt-2 space-y-1">
-                        <div className="flex justify-between text-xs">
-                          <span>Progress</span>
-                          <span>{Math.round(calculateProgress(set.cards))}%</span>
-                        </div>
-                        <Progress value={calculateProgress(set.cards)} className="h-1" />
+                        {set.course && (
+                          <>
+                            <span className="inline-block w-1 h-1 rounded-full bg-muted-foreground"></span>
+                            <span>{set.course}</span>
+                          </>
+                        )}
                       </div>
                     </div>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleRetakeFlashcards(set.id)}
-                    >
-                      Review
-                    </Button>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span>Progress</span>
+                        <span className="font-medium">{Math.round(calculateProgress(set.cards))}%</span>
+                      </div>
+                      <Progress value={calculateProgress(set.cards)} className="h-2" />
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs text-muted-foreground">
+                        {set.cards.filter(c => c.status === 'known').length} of {set.cards.length} cards mastered
+                      </p>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleReviewFlashcards(set.id)}
+                        className="gap-1 px-4"
+                      >
+                        Review <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

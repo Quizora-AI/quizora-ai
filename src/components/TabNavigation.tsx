@@ -86,7 +86,7 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
           value={activeTab}
           onValueChange={handleTabChange}
         >
-          <TabsList className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 grid grid-cols-4 max-w-md w-[90%] shadow-lg border border-border/20 backdrop-blur-sm">
+          <TabsList className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 grid grid-cols-4 max-w-md w-[90%] shadow-md backdrop-blur-sm">
             <TabsTrigger value="generate" className="flex items-center" disabled={isChangingTab}>
               <BrainCircuit className={tabIconStyle} />
               <span className="hidden sm:inline">Quiz</span>

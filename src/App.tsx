@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import LandingPage from "./pages/LandingPage";
 import * as React from "react";
 import QuizReview from "./pages/QuizReview";
 
@@ -53,6 +54,20 @@ const PremiumRoute: React.FC<{element: React.ReactNode}> = ({ element }) => {
 };
 
 const App = () => {
+  // Check if this is user's first visit
+  const [isFirstVisit, setIsFirstVisit] = React.useState(true);
+
+  React.useEffect(() => {
+    // Check if user has visited before
+    const hasVisited = localStorage.getItem("hasVisitedBefore");
+    if (hasVisited === "true") {
+      setIsFirstVisit(false);
+    } else {
+      // Set flag for future visits
+      localStorage.setItem("hasVisitedBefore", "true");
+    }
+  }, []);
+
   return (
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
@@ -60,7 +75,8 @@ const App = () => {
           <Toaster />
           <Sonner />
           <Routes>
-            <Route path="/" element={<Index initialTab="generate" />} />
+            {/* Landing page only shown on first visit */}
+            <Route path="/" element={isFirstVisit ? <LandingPage /> : <Index initialTab="generate" />} />
             <Route path="/quiz" element={<Index initialTab="generate" />} />
             <Route path="/flashcards" element={<Index initialTab="flashcards" />} />
             <Route path="/history" element={<Index initialTab="history" />} />
