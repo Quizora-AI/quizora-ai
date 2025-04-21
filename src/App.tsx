@@ -1,5 +1,4 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
@@ -10,6 +9,7 @@ import QuizReview from "./pages/QuizReview";
 import { Auth0Provider, useAuth0 } from "@auth0/auth0-react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { ThemeProvider } from "next-themes";
 
 // Create a client with better error handling
 const queryClient = new QueryClient({
@@ -117,22 +117,22 @@ const App = () => {
 
   return (
     <React.StrictMode>
-      <Auth0Provider
-        domain={auth0Domain}
-        clientId={auth0ClientId}
-        authorizationParams={{
-          redirect_uri: window.location.origin
-        }}
-        cacheLocation="localstorage"
-      >
-        <QueryClientProvider client={queryClient}>
-          <BrowserRouter>
-            <Toaster />
-            <Sonner />
-            <AppRoutes isFirstVisit={isFirstVisit} />
-          </BrowserRouter>
-        </QueryClientProvider>
-      </Auth0Provider>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <Auth0Provider
+          domain={auth0Domain}
+          clientId={auth0ClientId}
+          authorizationParams={{
+            redirect_uri: window.location.origin
+          }}
+          cacheLocation="localstorage"
+        >
+          <QueryClientProvider client={queryClient}>
+            <BrowserRouter>
+              <AppRoutes isFirstVisit={isFirstVisit} />
+            </BrowserRouter>
+          </QueryClientProvider>
+        </Auth0Provider>
+      </ThemeProvider>
     </React.StrictMode>
   );
 };
@@ -150,19 +150,37 @@ const AppRoutes: React.FC<{isFirstVisit: boolean}> = ({ isFirstVisit }) => {
   }
 
   return (
-    <Routes>
-      <Route path="/" element={isFirstVisit || !isAuthenticated ? <Navigate to="/landing" /> : <Navigate to="/quiz" />} />
-      <Route path="/landing" element={<LandingPage />} />
-      <Route path="/login" element={<LoginRedirect />} />
-      
-      <Route path="/quiz" element={<AuthGuard element={<Index initialTab="generate" />} />} />
-      <Route path="/flashcards" element={<AuthGuard element={<Index initialTab="flashcards" />} />} />
-      <Route path="/history" element={<AuthGuard element={<Index initialTab="history" />} />} />
-      <Route path="/history/:quizId" element={<AuthGuard element={<QuizReview />} />} />
-      <Route path="/settings" element={<AuthGuard element={<Index initialTab="settings" />} />} />
-      <Route path="/legal" element={<Index initialTab="generate" />} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <>
+      {/* Import Toasters inside the component tree */}
+      <ToastProviders />
+      <Routes>
+        <Route path="/" element={isFirstVisit || !isAuthenticated ? <Navigate to="/landing" /> : <Navigate to="/quiz" />} />
+        <Route path="/landing" element={<LandingPage />} />
+        <Route path="/login" element={<LoginRedirect />} />
+        
+        <Route path="/quiz" element={<AuthGuard element={<Index initialTab="generate" />} />} />
+        <Route path="/flashcards" element={<AuthGuard element={<Index initialTab="flashcards" />} />} />
+        <Route path="/history" element={<AuthGuard element={<Index initialTab="history" />} />} />
+        <Route path="/history/:quizId" element={<AuthGuard element={<QuizReview />} />} />
+        <Route path="/settings" element={<AuthGuard element={<Index initialTab="settings" />} />} />
+        <Route path="/legal" element={<Index initialTab="generate" />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
+  );
+};
+
+// Separate component to handle toast providers
+const ToastProviders = () => {
+  // Import these components dynamically to ensure they're used within a proper React component
+  const { Toaster } = require("@/components/ui/toaster");
+  const { Toaster: SonnerToaster } = require("@/components/ui/sonner");
+  
+  return (
+    <>
+      <Toaster />
+      <SonnerToaster />
+    </>
   );
 };
 
