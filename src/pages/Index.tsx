@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Question } from "@/components/FileUpload";
@@ -6,6 +7,7 @@ import { TabNavigation } from "@/components/TabNavigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { QuizFlow, AppState as QuizAppState } from "@/components/QuizFlow";
+import { FlashcardsFlow } from "@/components/Flashcards/FlashcardsFlow";
 import { LegalContentWrapper } from "@/components/LegalContentWrapper";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -148,6 +150,30 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
             initialAppState={QuizAppState.QUIZ}
           />
         </>
+      );
+    }
+    
+    if (location.pathname === "/flashcards") {
+      return (
+        <motion.div
+          initial="initial"
+          animate="in"
+          exit="out"
+          variants={{
+            initial: { opacity: 0, x: 50 },
+            in: { opacity: 1, x: 0 },
+            out: { opacity: 0, x: -50 },
+          }}
+          transition={{
+            type: "spring",
+            stiffness: 300,
+            damping: 30,
+          }}
+          className="w-full"
+          key="flashcards-flow"
+        >
+          <FlashcardsFlow />
+        </motion.div>
       );
     }
     

@@ -51,15 +51,14 @@ const App = () => {
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          {/* Remove the TooltipProvider from here - we'll add it at the component level where needed */}
           <Toaster />
           <Sonner />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/quiz" element={<Index initialTab="generate" />} />
+            <Route path="/flashcards" element={<Index initialTab="flashcards" />} />
             <Route path="/history" element={<Index initialTab="history" />} />
             <Route path="/history/:quizId" element={<QuizReview />} />
-            <Route path="/assistant" element={<PremiumRoute element={<Index initialTab="assistant" />} />} />
             <Route path="/settings" element={<Index initialTab="settings" />} />
             <Route path="/legal" element={<Index />} />
             <Route path="*" element={<NotFound />} />

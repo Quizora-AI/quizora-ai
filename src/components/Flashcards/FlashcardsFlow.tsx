@@ -1,0 +1,146 @@
+
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { Flashcard, FlashcardsGenerator } from "./FlashcardsGenerator";
+import { FlashcardsViewer } from "./FlashcardsViewer";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+export enum FlashcardsState {
+  CREATE,
+  REVIEW,
+}
+
+interface FlashcardsFlowProps {
+  onBackToCreate?: () => void;
+}
+
+export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProps) {
+  const [appState, setAppState] = useState<FlashcardsState>(FlashcardsState.CREATE);
+  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
+  const [title, setTitle] = useState("Flashcards");
+  const { toast } = useToast();
+
+  useEffect(() => {
+    // Check for flashcards to review
+    const flashcardsToReview = localStorage.getItem("flashcardsToReview");
+    if (flashcardsToReview) {
+      try {
+        const { cards, title: savedTitle } = JSON.parse(flashcardsToReview);
+        if (cards && cards.length) {
+          setFlashcards(cards);
+          if (savedTitle) setTitle(savedTitle);
+          setAppState(FlashcardsState.REVIEW);
+          localStorage.removeItem("flashcardsToReview");
+        }
+      } catch (error) {
+        console.error("Error loading flashcards to review:", error);
+        localStorage.removeItem("flashcardsToReview");
+      }
+    }
+  }, []);
+
+  const handleFlashcardsGenerated = (generatedFlashcards: Flashcard[]) => {
+    setFlashcards(generatedFlashcards);
+    setAppState(FlashcardsState.REVIEW);
+  };
+
+  const handleBackToCreate = () => {
+    setFlashcards([]);
+    setAppState(FlashcardsState.CREATE);
+    onBackToCreate();
+  };
+
+  const handleSaveProgress = async (updatedFlashcards: Flashcard[]) => {
+    setFlashcards(updatedFlashcards);
+    
+    // Update in local storage
+    const flashcardsHistory = localStorage.getItem("flashcardsHistory");
+    if (flashcardsHistory) {
+      try {
+        const history = JSON.parse(flashcardsHistory);
+        const index = history.findIndex((set: any) => 
+          JSON.stringify(set.cards.map((c: any) => c.id)) === 
+          JSON.stringify(updatedFlashcards.map(c => c.id)));
+        
+        if (index !== -1) {
+          history[index].cards = updatedFlashcards;
+          localStorage.setItem("flashcardsHistory", JSON.stringify(history));
+        }
+      } catch (error) {
+        console.error("Error updating flashcards progress in local storage:", error);
+      }
+    }
+    
+    // Update in Supabase if user is logged in
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      try {
+        // Find the set ID from local storage
+        const flashcardsHistory = localStorage.getItem("flashcardsHistory");
+        if (flashcardsHistory) {
+          const history = JSON.parse(flashcardsHistory);
+          const setItem = history.find((set: any) => 
+            JSON.stringify(set.cards.map((c: any) => c.id)) === 
+            JSON.stringify(updatedFlashcards.map(c => c.id)));
+          
+          if (setItem && setItem.id) {
+            await supabase
+              .from('flashcard_sets')
+              .update({ cards: updatedFlashcards })
+              .eq('id', setItem.id)
+              .eq('user_id', user.id);
+          }
+        }
+      } catch (error) {
+        console.error("Error updating flashcards progress in database:", error);
+      }
+    }
+  };
+
+  const pageVariants = {
+    initial: { opacity: 0, x: 50 },
+    in: { opacity: 1, x: 0 },
+    out: { opacity: 0, x: -50 },
+  };
+
+  const pageTransition = {
+    type: "spring",
+    stiffness: 300,
+    damping: 30,
+  };
+
+  switch (appState) {
+    case FlashcardsState.CREATE:
+      return (
+        <motion.div
+          initial="initial"
+          animate="in"
+          exit="out"
+          variants={pageVariants}
+          transition={pageTransition}
+        >
+          <FlashcardsGenerator onFlashcardsGenerated={handleFlashcardsGenerated} />
+        </motion.div>
+      );
+    case FlashcardsState.REVIEW:
+      return (
+        <motion.div
+          initial="initial"
+          animate="in"
+          exit="out"
+          variants={pageVariants}
+          transition={pageTransition}
+        >
+          <FlashcardsViewer 
+            flashcards={flashcards}
+            title={title}
+            onBackToCreate={handleBackToCreate}
+            onSaveProgress={handleSaveProgress}
+          />
+        </motion.div>
+      );
+    default:
+      return null;
+  }
+}

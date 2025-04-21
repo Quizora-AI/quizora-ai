@@ -76,8 +76,8 @@ export function PremiumPanel({ isPremium, settings, activatePremium }: PremiumPa
                 <li className="flex items-center gap-2"><span>✓</span><span>Unlimited quizzes</span></li>
                 <li className="flex items-center gap-2"><span>✓</span><span>Up to 50 questions per quiz</span></li>
                 <li className="flex items-center gap-2"><span>✓</span><span>Custom time per question</span></li>
+                <li className="flex items-center gap-2"><span>✓</span><span>Up to 30 flashcards per set</span></li>
                 <li className="flex items-center gap-2"><span>✓</span><span>Detailed analytics</span></li>
-                <li className="flex items-center gap-2"><span>✓</span><span>Quizora AI Assistant</span></li>
               </ul>
             </CardContent>
             <CardFooter>
@@ -134,15 +134,15 @@ export function PremiumPanel({ isPremium, settings, activatePremium }: PremiumPa
             <div>Questions per quiz</div>
             <div className="text-muted-foreground">10 max</div>
             <div className="text-green-600">Up to 50</div>
+            <div>Flashcards per set</div>
+            <div className="text-muted-foreground">10 max</div>
+            <div className="text-green-600">Up to 30</div>
             <div>Time per question</div>
             <div className="text-muted-foreground">Fixed 30s</div>
             <div className="text-green-600">Adjustable</div>
             <div>Analytics</div>
             <div className="text-muted-foreground">Basic</div>
             <div className="text-green-600">Advanced</div>
-            <div>AI Assistant</div>
-            <div className="text-muted-foreground">Not available</div>
-            <div className="text-green-600">Full access</div>
           </div>
         </div>
       </motion.div>

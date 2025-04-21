@@ -6,11 +6,12 @@ import { Card } from "@/components/ui/card";
 import { FileUpload } from "@/components/FileUpload";
 import { QuizGenerator } from "@/components/QuizGenerator";
 import { QuizHistory } from "@/components/QuizHistory";
-import { AIAssistant } from "@/components/AIAssistant";
+import { FlashcardsFlow } from "@/components/Flashcards/FlashcardsFlow";
+import { FlashcardsHistory } from "@/components/Flashcards/FlashcardsHistory";
 import { SettingsPanel } from "@/components/SettingsPanel";
 import { Question } from "@/components/FileUpload";
 import { motion } from "framer-motion";
-import { BrainCircuit, History, MessageSquare, Settings } from "lucide-react";
+import { BrainCircuit, History, Book, Settings } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -33,7 +34,7 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
     const lastPart = pathParts[pathParts.length - 1];
 
     if (lastPart === 'history') setActiveTab('history');
-    else if (lastPart === 'assistant') setActiveTab('assistant');
+    else if (lastPart === 'flashcards') setActiveTab('flashcards');
     else if (lastPart === 'settings') setActiveTab('settings');
     else setActiveTab('generate');
 
@@ -50,8 +51,9 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
     setIsChangingTab(true);
     setActiveTab(value);
 
-    if (value === "assistant" && !isPremium) {
-      navigate('/settings?tab=premium');
+    if (value === "flashcards" && !isPremium) {
+      // Free users can use flashcards with limited functionality
+      navigate('/flashcards');
       setTimeout(() => setIsChangingTab(false), 300);
       return;
     }
@@ -60,8 +62,8 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
       case 'history':
         navigate('/history');
         break;
-      case 'assistant':
-        navigate('/assistant');
+      case 'flashcards':
+        navigate('/flashcards');
         break;
       case 'settings':
         navigate('/settings');
@@ -129,13 +131,13 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
               <BrainCircuit className={tabIconStyle} />
               <span className="hidden sm:inline">Quiz</span>
             </TabsTrigger>
+            <TabsTrigger value="flashcards" className="flex items-center" disabled={isChangingTab}>
+              <Book className={tabIconStyle} />
+              <span className="hidden sm:inline">Flashcards</span>
+            </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center" disabled={isChangingTab}>
               <History className={tabIconStyle} />
               <span className="hidden sm:inline">History</span>
-            </TabsTrigger>
-            <TabsTrigger value="assistant" className="flex items-center" disabled={isChangingTab}>
-              <MessageSquare className={tabIconStyle} />
-              <span className="hidden sm:inline">Assistant</span>
             </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center" disabled={isChangingTab}>
               <Settings className={tabIconStyle} />
@@ -147,12 +149,9 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
             <TabsContent value="generate" className="mt-0">
               <QuizGenerator onQuizGenerated={onQuizGenerated} />
             </TabsContent>
-            <TabsContent value="history" className="mt-0">
-              <QuizHistory />
-            </TabsContent>
-            <TabsContent value="assistant" className="mt-0">
+            <TabsContent value="flashcards" className="mt-0">
               {isPremium ? (
-                <AIAssistant key="assistant-component" />
+                <FlashcardsFlow key="flashcards-component" />
               ) : (
                 <Card className="p-8 text-center">
                   <motion.div
@@ -160,20 +159,30 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <MessageSquare className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                    <h2 className="text-xl font-bold mb-2">Quizora Assistant</h2>
+                    <Book className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                    <h2 className="text-xl font-bold mb-2">Flashcards</h2>
                     <p className="text-muted-foreground mb-6">
-                      Upgrade to premium to access the Quizora AI Assistant and get personalized help with your studies.
+                      Free users can create up to 10 flashcards per set. Upgrade to premium to create up to 30 flashcards per set!
                     </p>
-                    <Button
-                      onClick={() => navigate('/settings?tab=premium')}
-                      className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded"
-                    >
-                      Upgrade to Premium
-                    </Button>
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                      <Button
+                        onClick={() => navigate('/settings?tab=premium')}
+                        variant="outline"
+                      >
+                        Upgrade to Premium
+                      </Button>
+                      <Button
+                        onClick={() => navigate('/flashcards')}
+                      >
+                        Try Free Version
+                      </Button>
+                    </div>
                   </motion.div>
                 </Card>
               )}
+            </TabsContent>
+            <TabsContent value="history" className="mt-0">
+              <FlashcardsHistory />
             </TabsContent>
             <TabsContent value="settings" className="mt-0">
               <SettingsPanel />
