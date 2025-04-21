@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Question } from "@/components/FileUpload";
@@ -15,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
   const [appState, setAppState] = useState<number>(0);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [quizTitle, setQuizTitle] = useState<string>("Medical Quiz");
+  const [quizTitle, setQuizTitle] = useState<string>("Quiz");
   const [quizInProgress, setQuizInProgress] = useState<boolean>(false);
   const [showQuizResumeDialog, setShowQuizResumeDialog] = useState<boolean>(false);
   const navigate = useNavigate();
@@ -23,7 +22,6 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check for saved quiz in progress
     const savedQuizState = localStorage.getItem("quizInProgress");
     if (savedQuizState && location.pathname === '/') {
       try {
@@ -31,7 +29,6 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
         if (questions && questions.length > 0) {
           setQuestions(questions);
           if (title) setQuizTitle(title);
-          // Ask user if they want to resume instead of auto-resuming
           setShowQuizResumeDialog(true);
         }
       } catch (error) {
@@ -40,7 +37,6 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
       }
     }
     
-    // Check for quiz to retake
     const quizToRetake = localStorage.getItem("quizToRetake");
     if (quizToRetake) {
       try {
@@ -86,16 +82,13 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
 
   const handleQuizGenerated = (generatedQuestions: Question[]) => {
     setQuestions(generatedQuestions);
-    setQuizTitle(
-      `Medical Quiz - ${new Date().toLocaleDateString()}`
-    );
+    setQuizTitle(`Quiz - ${new Date().toLocaleDateString()}`);
     setAppState(1);
     setQuizInProgress(true);
     toast({
       title: "Quiz Generated",
       description: `${generatedQuestions.length} questions ready for you`,
     });
-    // Save initial quiz state
     localStorage.setItem("quizInProgress", JSON.stringify({
       questions: generatedQuestions,
       title: quizTitle,
@@ -113,12 +106,10 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
   };
 
   const handleExitQuiz = () => {
-    // Save quiz state if in progress
     if (questions?.length) {
       localStorage.setItem("quizInProgress", JSON.stringify({
         questions,
         title: quizTitle,
-        // Optionally can add more state (currentIndex, etc)
       }));
     }
     setQuizInProgress(false);
@@ -131,25 +122,10 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
   };
 
   const renderContent = () => {
-    // Legal page route
     if (location.pathname === "/legal") {
-      return (
-        <>
-          <div className="flex items-center mb-4">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="flex items-center gap-2 border-border hover:bg-muted" 
-              onClick={() => navigate("/")}
-            >
-              <ArrowLeft className="h-4 w-4" /> Back to home
-            </Button>
-          </div>
-          <LegalContentWrapper />
-        </>
-      );
+      return <LegalContentWrapper />;
     }
-    // Quiz flow (QUIZ/RESULTS/ANALYTICS)
+    
     if (appState === 1 && questions && questions.length > 0) {
       return (
         <>
@@ -174,7 +150,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
         </>
       );
     }
-    // Tabs navigation
+    
     return (
       <motion.div
         initial="initial"
@@ -207,7 +183,6 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
         </AnimatePresence>
       </main>
 
-      {/* Quiz Resume Dialog */}
       <Dialog open={showQuizResumeDialog} onOpenChange={setShowQuizResumeDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

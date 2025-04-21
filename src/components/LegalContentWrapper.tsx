@@ -29,7 +29,7 @@ export const LegalContentWrapper = () => {
       transition={pageTransition}
       className="w-full"
     >
-      {/* Only one back button at the top */}
+      {/* Single back button at the top */}
       <div className="flex items-center mb-4">
         <Button 
           variant="outline" 

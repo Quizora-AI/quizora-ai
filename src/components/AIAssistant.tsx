@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -97,22 +98,20 @@ export function AIAssistant() {
         timestamp: new Date(),
       }]);
 
-      const { response } = await fetch("https://api.aimlapi.com/v1/chat/completions", {
+      // Use the edge function to get AI response
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${import.meta.env.VITE_AIMLAPI_KEY || ""}`,
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
         },
         body: JSON.stringify({
-          model: "gpt-4o",
-          messages: [
-            ...(course ? [{role: "system", content: `You are a Quizora assistant for ${course}`}]: []),
-            ...messages.slice(-4).map(m => ({
-              role: m.role,
-              content: m.content
-            })),
-            { role: "user", content: input.trim() }
-          ]
+          message: input.trim(),
+          course: course || "",
+          context: messages.slice(-4).map(m => ({
+            role: m.role,
+            content: m.content
+          }))
         })
       }).then(r => r.json());
 
@@ -121,7 +120,7 @@ export function AIAssistant() {
       const aiResponse: Message = {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: response?.choices?.[0]?.message?.content || response?.result || "I'm sorry, I couldn't process your request at this time.",
+        content: response?.response || "I'm sorry, I couldn't process your request at this time.",
         timestamp: new Date(),
       };
 
@@ -244,7 +243,7 @@ export function AIAssistant() {
                       <User className="h-4 w-4" />
                     </div>
                     <div className="rounded-lg p-3 max-w-[80%] bg-primary text-primary-foreground">
-                      Can you explain Newton's Laws to me?
+                      Can you explain the concept of machine learning?
                     </div>
                   </div>
                   <div className="flex gap-3">
@@ -252,7 +251,7 @@ export function AIAssistant() {
                       <BrainCircuit className="h-4 w-4 text-primary-foreground" />
                     </div>
                     <div className="rounded-lg p-3 max-w-[80%] bg-muted text-muted-foreground">
-                      Newton's laws describe the relationship between motion of an object and the forces acting on it...
+                      Machine learning is a branch of artificial intelligence that allows systems to learn and improve from experience...
                     </div>
                   </div>
                 </div>
@@ -353,7 +352,7 @@ export function AIAssistant() {
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={isPremium ? "Ask about your queries..." : "Upgrade to premium to use Quizora Assistant"}
+              placeholder={isPremium ? "Ask about any subject..." : "Upgrade to premium to use Quizora Assistant"}
               className="flex-1"
               disabled={isLoading || !isPremium}
             />
