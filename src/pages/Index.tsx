@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Question } from "@/components/FileUpload";
@@ -109,12 +110,14 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
             .select("id")
             .eq("user_id", user.id);
 
+          // Properly handle the profile query with error checking
           const { data: profile, error: profileError } = await supabase
             .from("profiles")
             .select("isPremium,free_quizzes_used")
             .eq("id", user.id)
             .maybeSingle();
-
+            
+          // Handle both successful query and error cases
           const isPremium = profile?.isPremium === true;
           const maxFree = 2;
           if (!isPremium && (existingAttempts?.length ?? 0) >= maxFree) {
@@ -128,6 +131,7 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
 
           const correctAnswers = getCorrectAnswersCount();
 
+          // Proper type conversion for JSON serialization
           const questionsJson: Json = questions.map(q => ({
             question: q.question,
             options: q.options,

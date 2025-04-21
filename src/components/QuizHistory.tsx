@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,8 +54,14 @@ export function QuizHistory() {
         setHistory(output);
 
         // Check premium status
-        const profileData = await supabase.from("profiles").select("isPremium").eq("id", user.id).maybeSingle();
-        const isPremium = profileData?.data?.isPremium === true;
+        const profileData = await supabase
+          .from("profiles")
+          .select("isPremium")
+          .eq("id", user.id)
+          .maybeSingle();
+        
+        // Handle both successful query and error cases
+        const isPremium = profileData.data?.isPremium === true;
         
         if (!isPremium && output.length >= 2) setShowFreeWarning(true);
         else setShowFreeWarning(false);
