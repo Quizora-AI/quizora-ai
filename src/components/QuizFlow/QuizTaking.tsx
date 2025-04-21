@@ -15,6 +15,7 @@ const QuizTaking = ({
   currentQuestionNumber,
   totalQuestions,
 }: QuizTakingProps) => {
+  // Pass the question directly to the QuizQuestion component
   return (
     <QuizQuestion
       question={question}

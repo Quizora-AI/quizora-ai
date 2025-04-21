@@ -27,6 +27,7 @@ export function QuizQuestion({
   const [timeLeft, setTimeLeft] = useState(defaultTimePerQuestion);
   const [isTimerRunning, setIsTimerRunning] = useState(true);
   const [animateOptions, setAnimateOptions] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
   const optionLabels = ["A", "B", "C", "D"];
   const timerProgressRef = useRef<HTMLDivElement>(null);
 
@@ -37,6 +38,7 @@ export function QuizQuestion({
     setSelectedOption(null);
     setIsAnswered(false);
     setAnimateOptions(true);
+    setShowFeedback(false);
   }, [question.id, defaultTimePerQuestion]);
 
   useEffect(() => {
@@ -45,6 +47,7 @@ export function QuizQuestion({
     if (timeLeft <= 0) {
       setIsTimerRunning(false);
       setIsAnswered(true);
+      setShowFeedback(true);
       return;
     }
     
@@ -66,6 +69,11 @@ export function QuizQuestion({
     setSelectedOption(optionIndex);
     setIsAnswered(true);
     setIsTimerRunning(false);
+    
+    // Show feedback after a short delay for better UX
+    setTimeout(() => {
+      setShowFeedback(true);
+    }, 300);
   };
 
   const handleNextQuestion = () => {
@@ -90,6 +98,32 @@ export function QuizQuestion({
 
   const isCorrect = selectedOption === question.correctAnswer;
   const progress = ((currentQuestionNumber) / totalQuestions) * 100;
+  
+  // Format explanation for better readability
+  const formatExplanation = (explanation: string) => {
+    if (!explanation) return "No explanation available.";
+    
+    // Check if the explanation already mentions correct and incorrect answers
+    const hasCorrectReference = /\bcorrect\b/i.test(explanation);
+    const hasIncorrectReference = /\bincorrect\b/i.test(explanation);
+    
+    if (hasCorrectReference && hasIncorrectReference) {
+      return explanation;
+    }
+    
+    // If not, add some structure to the explanation
+    let formattedExplanation = explanation;
+    
+    if (!hasCorrectReference) {
+      formattedExplanation = `The correct answer is ${optionLabels[question.correctAnswer]}: ${question.options[question.correctAnswer]}. ${formattedExplanation}`;
+    }
+    
+    if (selectedOption !== null && selectedOption !== question.correctAnswer && !hasIncorrectReference) {
+      formattedExplanation += ` You selected ${optionLabels[selectedOption]}, which is incorrect.`;
+    }
+    
+    return formattedExplanation;
+  };
   
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -153,8 +187,8 @@ export function QuizQuestion({
               Question {currentQuestionNumber} of {totalQuestions}
             </span>
             <div className="flex items-center text-sm">
-              <Timer className="h-4 w-4 mr-1 text-medical-teal" />
-              <span className={`font-medium ${timeLeft < 10 ? "text-error animate-pulse" : ""}`}>{timeLeft}s</span>
+              <Timer className="h-4 w-4 mr-1 text-primary" />
+              <span className={`font-medium ${timeLeft < 10 ? "text-destructive animate-pulse" : ""}`}>{timeLeft}s</span>
             </div>
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -169,7 +203,7 @@ export function QuizQuestion({
           <div className="h-2 bg-muted rounded-full overflow-hidden mt-2">
             <div 
               ref={timerProgressRef} 
-              className="h-full bg-medical-teal" 
+              className="h-full bg-primary/60" 
               style={{ width: '100%' }}
             />
           </div>
@@ -195,7 +229,7 @@ export function QuizQuestion({
                     isAnswered && index === question.correctAnswer
                       ? "border-success bg-success/5"
                       : isAnswered && index === selectedOption && index !== question.correctAnswer
-                      ? "border-error bg-error/5"
+                      ? "border-destructive bg-destructive/5"
                       : selectedOption === index
                       ? "border-primary bg-primary/5"
                       : "border-muted hover:border-primary/50 hover:bg-muted/30"
@@ -231,22 +265,22 @@ export function QuizQuestion({
                       transition={{ type: "spring", stiffness: 300, damping: 20 }}
                       className="ml-auto"
                     >
-                      <XCircle className="ml-auto h-5 w-5 text-error" />
+                      <XCircle className="ml-auto h-5 w-5 text-destructive" />
                     </motion.div>
                   )}
                 </motion.button>
               ))}
             </div>
 
-            {isAnswered && question.explanation && (
+            {showFeedback && question.explanation && (
               <motion.div 
-                className="mt-6 p-4 bg-muted/50 rounded-md"
+                className="mt-6 p-4 bg-muted/50 rounded-md border border-muted"
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.3 }}
               >
                 <p className="font-medium mb-1">Explanation:</p>
-                <p className="text-sm">{question.explanation}</p>
+                <p className="text-sm">{formatExplanation(question.explanation)}</p>
               </motion.div>
             )}
           </CardContent>
@@ -266,8 +300,8 @@ export function QuizQuestion({
                     </>
                   ) : (
                     <>
-                      <XCircle className="h-5 w-5 text-error mr-2" />
-                      <span className="font-medium text-error">Incorrect</span>
+                      <XCircle className="h-5 w-5 text-destructive mr-2" />
+                      <span className="font-medium text-destructive">Incorrect</span>
                     </>
                   )}
                 </div>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -118,14 +117,22 @@ export function QuizGenerator({ onQuizGenerated }: { onQuizGenerated: (questions
     try {
       const difficulty = getDifficultyFromSlider(data.difficultyLevel);
       
-      // Create a prompt based on the form data
+      // Create an improved educational prompt based on the form data
       const prompt = `
-Create a ${data.course} quiz with ${maxQuestions} multiple-choice questions about ${data.topic} in ${data.subject} 
-for ${data.course} students. The difficulty level should be ${difficulty}. 
-Each question should have 4 options (A, B, C, D) with one correct answer.
-For each question, provide a detailed explanation of why the correct answer is right and why the others are wrong.
-Format the response as multiple-choice questions with lettered options.
+I need an educational quiz on ${data.topic || "general concepts"} in ${data.subject} for ${data.course} students.
+Focus on creating ${maxQuestions} multiple-choice questions at ${difficulty} difficulty level.
+
+The questions should:
+- Test critical thinking and understanding rather than simple memorization
+- Cover key concepts that students often struggle with in ${data.topic || data.subject}
+- Include common misconceptions as incorrect options
+- Have detailed explanations that clarify why the correct answer is right and precisely why each wrong answer is incorrect
+- Address specific misconceptions students typically have about ${data.topic || data.subject}
+
+This quiz will be used for educational purposes to help students test their understanding and learn from their mistakes.
       `;
+
+      console.log("Sending quiz generation request with prompt:", prompt);
 
       // Call the edge function to generate quiz with AI
       const { data: responseData, error: functionError } = await supabase.functions.invoke('process-document', {
@@ -142,6 +149,8 @@ Format the response as multiple-choice questions with lettered options.
         throw new Error(`Error calling AI: ${functionError.message}`);
       }
       
+      console.log("Received quiz generation response:", responseData);
+      
       if (!responseData?.questions || responseData.questions.length === 0) {
         throw new Error('No questions were generated. Please try again with different parameters.');
       }
@@ -151,7 +160,7 @@ Format the response as multiple-choice questions with lettered options.
       
       toast({
         title: "Quiz generated successfully!",
-        description: `Created ${responseData.questions.length} questions about ${data.topic}`,
+        description: `Created ${responseData.questions.length} questions about ${data.topic || data.subject}`,
       });
       
       // Apply the specified time per question to the questions
