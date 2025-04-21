@@ -16,6 +16,7 @@ export type Database = {
           email: string
           free_quizzes_used: number | null
           id: string
+          isPremium: boolean | null
           last_login: string | null
           name: string | null
           updated_at: string | null
@@ -26,6 +27,7 @@ export type Database = {
           email: string
           free_quizzes_used?: number | null
           id: string
+          isPremium?: boolean | null
           last_login?: string | null
           name?: string | null
           updated_at?: string | null
@@ -36,6 +38,7 @@ export type Database = {
           email?: string
           free_quizzes_used?: number | null
           id?: string
+          isPremium?: boolean | null
           last_login?: string | null
           name?: string | null
           updated_at?: string | null

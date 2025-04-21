@@ -53,8 +53,8 @@ export function QuizHistory() {
         setHistory(output);
 
         // Check premium status
-        const profileData = await supabase.from('profiles').select("*").eq("id", user.id).single();
-        const isPremium = profileData.data?.isPremium === true;
+        const profileData = await supabase.from("profiles").select("isPremium").eq("id", user.id).maybeSingle();
+        const isPremium = profileData?.data?.isPremium === true;
         
         if (!isPremium && output.length >= 2) setShowFreeWarning(true);
         else setShowFreeWarning(false);

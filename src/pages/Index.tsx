@@ -109,13 +109,13 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
             .select("id")
             .eq("user_id", user.id);
 
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from("profiles")
             .select("isPremium,free_quizzes_used")
             .eq("id", user.id)
             .maybeSingle();
 
-          const isPremium = profile?.isPremium || false;
+          const isPremium = profile?.isPremium === true;
           const maxFree = 2;
           if (!isPremium && (existingAttempts?.length ?? 0) >= maxFree) {
             toast({
@@ -127,15 +127,15 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
           }
 
           const correctAnswers = getCorrectAnswersCount();
-          
+
           const questionsJson: Json = questions.map(q => ({
             question: q.question,
             options: q.options,
             correctAnswer: q.correctAnswer,
             explanation: q.explanation,
             timeLimit: q.timeLimit
-          }));
-          
+          })) as Json;
+
           await supabase.from("quiz_attempts").insert({
             user_id: user.id,
             title: quizTitle,
