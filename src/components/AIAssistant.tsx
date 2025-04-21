@@ -56,6 +56,9 @@ export function AIAssistant() {
     if (userSettings) {
       const settings = JSON.parse(userSettings);
       setIsPremium(settings.isPremium === true);
+      if (settings.course) {
+        setCourse(settings.course);
+      }
     }
   }, []);
 
