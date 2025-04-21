@@ -1,17 +1,20 @@
 
 // This file integrates shadcn's toast functionality
-import { Toast as ToastPrimitive, ToastActionElement, ToastProps } from "@/components/ui/toast"
+import { Toast, ToastActionElement } from "@/components/ui/toast"
 import * as React from "react"
 
 const TOAST_LIMIT = 5
 const TOAST_REMOVE_DELAY = 5000
 
-// Define the ToasterToast type without circular reference
-interface ToasterToastProps extends ToastProps {
+// Define interfaces to avoid circular references
+interface ToasterToastProps {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
   action?: ToastActionElement
+  variant?: "default" | "destructive" | "success"
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 const actionTypes = {
@@ -153,10 +156,18 @@ function dispatch(action: Action) {
   })
 }
 
-// Define toast function with proper types
-type ToastProps = Omit<ToasterToastProps, "id">
+// Define custom toast parameters without circular references
+interface ToastParams {
+  title?: React.ReactNode
+  description?: React.ReactNode
+  action?: ToastActionElement
+  variant?: "default" | "destructive" | "success"
+  duration?: number
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}
 
-function toast({ ...props }: ToastProps) {
+function toast(props: ToastParams) {
   // Check for duplicates before adding
   if (hasToastDuplicate(props, memoryState.toasts)) {
     return {
@@ -168,7 +179,7 @@ function toast({ ...props }: ToastProps) {
 
   const id = genId()
 
-  const update = (props: ToastProps) =>
+  const update = (props: ToastParams) =>
     dispatch({
       type: actionTypes.UPDATE_TOAST,
       toast: { ...props, id },
