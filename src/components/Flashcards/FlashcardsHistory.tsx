@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { BookOpen, BookPlus, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Flashcard } from "./FlashcardsGenerator";
+import { useToast } from "@/components/ui/use-toast";
 
 interface FlashcardsSetHistory {
   id: string;
@@ -21,6 +22,7 @@ interface FlashcardsSetHistory {
 export function FlashcardsHistory() {
   const [flashcardSets, setFlashcardSets] = useState<FlashcardsSetHistory[]>([]);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     // Load flashcards history
@@ -28,6 +30,7 @@ export function FlashcardsHistory() {
     if (savedFlashcards) {
       try {
         const parsedSets = JSON.parse(savedFlashcards);
+        console.log("Loaded flashcard sets:", parsedSets);
         setFlashcardSets(parsedSets);
       } catch (error) {
         console.error("Error loading flashcard history:", error);
@@ -53,15 +56,30 @@ export function FlashcardsHistory() {
   const handleReviewFlashcards = (setId: string) => {
     const selectedSet = flashcardSets.find(set => set.id === setId);
     if (selectedSet) {
-      // Store the flashcard set to review in localStorage
+      console.log("Selected flashcard set for review:", selectedSet);
+      
+      // Store the flashcard set to review in localStorage with proper format
       localStorage.setItem("currentFlashcardSet", JSON.stringify({
         id: selectedSet.id,
         title: selectedSet.title,
-        cards: selectedSet.cards
+        cards: selectedSet.cards,
+        mode: "review" // Add a mode flag to indicate we're reviewing existing cards
       }));
       
-      // Navigate to the flashcards page
-      navigate("/flashcards");
+      // Navigate to the flashcards review page with a specific route parameter
+      navigate("/flashcards?mode=review");
+      
+      toast({
+        title: "Flashcards Ready",
+        description: `Review your ${selectedSet.cards.length} ${selectedSet.title} flashcards`,
+      });
+    } else {
+      console.error("Flashcard set not found with ID:", setId);
+      toast({
+        title: "Error",
+        description: "Could not find the selected flashcards",
+        variant: "destructive"
+      });
     }
   };
 
