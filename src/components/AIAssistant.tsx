@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -7,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { MessageSquare, SendHorizonal, User, BrainCircuit, ArrowDown, Lock, Crown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { MessageDisplay } from "./AIAssistant/MessageDisplay";
+import { AssistantInputForm } from "./AIAssistant/AssistantInputForm";
+import { PremiumUpgrade } from "./AIAssistant/PremiumUpgrade";
 
 interface Message {
   id: string;
@@ -92,11 +94,9 @@ export function AIAssistant() {
     setInput("");
     setIsLoading(true);
 
-    // Define tempId here so it's accessible in both try and catch blocks
     const tempId = crypto.randomUUID();
 
     try {
-      // Add a "thinking" message
       setMessages(prev => [...prev, {
         id: tempId,
         role: "assistant",
@@ -138,7 +138,6 @@ export function AIAssistant() {
       const data = await response.json();
       console.log("AI assistant response:", data);
 
-      // Remove the thinking message
       setMessages(prev => prev.filter(m => m.id !== tempId));
 
       if (data.error) {
@@ -159,7 +158,6 @@ export function AIAssistant() {
         description: "Got an answer to your question",
       });
     } catch (error:any) {
-      // Remove the thinking message and add error
       setMessages(prev => {
         const filtered = prev.filter(m => m.id !== tempId);
         return [...filtered, {
@@ -254,149 +252,24 @@ export function AIAssistant() {
 
         <CardContent>
           {!isPremium ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="relative"
-            >
-              <div className="filter blur-sm pointer-events-none">
-                <div className="space-y-4 mb-4 h-[40vh] overflow-hidden">
-                  <div className="flex gap-3">
-                    <div className="bg-primary p-2 rounded-full">
-                      <BrainCircuit className="h-4 w-4 text-primary-foreground" />
-                    </div>
-                    <div className="rounded-lg p-3 max-w-[80%] bg-muted text-muted-foreground">
-                      Hello! I'm your Quizora Assistant. How can I help you with your learning today?
-                    </div>
-                  </div>
-                  <div className="flex gap-3 flex-row-reverse">
-                    <div className="bg-accent p-2 rounded-full">
-                      <User className="h-4 w-4" />
-                    </div>
-                    <div className="rounded-lg p-3 max-w-[80%] bg-primary text-primary-foreground">
-                      Can you explain the concept of machine learning?
-                    </div>
-                  </div>
-                  <div className="flex gap-3">
-                    <div className="bg-primary p-2 rounded-full">
-                      <BrainCircuit className="h-4 w-4 text-primary-foreground" />
-                    </div>
-                    <div className="rounded-lg p-3 max-w-[80%] bg-muted text-muted-foreground">
-                      Machine learning is a branch of artificial intelligence that allows systems to learn and improve from experience...
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
-                <div className="bg-amber-500/10 p-4 rounded-full mb-4">
-                  <Lock className="h-8 w-8 text-amber-500" />
-                </div>
-                <h3 className="text-xl font-medium mb-2">Premium Feature</h3>
-                <p className="text-center text-muted-foreground mb-6 max-w-md">
-                  Quizora Assistant is available exclusively for premium subscribers. Upgrade now to get personalized help with your studies!
-                </p>
-                <Button onClick={handleUpgradeToPremium} className="bg-gradient-to-r from-amber-500 to-orange-600">
-                  <Crown className="mr-2 h-4 w-4" />
-                  Upgrade to Premium
-                </Button>
-              </div>
-            </motion.div>
+            <PremiumUpgrade onUpgrade={handleUpgradeToPremium} />
           ) : (
-            <div className="space-y-4 mb-4 max-h-[50vh] overflow-y-auto p-1">
-              {messages.length === 0 ? (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="text-center py-8 text-muted-foreground"
-                >
-                  <BrainCircuit className="mx-auto h-12 w-12 mb-4 opacity-40" />
-                  <h3 className="text-xl font-medium mb-2">No messages yet</h3>
-                  <p>Start a conversation with your Quizora Assistant</p>
-                  <div className="mt-4 flex justify-center">
-                    <motion.div
-                      animate={{
-                        y: [0, 5, 0],
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                      }}
-                    >
-                      <ArrowDown className="h-5 w-5 opacity-60" />
-                    </motion.div>
-                  </div>
-                </motion.div>
-              ) : (
-                <AnimatePresence>
-                  {messages.map((message) => (
-                    <motion.div
-                      key={message.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className={`flex gap-3 ${
-                        message.role === "assistant" ? "" : "flex-row-reverse"
-                      }`}
-                    >
-                      <div
-                        className={`rounded-full p-2 ${
-                          message.role === "assistant"
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-accent text-accent-foreground"
-                        }`}
-                      >
-                        {message.role === "assistant" ? (
-                          <BrainCircuit className="h-4 w-4" />
-                        ) : (
-                          <User className="h-4 w-4" />
-                        )}
-                      </div>
-                      <div
-                        className={`rounded-lg p-3 max-w-[80%] ${
-                          message.role === "assistant"
-                            ? "bg-muted text-muted-foreground"
-                            : "bg-primary text-primary-foreground"
-                        }`}
-                      >
-                        {message.content === "Thinking..." ? (
-                          <div className="flex items-center gap-1">
-                            <div className="h-2 w-2 bg-current rounded-full animate-pulse"></div>
-                            <div className="h-2 w-2 bg-current rounded-full animate-pulse" style={{ animationDelay: "0.2s" }}></div>
-                            <div className="h-2 w-2 bg-current rounded-full animate-pulse" style={{ animationDelay: "0.4s" }}></div>
-                          </div>
-                        ) : (
-                          message.content
-                        )}
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
+            <MessageDisplay
+              messages={messages}
+              isPremium={isPremium}
+              messagesEndRef={messagesEndRef}
+            />
           )}
         </CardContent>
 
         <CardFooter>
-          <form onSubmit={handleSubmit} className="w-full flex gap-2">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={isPremium ? "Ask about any subject..." : "Upgrade to premium to use Quizora Assistant"}
-              className="flex-1"
-              disabled={isLoading || !isPremium}
-            />
-            <Button type="submit" disabled={isLoading || !input.trim() || !isPremium}>
-              {isLoading ? (
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              ) : (
-                <SendHorizonal className="h-5 w-5" />
-              )}
-              <span className="sr-only">Send message</span>
-            </Button>
-          </form>
+          <AssistantInputForm
+            value={input}
+            onChange={setInput}
+            onSubmit={handleSubmit}
+            isLoading={isLoading}
+            isPremium={isPremium}
+          />
         </CardFooter>
       </Card>
     </motion.div>
