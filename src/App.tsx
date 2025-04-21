@@ -75,8 +75,8 @@ const App = () => {
           <Toaster />
           <Sonner />
           <Routes>
-            {/* Landing page only shown on first visit */}
-            <Route path="/" element={isFirstVisit ? <LandingPage /> : <Index initialTab="generate" />} />
+            {/* Show landing page on first visit, otherwise show main app */}
+            <Route path="/" element={isFirstVisit ? <LandingPage /> : <Navigate to="/quiz" />} />
             <Route path="/quiz" element={<Index initialTab="generate" />} />
             <Route path="/flashcards" element={<Index initialTab="flashcards" />} />
             <Route path="/history" element={<Index initialTab="history" />} />

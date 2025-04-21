@@ -26,7 +26,7 @@ export default function LandingPage() {
     // Simulate loading time
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 2200);
+    }, 1500);
     
     return () => clearTimeout(timer);
   }, []);
@@ -155,7 +155,7 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
           <FeatureCard 
             title="AI-Generated Quizzes" 
-            description="Custom quizzes tailored to your needs, created instantly by AI."
+            description="Custom quizzes tailored to your needs, created instantly by AI with detailed explanations."
             delay={1.0}
             icon="quiz"
           />
@@ -167,7 +167,7 @@ export default function LandingPage() {
           />
           <FeatureCard 
             title="Detailed Analytics" 
-            description="Track your progress and identify areas for improvement."
+            description="Track your progress and identify areas for improvement with AI-powered insights."
             delay={1.4}
             icon="analytics"
           />

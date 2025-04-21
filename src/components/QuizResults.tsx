@@ -54,7 +54,7 @@ export function QuizResults({
   };
   
   const handleCreateNewQuiz = () => {
-    navigate('/');
+    onNewFile();
   };
 
   // Animation variants
