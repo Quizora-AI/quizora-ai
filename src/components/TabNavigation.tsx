@@ -27,6 +27,7 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
     if (path === '/history') setActiveTab('history');
     else if (path === '/flashcards') setActiveTab('flashcards');
     else if (path === '/settings') setActiveTab('settings');
+    else if (path === '/quiz') setActiveTab('generate');
     else setActiveTab('generate');
 
     // Check premium status from local storage
@@ -58,6 +59,9 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
           break;
         case 'settings':
           navigate('/settings', { replace: false });
+          break;
+        case 'generate':
+          navigate('/quiz', { replace: false });
           break;
         default:
           navigate('/quiz', { replace: false });
