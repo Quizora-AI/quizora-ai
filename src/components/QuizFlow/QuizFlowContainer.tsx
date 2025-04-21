@@ -1,13 +1,13 @@
 
 import { useState, useEffect } from "react";
-import { QuizQuestion } from "@/components/QuizQuestion";
-import { QuizResults } from "@/components/QuizResults";
-import { QuizAnalytics } from "@/components/QuizAnalytics";
+import { v4 as uuidv4 } from "uuid";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
-import { v4 as uuidv4 } from "uuid";
-import { Question } from "@/components/FileUpload";
 import { useNavigate } from "react-router-dom";
+import QuizTaking from "./QuizTaking";
+import QuizFlowResults from "./QuizFlowResults";
+import QuizFlowAnalytics from "./QuizFlowAnalytics";
+import { Question } from "../FileUpload";
 
 export enum AppState {
   QUIZ,
@@ -26,7 +26,7 @@ interface QuizHistory {
   attempts?: number;
 }
 
-interface QuizFlowProps {
+interface QuizFlowContainerProps {
   questions: Question[];
   setQuestions: (q: Question[]) => void;
   quizTitle: string;
@@ -35,14 +35,14 @@ interface QuizFlowProps {
   initialAppState: AppState;
 }
 
-export const QuizFlow = ({
+const QuizFlowContainer = ({
   questions,
   setQuestions,
   quizTitle,
   setQuizTitle,
   onBackToCreate,
   initialAppState,
-}: QuizFlowProps) => {
+}: QuizFlowContainerProps) => {
   const [appState, setAppState] = useState<AppState>(initialAppState);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<number[]>([]);
@@ -53,8 +53,6 @@ export const QuizFlow = ({
 
   useEffect(() => {
     setAppState(initialAppState);
-    
-    // Check for saved progress
     const savedQuizState = localStorage.getItem("quizInProgress");
     if (savedQuizState && initialAppState === AppState.QUIZ) {
       try {
@@ -69,13 +67,10 @@ export const QuizFlow = ({
         console.error("Error restoring quiz state:", error);
       }
     }
-    
-    // Set start time
     setStartTime(new Date());
     // eslint-disable-next-line
   }, [initialAppState]);
-  
-  // Save quiz state when user navigates away
+
   useEffect(() => {
     if (appState === AppState.QUIZ && questions.length > 0 && currentQuestionIndex > 0) {
       const quizState = {
@@ -87,8 +82,6 @@ export const QuizFlow = ({
       };
       localStorage.setItem("quizInProgress", JSON.stringify(quizState));
     }
-    
-    // Clean up saved state when quiz is completed
     if (appState !== AppState.QUIZ) {
       localStorage.removeItem("quizInProgress");
     }
@@ -108,7 +101,6 @@ export const QuizFlow = ({
     } else {
       setEndTime(new Date());
       setAppState(AppState.RESULTS);
-      // Remove in-progress state once completed
       localStorage.removeItem("quizInProgress");
     }
   };
@@ -129,12 +121,8 @@ export const QuizFlow = ({
   };
 
   const handleNewQuiz = () => {
-    // Clear quiz data
     localStorage.removeItem("quizInProgress");
-    
-    // Go back to create page
     onBackToCreate();
-    
     toast({
       title: "Create New Quiz",
       description: "Choose a file or use AI to generate questions",
@@ -142,7 +130,6 @@ export const QuizFlow = ({
   };
 
   useEffect(() => {
-    // Save to history on RESULTS
     if (appState === AppState.RESULTS && questions.length && userAnswers.length) {
       const autoSave = localStorage.getItem("autoSave") !== "false";
       if (autoSave) {
@@ -204,7 +191,7 @@ export const QuizFlow = ({
           variants={pageVariants}
           transition={pageTransition}
         >
-          <QuizQuestion
+          <QuizTaking
             question={questions[currentQuestionIndex]}
             onNext={handleNextQuestion}
             currentQuestionNumber={currentQuestionIndex + 1}
@@ -222,7 +209,7 @@ export const QuizFlow = ({
           variants={pageVariants}
           transition={pageTransition}
         >
-          <QuizResults
+          <QuizFlowResults
             totalQuestions={questions.length}
             correctAnswers={correctAnswers}
             onRetakeQuiz={handleRetakeQuiz}
@@ -241,7 +228,7 @@ export const QuizFlow = ({
           variants={pageVariants}
           transition={pageTransition}
         >
-          <QuizAnalytics
+          <QuizFlowAnalytics
             questions={questions}
             correctAnswers={correctCount}
             incorrectAnswers={questions.length - correctCount}
@@ -253,3 +240,6 @@ export const QuizFlow = ({
       return null;
   }
 };
+
+export default QuizFlowContainer;
+export type { QuizFlowContainerProps, QuizHistory };

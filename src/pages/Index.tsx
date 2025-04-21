@@ -1,4 +1,3 @@
-
 import { useState, useEffect, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Question } from "@/components/FileUpload";
@@ -6,7 +5,7 @@ import { Header } from "@/components/Header";
 import { TabNavigation } from "@/components/TabNavigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
-import { QuizFlow, AppState as QuizAppState } from "@/components/QuizFlow";
+import QuizFlowContainer, { AppState as QuizAppState } from "@/components/QuizFlow/QuizFlowContainer";
 import { FlashcardsFlow } from "@/components/Flashcards/FlashcardsFlow";
 import { QuizGenerator } from "@/components/QuizGenerator";
 import { QuizHistory } from "@/components/QuizHistory";
@@ -28,7 +27,6 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
   const location = useLocation();
   const { toast } = useToast();
 
-  // Effect for handling saved quiz state and quiz retakes
   useEffect(() => {
     const savedQuizState = localStorage.getItem("quizInProgress");
     if (savedQuizState && location.pathname === '/') {
@@ -66,7 +64,6 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
       }
     }
 
-    // Force a re-render when the route changes to ensure proper content display
     setContentKey(`content-${location.pathname}-${Date.now()}`);
   }, [location.pathname]);
 
@@ -156,7 +153,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
               <ArrowLeft className="h-4 w-4" /> Exit quiz
             </Button>
           </div>
-          <QuizFlow
+          <QuizFlowContainer
             questions={questions}
             setQuestions={setQuestions}
             quizTitle={quizTitle}
@@ -168,12 +165,10 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
       );
     }
     
-    // For any route, we'll render the tab navigation component plus the content specific to each route
     return (
       <>
         <TabNavigation onQuizGenerated={handleQuizGenerated} />
         
-        {/* Render route-specific content */}
         <AnimatePresence mode="wait">
           {location.pathname === "/" && (
             <motion.div
@@ -248,7 +243,6 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
         </AnimatePresence>
       </main>
       
-      {/* Always render tab navigation at the bottom when on specific pages */}
       {(location.pathname === "/flashcards" || 
         location.pathname === "/history" || 
         location.pathname === "/settings" || 
