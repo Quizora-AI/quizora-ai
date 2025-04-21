@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Question } from "./FileUpload";
@@ -30,6 +29,7 @@ interface QuizAnalyticsProps {
 
 export function QuizAnalytics({ questions, correctAnswers, incorrectAnswers, userAnswers }: QuizAnalyticsProps) {
   const [activeTab, setActiveTab] = useState("overview");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const totalQuestions = questions.length;
   const score = Math.round((correctAnswers / totalQuestions) * 100);
   const navigate = useNavigate();
@@ -48,6 +48,12 @@ export function QuizAnalytics({ questions, correctAnswers, incorrectAnswers, use
     }
   });
   
+  useEffect(() => {
+    // Generate performance suggestions based on score when component mounts
+    // This ensures suggestions don't keep changing
+    setSuggestions(getPerformanceSuggestions());
+  }, []);
+
   // Calculate timing per question (this would normally be tracked during the quiz)
   const avgTimePerQuestion = 15; // This is a placeholder, would be actual data in real implementation
   
@@ -72,7 +78,7 @@ export function QuizAnalytics({ questions, correctAnswers, incorrectAnswers, use
   const incorrectQuestions = questions.filter((_, index) => userAnswers[index] !== questions[index].correctAnswer);
 
   // Performance suggestions based on score
-  const getPerformanceSuggestions = () => {
+  function getPerformanceSuggestions() {
     if (score >= 80) {
       return [
         "Excellent work! To further improve, focus on the specific questions you missed.",
@@ -92,7 +98,7 @@ export function QuizAnalytics({ questions, correctAnswers, incorrectAnswers, use
         "Review the explanations thoroughly and try similar questions to reinforce learning."
       ];
     }
-  };
+  }
 
   const handleCreateNewQuiz = () => {
     navigate('/');
@@ -302,7 +308,7 @@ export function QuizAnalytics({ questions, correctAnswers, incorrectAnswers, use
                     <div>
                       <h3 className="font-medium text-lg mb-2">Suggestions</h3>
                       <ul className="list-disc list-inside space-y-1 pl-4">
-                        {getPerformanceSuggestions().map((suggestion, index) => (
+                        {suggestions.map((suggestion, index) => (
                           <li key={index}>{suggestion}</li>
                         ))}
                       </ul>

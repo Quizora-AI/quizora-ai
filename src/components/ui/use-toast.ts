@@ -1,5 +1,4 @@
 
-
 import { useToast as useInternalToast, toast as internalToast, type ToastParams } from "@/hooks/use-toast";
 
 // Re-export with extended functionality

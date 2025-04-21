@@ -25,15 +25,19 @@ const QuizTaking = ({
     if (quizInProgress) {
       try {
         const parsedQuiz = JSON.parse(quizInProgress);
-        localStorage.setItem("quizInProgress", JSON.stringify({
-          ...parsedQuiz,
-          currentIndex: currentQuestionNumber - 1
-        }));
+        if (parsedQuiz && parsedQuiz.questions) {
+          localStorage.setItem("quizInProgress", JSON.stringify({
+            ...parsedQuiz,
+            currentIndex: currentQuestionNumber - 1,
+            lastUpdated: new Date().toISOString()
+          }));
+          console.log(`Quiz progress saved: Question ${currentQuestionNumber} of ${totalQuestions}`);
+        }
       } catch (error) {
         console.error("Error updating quiz progress:", error);
       }
     }
-  }, [currentQuestionNumber]);
+  }, [currentQuestionNumber, totalQuestions]);
 
   // Pass the question directly to the QuizQuestion component
   return (

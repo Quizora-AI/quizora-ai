@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 import { Toaster as ToastUIToaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
@@ -73,21 +72,32 @@ const ToastCleaner = () => {
   return null;
 };
 
+// Reset all app data function
+function resetAppData() {
+  // Remove all app-related data from localStorage
+  localStorage.removeItem("quizHistory");
+  localStorage.removeItem("flashcardsHistory");
+  localStorage.removeItem("quizInProgress");
+  localStorage.removeItem("currentFlashcardSet");
+  localStorage.removeItem("quizToRetake");
+  
+  // Keep user settings
+  console.log("App data has been reset. Fresh start!");
+}
+
 const App = () => {
-  // Check if this is user's first visit
-  const [isFirstVisit, setIsFirstVisit] = React.useState(false);
+  const [initialLoad, setInitialLoad] = React.useState(true);
 
   React.useEffect(() => {
-    // Check if user has visited before
-    const hasVisited = localStorage.getItem("hasVisitedBefore");
-    if (hasVisited === "true") {
-      setIsFirstVisit(false);
-    } else {
-      // Set flag for future visits
-      localStorage.setItem("hasVisitedBefore", "true");
-      setIsFirstVisit(true);
+    // Reset all app data for fresh start (only do this once when requested)
+    if (initialLoad) {
+      resetAppData();
+      setInitialLoad(false);
     }
-  }, []);
+    
+    // Always set the landing page to be shown
+    localStorage.removeItem("hasVisitedBefore");
+  }, [initialLoad]);
 
   return (
     <React.StrictMode>
@@ -97,7 +107,7 @@ const App = () => {
           <ToastUIToaster />
           <SonnerToaster />
           <Routes>
-            <Route path="/" element={isFirstVisit ? <Navigate to="/landing" /> : <Navigate to="/quiz" />} />
+            <Route path="/" element={<Navigate to="/landing" />} />
             <Route path="/landing" element={<LandingPage />} />
             <Route path="/quiz" element={<Index initialTab="generate" />} />
             <Route path="/flashcards" element={<Index initialTab="flashcards" />} />
