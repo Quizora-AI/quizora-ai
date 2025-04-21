@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import { LegalPages } from "@/components/LegalPages";
 import { useNavigate } from "react-router-dom";
@@ -28,6 +29,7 @@ export const LegalContentWrapper = () => {
       transition={pageTransition}
       className="w-full"
     >
+      {/* Only one back button at the top */}
       <div className="flex items-center mb-4">
         <Button 
           variant="outline" 

@@ -55,9 +55,6 @@ export function AIAssistant() {
     if (userSettings) {
       const settings = JSON.parse(userSettings);
       setIsPremium(settings.isPremium === true);
-      if (settings.course) {
-        setCourse("");
-      }
     }
   }, []);
 
@@ -109,7 +106,7 @@ export function AIAssistant() {
         body: JSON.stringify({
           model: "gpt-4o",
           messages: [
-            ...(course ? [{role: "system", content: `You are a Quizora medical assistant for ${course}`}]: []),
+            ...(course ? [{role: "system", content: `You are a Quizora assistant for ${course}`}]: []),
             ...messages.slice(-4).map(m => ({
               role: m.role,
               content: m.content

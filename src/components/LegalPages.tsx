@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,7 +26,7 @@ export function LegalPages() {
       title: "Contact Us",
       icon: Mail,
       description: "Get in touch with our team",
-      content: `Email: support@quizora.ai
+      content: `Email: quizoraaihelp@gmail.com
       Response Time: Within 24 hours
       
       We're here to help with any questions about:
