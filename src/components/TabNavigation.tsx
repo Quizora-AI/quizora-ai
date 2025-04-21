@@ -48,7 +48,6 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
     setIsChangingTab(true);
     setActiveTab(value);
 
-    // Improve tab changing responsiveness
     requestAnimationFrame(() => {
       switch (value) {
         case 'history':
@@ -65,7 +64,6 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
           break;
       }
       
-      // Use a proper delay to prevent rapid clicks
       setTimeout(() => setIsChangingTab(false), 300);
     });
   };
@@ -86,7 +84,7 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
           value={activeTab}
           onValueChange={handleTabChange}
         >
-          <TabsList className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 grid grid-cols-4 max-w-md w-[90%] shadow-md">
+          <TabsList className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 grid grid-cols-4 max-w-md w-[90%] shadow-md bg-background">
             <TabsTrigger value="generate" className="flex items-center" disabled={isChangingTab}>
               <BrainCircuit className={tabIconStyle} />
               <span className="hidden sm:inline">Quiz</span>

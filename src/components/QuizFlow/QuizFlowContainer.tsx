@@ -68,7 +68,6 @@ const QuizFlowContainer = ({
       }
     }
     setStartTime(new Date());
-    // eslint-disable-next-line
   }, [initialAppState]);
 
   useEffect(() => {
@@ -161,8 +160,7 @@ const QuizFlowContainer = ({
         });
       }
     }
-    // eslint-disable-next-line
-  }, [appState, questions, userAnswers, quizTitle]);
+  }, [appState, questions, userAnswers, quizTitle, toast]);
 
   const pageVariants = {
     initial: { opacity: 0, x: 50 },

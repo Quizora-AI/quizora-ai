@@ -1,3 +1,4 @@
+
 import { useState, useEffect, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Question } from "@/components/FileUpload";
@@ -29,12 +30,12 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
 
   useEffect(() => {
     const savedQuizState = localStorage.getItem("quizInProgress");
-    if (savedQuizState && location.pathname === '/') {
+    if (savedQuizState && location.pathname === '/quiz') {
       try {
-        const { questions, title } = JSON.parse(savedQuizState);
-        if (questions && questions.length > 0) {
-          setQuestions(questions);
-          if (title) setQuizTitle(title);
+        const parsedState = JSON.parse(savedQuizState);
+        if (parsedState.questions && parsedState.questions.length > 0) {
+          setQuestions(parsedState.questions);
+          if (parsedState.title) setQuizTitle(parsedState.title);
           setShowQuizResumeDialog(true);
         }
       } catch (error) {
@@ -65,7 +66,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
     }
 
     setContentKey(`content-${location.pathname}-${Date.now()}`);
-  }, [location.pathname]);
+  }, [location.pathname, toast]);
 
   const handleResumeQuiz = () => {
     setAppState(1);
@@ -109,7 +110,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
     setAppState(0);
     setQuizInProgress(false);
     localStorage.removeItem("quizInProgress");
-    navigate("/");
+    navigate("/quiz");
   };
 
   const handleExitQuiz = () => {
@@ -121,7 +122,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
     }
     setQuizInProgress(false);
     setAppState(0);
-    navigate("/");
+    navigate("/quiz");
     toast({
       title: "Quiz saved",
       description: "Your progress has been saved. You can resume later."
@@ -170,7 +171,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
         <TabNavigation onQuizGenerated={handleQuizGenerated} />
         
         <AnimatePresence mode="wait">
-          {location.pathname === "/" && (
+          {location.pathname === "/quiz" && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -195,7 +196,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
               className="w-full mt-4 mb-16"
             >
               <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading Flashcards...</div>}>
-                <FlashcardsFlow onBackToCreate={() => navigate('/')} />
+                <FlashcardsFlow onBackToCreate={() => navigate('/quiz')} />
               </Suspense>
             </motion.div>
           )}
@@ -246,7 +247,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
       {(location.pathname === "/flashcards" || 
         location.pathname === "/history" || 
         location.pathname === "/settings" || 
-        location.pathname === "/") && appState !== 1 && (
+        location.pathname === "/quiz") && appState !== 1 && (
         <div className="fixed bottom-0 left-0 right-0 z-40">
           <TabNavigation onQuizGenerated={handleQuizGenerated} />
         </div>

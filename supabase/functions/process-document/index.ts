@@ -59,9 +59,9 @@ async function handleQuizGeneration(requestData, apiKey) {
   }
   
   // Build the system prompt
-  const systemPrompt = `You are an expert educator specialized in creating quizzes. Create a quiz about ${subject || 'general knowledge'}${topic ? ` focusing on ${topic}` : ''} with difficulty level ${difficulty || 'medium'}.`;
+  const systemPrompt = `You are an expert educator specialized in creating quizzes. Create a quiz about ${subject || 'general knowledge'}${topic ? ` focusing on ${topic}` : ''} with difficulty level ${difficulty || 'medium'}.
+  For each question, you must provide a detailed explanation of why the correct answer is right and why each incorrect option is wrong. This is crucial for educational purposes.`;
   
-  // Call AIML API
   try {
     const response = await fetch("https://api.aimlapi.com/v1/chat/completions", {
       method: "POST",
@@ -78,11 +78,11 @@ async function handleQuizGeneration(requestData, apiKey) {
           },
           {
             role: "user",
-            content: promptText
+            content: promptText + "\nINCLUDE DETAILED EXPLANATIONS for why the correct answer is right and why the other options are wrong."
           }
         ],
         temperature: 0.7,
-        max_tokens: 2000
+        max_tokens: 2500
       })
     });
     
@@ -93,7 +93,7 @@ async function handleQuizGeneration(requestData, apiKey) {
     }
     
     const responseData = await response.json();
-    console.log("AIML API response for quiz:", JSON.stringify(responseData));
+    console.log("AIML API response received for quiz generation.");
     
     if (!responseData.choices || !responseData.choices[0] || !responseData.choices[0].message) {
       throw new Error("Invalid response format from AIML API");
@@ -103,6 +103,7 @@ async function handleQuizGeneration(requestData, apiKey) {
     
     // Process the response to extract questions
     const questions = extractQuestions(content, numQuestions);
+    console.log(`Extracted ${questions.length} questions from the API response.`);
     
     return new Response(JSON.stringify({ questions }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -163,7 +164,7 @@ async function handleFlashcardGeneration(requestData, apiKey) {
           }
         ],
         temperature: 0.7,
-        max_tokens: 2000
+        max_tokens: 2500
       })
     });
     
@@ -174,14 +175,13 @@ async function handleFlashcardGeneration(requestData, apiKey) {
     }
     
     const responseData = await response.json();
-    console.log("AIML API response for flashcards:", JSON.stringify(responseData));
+    console.log("AIML API response received for flashcards generation");
     
     if (!responseData.choices || !responseData.choices[0] || !responseData.choices[0].message) {
       throw new Error("Invalid response format from AIML API");
     }
     
     const content = responseData.choices[0].message.content;
-    console.log("Content from API:", content);
     
     try {
       // Extract the JSON part from the response
@@ -202,7 +202,6 @@ async function handleFlashcardGeneration(requestData, apiKey) {
       });
     } catch (jsonError) {
       console.error("Error parsing JSON from API response:", jsonError);
-      // Fallback handling
       const fallbackCards = generateFallbackFlashcards(subject, topic, questionCount);
       return new Response(JSON.stringify({ 
         questions: fallbackCards,
@@ -214,7 +213,6 @@ async function handleFlashcardGeneration(requestData, apiKey) {
   } catch (apiError) {
     console.error("API call failed:", apiError);
     
-    // Generate fallback flashcards when the API call fails
     const fallbackCards = generateFallbackFlashcards(subject, topic, questionCount);
     return new Response(JSON.stringify({ 
       questions: fallbackCards,
@@ -245,12 +243,15 @@ function extractQuestions(content, numQuestions = 10) {
     let options = [];
     let correctAnswer = null;
     let explanation = '';
+    let collectingExplanation = false;
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       
+      if (!line) continue;
+      
       // Look for question patterns like "1.", "Question 1:", etc.
-      if (/^(\d+[\.\)]|Question\s+\d+:)/i.test(line) && line.length > 2) {
+      if (/^(\d+[\.\)]|Question\s+\d+:)/i.test(line) && line.length > 2 && !collectingExplanation) {
         // Save previous question if exists
         if (currentQuestion && options.length >= 2) {
           questions.push({
@@ -268,9 +269,10 @@ function extractQuestions(content, numQuestions = 10) {
         options = [];
         correctAnswer = null;
         explanation = '';
+        collectingExplanation = false;
       }
       // Look for options like "A.", "B)", "1.", "2)", etc.
-      else if (/^[A-D][\.\)]|^\d+[\.\)]/.test(line) && currentQuestion) {
+      else if (/^[A-D][\.\)]|^\d+[\.\)]/.test(line) && currentQuestion && !collectingExplanation) {
         const optionText = line.replace(/^[A-D][\.\)]|\d+[\.\)]/, '').trim();
         if (optionText) {
           options.push(optionText);
@@ -282,7 +284,7 @@ function extractQuestions(content, numQuestions = 10) {
         }
       }
       // Look for answer indication
-      else if (currentQuestion && /correct\s+(answer|option)|answer[:\s]+[A-D]/i.test(line)) {
+      else if (currentQuestion && /correct\s+(answer|option)|answer[:\s]+[A-D]/i.test(line) && !collectingExplanation) {
         const answerMatch = line.match(/[A-D]/i);
         if (answerMatch) {
           const letter = answerMatch[0].toUpperCase();
@@ -290,15 +292,17 @@ function extractQuestions(content, numQuestions = 10) {
         }
       }
       // Look for explanation
-      else if (currentQuestion && /explanation/i.test(line)) {
-        explanation = line.replace(/^explanation[:\s]*/i, '').trim();
-        // Collect multiline explanation
-        let j = i + 1;
-        while (j < lines.length && !(/^(\d+[\.\)]|Question\s+\d+:|[A-D][\.\)])/i.test(lines[j]))) {
-          if (lines[j].trim()) {
-            explanation += ' ' + lines[j].trim();
-          }
-          j++;
+      else if (currentQuestion && /explanation|rationale|reason/i.test(line)) {
+        explanation = line.replace(/^explanation[:\s]*|^rationale[:\s]*|^reason[:\s]*/i, '').trim();
+        collectingExplanation = true;
+      }
+      // Collect multiline explanation
+      else if (collectingExplanation && currentQuestion) {
+        if (!/^(\d+[\.\)]|Question\s+\d+:|[A-D][\.\)])/i.test(line)) {
+          explanation += ' ' + line.trim();
+        } else {
+          collectingExplanation = false;
+          i--; // Process this line again to catch the new question or option
         }
       }
     }
@@ -339,7 +343,7 @@ function generateFallbackQuestions(count = 5) {
         `Option D for question ${i}`
       ],
       correctAnswer: 0,
-      explanation: `This is a sample explanation for question ${i}.`
+      explanation: `This is a sample explanation for question ${i}. Option A is correct because it accurately represents the concept being tested. Options B, C, and D are incorrect because they contain factual errors or misrepresentations of the concept.`
     });
   }
   

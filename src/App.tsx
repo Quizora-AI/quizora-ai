@@ -55,7 +55,7 @@ const PremiumRoute: React.FC<{element: React.ReactNode}> = ({ element }) => {
 
 const App = () => {
   // Check if this is user's first visit
-  const [isFirstVisit, setIsFirstVisit] = React.useState(true);
+  const [isFirstVisit, setIsFirstVisit] = React.useState(false);
 
   React.useEffect(() => {
     // Check if user has visited before
@@ -75,8 +75,8 @@ const App = () => {
           <Toaster />
           <Sonner />
           <Routes>
-            {/* Show landing page on first visit, otherwise show main app */}
-            <Route path="/" element={isFirstVisit ? <LandingPage /> : <Navigate to="/quiz" />} />
+            <Route path="/" element={<Navigate to="/quiz" />} />
+            <Route path="/landing" element={<LandingPage />} />
             <Route path="/quiz" element={<Index initialTab="generate" />} />
             <Route path="/flashcards" element={<Index initialTab="flashcards" />} />
             <Route path="/history" element={<Index initialTab="history" />} />
