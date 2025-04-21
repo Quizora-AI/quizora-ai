@@ -1,4 +1,5 @@
 
+import * as React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -6,7 +7,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import LandingPage from "./pages/LandingPage";
-import * as React from "react";
 import QuizReview from "./pages/QuizReview";
 
 // Create a client with better error handling
@@ -65,6 +65,7 @@ const App = () => {
     } else {
       // Set flag for future visits
       localStorage.setItem("hasVisitedBefore", "true");
+      setIsFirstVisit(true);
     }
   }, []);
 
@@ -75,7 +76,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <Routes>
-            <Route path="/" element={<Navigate to="/quiz" />} />
+            <Route path="/" element={isFirstVisit ? <Navigate to="/landing" /> : <Navigate to="/quiz" />} />
             <Route path="/landing" element={<LandingPage />} />
             <Route path="/quiz" element={<Index initialTab="generate" />} />
             <Route path="/flashcards" element={<Index initialTab="flashcards" />} />
