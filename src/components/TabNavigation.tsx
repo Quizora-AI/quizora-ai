@@ -48,28 +48,31 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
 
   const handleTabChange = (value: string) => {
     if (isChangingTab) return;
+    
+    console.log(`Changing tab to: ${value} from ${activeTab}`);
     setIsChangingTab(true);
     setActiveTab(value);
 
-    // Store current path to return after potential premium check
-    const currentPath = location.pathname;
-
-    switch (value) {
-      case 'history':
-        navigate('/history');
-        break;
-      case 'flashcards':
-        navigate('/flashcards');
-        break;
-      case 'settings':
-        navigate('/settings');
-        break;
-      default:
-        navigate('/');
-        break;
-    }
-
-    setTimeout(() => setIsChangingTab(false), 300);
+    // Use setTimeout to ensure the tab change is visible before navigation
+    setTimeout(() => {
+      switch (value) {
+        case 'history':
+          navigate('/history');
+          break;
+        case 'flashcards':
+          navigate('/flashcards');
+          break;
+        case 'settings':
+          navigate('/settings');
+          break;
+        default:
+          navigate('/');
+          break;
+      }
+      
+      // Add delay before allowing another tab change to prevent rapid clicks
+      setTimeout(() => setIsChangingTab(false), 300);
+    }, 10);
   };
 
   // Only show "Create New Quiz" button on generate tab (bottom mobile bar)
@@ -141,49 +144,26 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
             </TabsTrigger>
           </TabsList>
           
-          <div className="pb-20">
-            <TabsContent value="generate" className="mt-0">
+          {/* Only render tab content if it matches the active route */}
+          {activeTab === 'generate' && location.pathname === '/' && (
+            <TabsContent value="generate" className="mt-0 pb-20">
               <QuizGenerator onQuizGenerated={onQuizGenerated} />
             </TabsContent>
-            <TabsContent value="flashcards" className="mt-0">
-              {isPremium ? (
-                <FlashcardsFlow key="flashcards-component" />
-              ) : (
-                <Card className="p-8 text-center">
-                  <motion.div
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Book className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                    <h2 className="text-xl font-bold mb-2">Flashcards</h2>
-                    <p className="text-muted-foreground mb-6">
-                      Free users can create up to 10 flashcards per set. Upgrade to premium to create up to 30 flashcards per set!
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                      <Button
-                        onClick={() => navigate('/settings?tab=premium')}
-                        variant="outline"
-                      >
-                        Upgrade to Premium
-                      </Button>
-                      <Button
-                        onClick={() => navigate('/flashcards')}
-                      >
-                        Try Free Version
-                      </Button>
-                    </div>
-                  </motion.div>
-                </Card>
-              )}
-            </TabsContent>
-            <TabsContent value="history" className="mt-0">
+          )}
+          
+          {activeTab === 'history' && location.pathname === '/history' && (
+            <TabsContent value="history" className="mt-0 pb-20">
               <FlashcardsHistory />
             </TabsContent>
-            <TabsContent value="settings" className="mt-0">
+          )}
+          
+          {activeTab === 'settings' && location.pathname === '/settings' && (
+            <TabsContent value="settings" className="mt-0 pb-20">
               <SettingsPanel />
             </TabsContent>
-          </div>
+          )}
+          
+          {/* We don't render flashcards content here since it's handled in the Index component */}
         </Tabs>
       </motion.div>
     </TooltipProvider>

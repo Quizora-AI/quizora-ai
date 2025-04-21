@@ -19,6 +19,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
   const [quizTitle, setQuizTitle] = useState<string>("Quiz");
   const [quizInProgress, setQuizInProgress] = useState<boolean>(false);
   const [showQuizResumeDialog, setShowQuizResumeDialog] = useState<boolean>(false);
+  const [isNavigating, setIsNavigating] = useState<boolean>(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -123,6 +124,9 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
   };
 
   const renderContent = () => {
+    // Use console.log to help diagnose rendering and navigation issues
+    console.log("Rendering content for path:", location.pathname, "with appState:", appState);
+    
     if (location.pathname === "/legal") {
       return <LegalContentWrapper />;
     }
@@ -152,58 +156,30 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
       );
     }
     
-    // Special case for flashcards page - always show both the flashcards content and tab navigation
+    // For flashcards page, render the flashcards component with unique key to prevent duplicate components
     if (location.pathname === "/flashcards") {
       return (
-        <>
+        <div key={`content-${location.pathname}`} className="w-full">
           <motion.div
-            initial="initial"
-            animate="in"
-            exit="out"
-            variants={{
-              initial: { opacity: 0, x: 50 },
-              in: { opacity: 1, x: 0 },
-              out: { opacity: 0, x: -50 },
-            }}
-            transition={{
-              type: "spring",
-              stiffness: 300,
-              damping: 30,
-            }}
-            className="w-full mb-12"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className="w-full mb-16"
             key="flashcards-flow"
           >
             <FlashcardsFlow onBackToCreate={() => navigate('/')} />
           </motion.div>
-          
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="w-full"
-            key={`tab-navigation-${location.pathname}`}
-          >
-            <TabNavigation onQuizGenerated={handleQuizGenerated} />
-          </motion.div>
-        </>
+        </div>
       );
     }
     
     return (
       <motion.div
-        initial="initial"
-        animate="in"
-        exit="out"
-        variants={{
-          initial: { opacity: 0, x: 50 },
-          in: { opacity: 1, x: 0 },
-          out: { opacity: 0, x: -50 },
-        }}
-        transition={{
-          type: "spring",
-          stiffness: 300,
-          damping: 30,
-        }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.3 }}
         className="w-full"
         key={`tab-content-${location.pathname}`}
       >
@@ -220,6 +196,13 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
           {renderContent()}
         </AnimatePresence>
       </main>
+      
+      {/* Always render tab navigation at the bottom when on flashcards page */}
+      {location.pathname === "/flashcards" && (
+        <div className="fixed bottom-0 left-0 right-0 z-40">
+          <TabNavigation onQuizGenerated={handleQuizGenerated} />
+        </div>
+      )}
 
       <Dialog open={showQuizResumeDialog} onOpenChange={setShowQuizResumeDialog}>
         <DialogContent className="sm:max-w-md">

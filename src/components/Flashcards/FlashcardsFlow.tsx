@@ -29,6 +29,7 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
   useEffect(() => {
     // Check for flashcards to review
     const flashcardsToReview = localStorage.getItem("flashcardsToReview");
+    
     if (flashcardsToReview) {
       try {
         const { cards, title: savedTitle, id } = JSON.parse(flashcardsToReview);
@@ -63,6 +64,9 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
     if (setMeta?.id) setSetId(setMeta.id);
     setAppState(FlashcardsState.REVIEW);
     setError(null);
+    
+    // Log successful generation
+    console.log(`Generated ${generatedFlashcards.length} flashcards successfully`);
   };
 
   const handleBackToCreate = () => {
@@ -98,17 +102,17 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
       // Update in Supabase if user is logged in
       const { data: { user } } = await supabase.auth.getUser();
       if (user && setId) {
-        // Convert Flashcard[] to Json type before saving to Supabase
-        const cardsJson: Json = updatedFlashcards.map(card => ({
+        // Convert Flashcard[] to a format Supabase can handle
+        const cardsForSupabase = updatedFlashcards.map(card => ({
           id: card.id,
           front: card.front,
           back: card.back,
           status: card.status
-        })) as unknown as Json;
+        }));
         
         const { error } = await supabase
           .from("flashcard_sets")
-          .update({ cards: cardsJson })
+          .update({ cards: cardsForSupabase })
           .eq("id", setId)
           .eq("user_id", user.id);
           
@@ -168,6 +172,7 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
           exit="out"
           variants={pageVariants}
           transition={pageTransition}
+          key="flashcards-create"
         >
           <FlashcardsGenerator onFlashcardsGenerated={handleFlashcardsGenerated} />
         </motion.div>
@@ -180,6 +185,7 @@ export function FlashcardsFlow({ onBackToCreate = () => {} }: FlashcardsFlowProp
           exit="out"
           variants={pageVariants}
           transition={pageTransition}
+          key="flashcards-review"
         >
           <FlashcardsViewer 
             flashcards={flashcards}
