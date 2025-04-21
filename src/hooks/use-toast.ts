@@ -1,16 +1,21 @@
 
 // This file integrates shadcn's toast functionality
-import { type ToastProps, type ToastActionElement } from "@/components/ui/toast"
+import { type ToastActionElement } from "@/components/ui/toast"
 import * as React from "react"
 
 const TOAST_LIMIT = 5
 const TOAST_REMOVE_DELAY = 1000000
 
-type ToasterToastProps = ToastProps & {
+interface ToastProps {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
   action?: ToastActionElement
+  variant?: "default" | "destructive" | "success"
+  className?: string
+  duration?: number
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 const actionTypes = {
@@ -32,11 +37,11 @@ type ActionType = typeof actionTypes
 type Action =
   | {
       type: ActionType["ADD_TOAST"]
-      toast: Omit<ToasterToastProps, "id">
+      toast: Omit<ToastProps, "id">
     }
   | {
       type: ActionType["UPDATE_TOAST"]
-      toast: Partial<ToasterToastProps> & { id: string }
+      toast: Partial<ToastProps> & { id: string }
     }
   | {
       type: ActionType["DISMISS_TOAST"]
@@ -48,7 +53,7 @@ type Action =
     }
 
 interface State {
-  toasts: ToasterToastProps[]
+  toasts: ToastProps[]
 }
 
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
@@ -138,12 +143,12 @@ function dispatch(action: Action) {
   })
 }
 
-type ToastProps = Omit<ToasterToastProps, "id">
+type ToastInput = Omit<ToastProps, "id">
 
-function toast({ ...props }: ToastProps) {
+function toast({ ...props }: ToastInput) {
   const id = genId()
 
-  const update = (props: ToastProps) =>
+  const update = (props: ToastInput) =>
     dispatch({
       type: actionTypes.UPDATE_TOAST,
       toast: { ...props, id },
