@@ -7,7 +7,7 @@ import {
 import * as React from "react"
 
 const TOAST_LIMIT = 5
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_REMOVE_DELAY = 5000
 
 type ToasterToast = Toast & {
   id: string
@@ -72,9 +72,23 @@ const addToRemoveQueue = (toastId: string) => {
   toastTimeouts.set(toastId, timeout)
 }
 
+// Check if a toast with the same title and description already exists
+const hasToastDuplicate = (newToast: Omit<ToasterToast, "id">, toasts: ToasterToast[]): boolean => {
+  return toasts.some(
+    toast => 
+      toast.title === newToast.title && 
+      toast.description === newToast.description
+  );
+}
+
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case actionTypes.ADD_TOAST:
+      // Check for duplicates before adding
+      if (hasToastDuplicate(action.toast, state.toasts)) {
+        return state;
+      }
+      
       return {
         ...state,
         toasts: [
@@ -144,6 +158,15 @@ function dispatch(action: Action) {
 type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
+  // Check for duplicates before adding
+  if (hasToastDuplicate(props, memoryState.toasts)) {
+    return {
+      id: "",
+      dismiss: () => {},
+      update: () => {},
+    };
+  }
+
   const id = genId()
 
   const update = (props: Toast) =>
