@@ -69,7 +69,7 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
     });
   };
 
-  const tabIconStyle = "h-4 w-4 mr-2";
+  const tabIconStyle = "h-4 w-4";
 
   return (
     <TooltipProvider>
@@ -85,22 +85,22 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
           value={activeTab}
           onValueChange={handleTabChange}
         >
-          <TabsList className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 grid grid-cols-4 max-w-md w-[90%] shadow-md border border-border/20 backdrop-blur-sm">
-            <TabsTrigger value="generate" className="flex items-center" disabled={isChangingTab}>
+          <TabsList className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 grid grid-cols-4 max-w-md w-[90%] shadow-lg bg-background/80 backdrop-blur-md border border-border/30 rounded-full">
+            <TabsTrigger value="generate" className="rounded-l-full" disabled={isChangingTab}>
               <BrainCircuit className={tabIconStyle} />
-              <span className="hidden sm:inline">Quiz</span>
+              <span className="ml-2 hidden sm:inline">Quiz</span>
             </TabsTrigger>
-            <TabsTrigger value="flashcards" className="flex items-center" disabled={isChangingTab}>
+            <TabsTrigger value="flashcards" disabled={isChangingTab}>
               <Book className={tabIconStyle} />
-              <span className="hidden sm:inline">Flashcards</span>
+              <span className="ml-2 hidden sm:inline">Flashcards</span>
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center" disabled={isChangingTab}>
+            <TabsTrigger value="history" disabled={isChangingTab}>
               <History className={tabIconStyle} />
-              <span className="hidden sm:inline">History</span>
+              <span className="ml-2 hidden sm:inline">History</span>
             </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center" disabled={isChangingTab}>
+            <TabsTrigger value="settings" className="rounded-r-full" disabled={isChangingTab}>
               <Settings className={tabIconStyle} />
-              <span className="hidden sm:inline">Settings</span>
+              <span className="ml-2 hidden sm:inline">Settings</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>

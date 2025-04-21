@@ -36,10 +36,9 @@ const History = () => {
           </CardHeader>
           <CardContent>
             <Tabs 
-              defaultValue="quizzes" 
-              className="w-full" 
-              onValueChange={setActiveTab}
               value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full"
             >
               <TabsList className="grid grid-cols-2 mb-6 w-full max-w-md mx-auto">
                 <TabsTrigger value="quizzes" className="flex items-center gap-2">

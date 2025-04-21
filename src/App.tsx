@@ -55,6 +55,18 @@ const PremiumRoute: React.FC<{element: React.ReactNode}> = ({ element }) => {
 };
 
 const App = () => {
+  // Add a check for existing quiz in progress to redirect
+  React.useEffect(() => {
+    // Check if we're on the home route and there's a saved quiz
+    if (window.location.pathname === '/') {
+      const savedQuiz = localStorage.getItem("quizInProgress");
+      if (savedQuiz) {
+        // Don't automatically redirect, the dialog will handle this
+        console.log("Found saved quiz, dialog will appear on Index page");
+      }
+    }
+  }, []);
+
   return (
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>

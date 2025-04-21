@@ -49,7 +49,10 @@ export function FlashcardsHistory() {
   const handleReviewFlashcards = (setId: string) => {
     const selectedSet = flashcardSets.find(set => set.id === setId);
     if (selectedSet) {
-      localStorage.setItem("flashcardsToReview", JSON.stringify(selectedSet));
+      // Save the selected flashcard set to localStorage to be used by FlashcardsFlow
+      localStorage.setItem("currentFlashcardSet", JSON.stringify(selectedSet));
+      
+      // Navigate to the flashcards page
       navigate("/flashcards");
     }
   };
