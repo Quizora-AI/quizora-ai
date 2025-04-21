@@ -90,11 +90,11 @@ export function FlashcardsHistory() {
         >
           {flashcardSets.map((set) => (
             <motion.div key={set.id} variants={itemVariants}>
-              <Card>
+              <Card className="overflow-hidden border border-border/40 bg-card/60 backdrop-blur-sm hover:shadow-md transition-all duration-200">
                 <CardContent className="p-4">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div className="flex-1">
-                      <h3 className="font-medium">{set.title}</h3>
+                      <h3 className="font-medium text-lg">{set.title}</h3>
                       <div className="text-sm text-muted-foreground flex flex-wrap gap-2 items-center">
                         <span>{formatDate(set.created_at)}</span>
                         <span>•</span>
@@ -105,13 +105,13 @@ export function FlashcardsHistory() {
                           <span>Progress</span>
                           <span>{Math.round(calculateProgress(set.cards))}%</span>
                         </div>
-                        <Progress value={calculateProgress(set.cards)} className="h-1" />
+                        <Progress value={calculateProgress(set.cards)} className="h-1.5" />
                       </div>
                     </div>
                     <Button
-                      variant="secondary"
-                      size="sm"
                       onClick={() => handleRetakeFlashcards(set.id)}
+                      className="bg-primary/90 hover:bg-primary text-primary-foreground shadow-sm"
+                      size="sm"
                     >
                       Review
                     </Button>

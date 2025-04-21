@@ -5,8 +5,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import * as React from "react";
 import QuizReview from "./pages/QuizReview";
+import LandingPage from "./pages/LandingPage";
+import History from "./pages/History";
+import * as React from "react";
 
 // Create a client with better error handling
 const queryClient = new QueryClient({
@@ -60,10 +62,10 @@ const App = () => {
           <Toaster />
           <Sonner />
           <Routes>
-            <Route path="/" element={<Index initialTab="generate" />} />
+            <Route path="/" element={<LandingPage />} />
             <Route path="/quiz" element={<Index initialTab="generate" />} />
             <Route path="/flashcards" element={<Index initialTab="flashcards" />} />
-            <Route path="/history" element={<Index initialTab="history" />} />
+            <Route path="/history" element={<History />} />
             <Route path="/history/:quizId" element={<QuizReview />} />
             <Route path="/settings" element={<Index initialTab="settings" />} />
             <Route path="/legal" element={<Index initialTab="generate" />} />
