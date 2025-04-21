@@ -193,86 +193,103 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
     damping: 30
   };
   
+  // Only render the appropriate content based on the current URL path and app state
   const renderContent = () => {
-    switch (appState) {
-      case AppState.CREATE:
-        return (
-          <motion.div
-            initial="initial"
-            animate="in"
-            exit="out"
-            variants={pageVariants}
-            transition={pageTransition}
-            className="w-full"
-          >
-            {location.pathname === "/legal" ? (
-              <LegalPages />
-            ) : (
-              <TabNavigation onQuizGenerated={handleQuizGenerated} />
-            )}
-          </motion.div>
-        );
-        
-      case AppState.QUIZ:
-        return (
-          <motion.div
-            initial="initial"
-            animate="in"
-            exit="out"
-            variants={pageVariants}
-            transition={pageTransition}
-          >
-            <QuizQuestion
-              question={questions[currentQuestionIndex]}
-              onNext={handleNextQuestion}
-              currentQuestionNumber={currentQuestionIndex + 1}
-              totalQuestions={questions.length}
-            />
-          </motion.div>
-        );
-        
-      case AppState.RESULTS:
-        const correctAnswers = getCorrectAnswersCount();
-        return (
-          <motion.div
-            initial="initial"
-            animate="in"
-            exit="out"
-            variants={pageVariants}
-            transition={pageTransition}
-          >
-            <QuizResults
-              totalQuestions={questions.length}
-              correctAnswers={correctAnswers}
-              onRetakeQuiz={handleRetakeQuiz}
-              onNewFile={handleNewQuiz}
-              onViewAnalytics={handleViewAnalytics}
-            />
-          </motion.div>
-        );
-        
-      case AppState.ANALYTICS:
-        const correctCount = getCorrectAnswersCount();
-        return (
-          <motion.div
-            initial="initial"
-            animate="in"
-            exit="out"
-            variants={pageVariants}
-            transition={pageTransition}
-          >
-            <QuizAnalytics
-              questions={questions}
-              correctAnswers={correctCount}
-              incorrectAnswers={questions.length - correctCount}
-              userAnswers={userAnswers}
-            />
-          </motion.div>
-        );
-        
-      default:
-        return null;
+    // If on legal page path, show legal content
+    if (location.pathname === "/legal") {
+      return (
+        <motion.div
+          initial="initial"
+          animate="in"
+          exit="out"
+          variants={pageVariants}
+          transition={pageTransition}
+          className="w-full"
+        >
+          <LegalPages />
+        </motion.div>
+      );
     }
+    
+    // For quiz flow states
+    if (appState !== AppState.CREATE) {
+      switch (appState) {
+        case AppState.QUIZ:
+          return (
+            <motion.div
+              initial="initial"
+              animate="in"
+              exit="out"
+              variants={pageVariants}
+              transition={pageTransition}
+            >
+              <QuizQuestion
+                question={questions[currentQuestionIndex]}
+                onNext={handleNextQuestion}
+                currentQuestionNumber={currentQuestionIndex + 1}
+                totalQuestions={questions.length}
+              />
+            </motion.div>
+          );
+          
+        case AppState.RESULTS:
+          const correctAnswers = getCorrectAnswersCount();
+          return (
+            <motion.div
+              initial="initial"
+              animate="in"
+              exit="out"
+              variants={pageVariants}
+              transition={pageTransition}
+            >
+              <QuizResults
+                totalQuestions={questions.length}
+                correctAnswers={correctAnswers}
+                onRetakeQuiz={handleRetakeQuiz}
+                onNewFile={handleNewQuiz}
+                onViewAnalytics={handleViewAnalytics}
+              />
+            </motion.div>
+          );
+          
+        case AppState.ANALYTICS:
+          const correctCount = getCorrectAnswersCount();
+          return (
+            <motion.div
+              initial="initial"
+              animate="in"
+              exit="out"
+              variants={pageVariants}
+              transition={pageTransition}
+            >
+              <QuizAnalytics
+                questions={questions}
+                correctAnswers={correctCount}
+                incorrectAnswers={questions.length - correctCount}
+                userAnswers={userAnswers}
+              />
+            </motion.div>
+          );
+          
+        default:
+          return null;
+      }
+    }
+    
+    // For tab-based navigation in CREATE state
+    return (
+      <motion.div
+        initial="initial"
+        animate="in"
+        exit="out"
+        variants={pageVariants}
+        transition={pageTransition}
+        className="w-full"
+        key={location.pathname}
+      >
+        <TabNavigation onQuizGenerated={handleQuizGenerated} />
+      </motion.div>
+    );
   };
   
   return (

@@ -12,6 +12,7 @@ import { motion } from "framer-motion";
 import { BrainCircuit, History, MessageSquare, Settings } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 
 interface TabNavigationProps {
   onQuizGenerated: (questions: Question[]) => void;
@@ -20,8 +21,10 @@ interface TabNavigationProps {
 export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("generate");
   const [isPremium, setIsPremium] = useState(false);
+  const [isChangingTab, setIsChangingTab] = useState(false);
   
   useEffect(() => {
     // Set active tab based on URL if it exists
@@ -42,11 +45,18 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
   }, [location.pathname]);
   
   const handleTabChange = (value: string) => {
+    // Prevent rapid tab switching
+    if (isChangingTab) return;
+    
+    setIsChangingTab(true);
     setActiveTab(value);
     
     // Handle special case for assistant when user isn't premium
     if (value === "assistant" && !isPremium) {
       navigate('/settings?tab=premium');
+      setTimeout(() => {
+        setIsChangingTab(false);
+      }, 300);
       return;
     }
     
@@ -65,6 +75,11 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
         navigate('/');
         break;
     }
+    
+    // Add a small delay to prevent tab content from rendering incorrectly
+    setTimeout(() => {
+      setIsChangingTab(false);
+    }, 300);
   };
   
   const containerVariants = {
@@ -96,19 +111,19 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
           onValueChange={handleTabChange}
         >
           <TabsList className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 grid grid-cols-4 max-w-md w-[90%] shadow-lg border border-border/20">
-            <TabsTrigger value="generate" className="flex items-center">
+            <TabsTrigger value="generate" className="flex items-center" disabled={isChangingTab}>
               <BrainCircuit className={tabIconStyle} />
               <span className="hidden sm:inline">Quiz</span>
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center">
+            <TabsTrigger value="history" className="flex items-center" disabled={isChangingTab}>
               <History className={tabIconStyle} />
               <span className="hidden sm:inline">History</span>
             </TabsTrigger>
-            <TabsTrigger value="assistant" className="flex items-center">
+            <TabsTrigger value="assistant" className="flex items-center" disabled={isChangingTab}>
               <MessageSquare className={tabIconStyle} />
               <span className="hidden sm:inline">Assistant</span>
             </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center">
+            <TabsTrigger value="settings" className="flex items-center" disabled={isChangingTab}>
               <Settings className={tabIconStyle} />
               <span className="hidden sm:inline">Settings</span>
             </TabsTrigger>
@@ -125,7 +140,7 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
             
             <TabsContent value="assistant" className="mt-0">
               {isPremium ? (
-                <AIAssistant />
+                <AIAssistant key="assistant-component" />
               ) : (
                 <Card className="p-8 text-center">
                   <motion.div
