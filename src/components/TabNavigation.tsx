@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FileUpload } from "@/components/FileUpload";
 import { QuizGenerator } from "@/components/QuizGenerator";
