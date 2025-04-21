@@ -1,23 +1,22 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { BrainCircuit, Book, ArrowRight, Sparkles } from 'lucide-react';
-import { useAuth0 } from '@auth0/auth0-react';
 
 const quotes = [
   "Knowledge is power.",
-  "Learning is not attained by chance, it must be sought for with ardor.",
-  "The beautiful thing about learning is that no one can take it away from you.",
-  "Education is the passport to the future.",
-  "The more that you read, the more things you will know."
+  "The only limit to our realization of tomorrow is our doubts of today.",
+  "Learning is a treasure that will follow its owner everywhere.",
+  "Education is not the filling of a pail, but the lighting of a fire.",
+  "The beautiful thing about learning is that no one can take it away from you."
 ];
 
 export default function LandingPage() {
   const navigate = useNavigate();
   const [quote, setQuote] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const { isAuthenticated, loginWithRedirect } = useAuth0();
   
   useEffect(() => {
     // Select a random quote
@@ -29,37 +28,8 @@ export default function LandingPage() {
       setIsLoading(false);
     }, 1500);
     
-    // Check if user is authenticated and redirect if needed
-    if (isAuthenticated) {
-      navigate('/quiz');
-    }
-    
     return () => clearTimeout(timer);
-  }, [isAuthenticated, navigate]);
-  
-  const handleStartLearning = () => {
-    if (isAuthenticated) {
-      // If user is already authenticated, navigate directly to the quiz page
-      console.log("User is authenticated, navigating to /quiz");
-      navigate('/quiz');
-    } else {
-      // If not authenticated, redirect to Auth0 login
-      console.log("User is not authenticated, redirecting to Auth0 login");
-      loginWithRedirect({
-        appState: { returnTo: window.location.origin + '/quiz' }
-      });
-    }
-  };
-  
-  const handleCreateFlashcards = () => {
-    if (isAuthenticated) {
-      navigate('/flashcards');
-    } else {
-      loginWithRedirect({
-        appState: { returnTo: window.location.origin + '/flashcards' }
-      });
-    }
-  };
+  }, []);
   
   if (isLoading) {
     return (
@@ -70,37 +40,25 @@ export default function LandingPage() {
           transition={{ duration: 0.5 }}
           className="flex flex-col items-center"
         >
-          <motion.div
-            animate={{ 
-              rotate: [0, 360],
-              borderColor: ["#3a86ff", "#ff006e", "#8338ec", "#3a86ff"]
-            }}
-            transition={{ 
-              duration: 3,
-              repeat: Infinity,
-              ease: "linear"
-            }}
-            className="w-20 h-20 rounded-full border-4 border-t-primary border-r-primary/30 border-b-primary/60 border-l-primary/10 flex items-center justify-center"
-          >
+          <div className="relative">
             <motion.div
               animate={{ 
-                scale: [1, 1.2, 1],
-                opacity: [0.7, 1, 0.7]
+                rotate: [0, 360],
               }}
               transition={{ 
                 duration: 2,
                 repeat: Infinity,
-                ease: "easeInOut"
+                ease: "linear"
               }}
-            >
-              <BrainCircuit className="h-10 w-10 text-primary" />
-            </motion.div>
-          </motion.div>
+              className="w-16 h-16 rounded-full border-4 border-t-primary border-r-primary/30 border-b-primary/60 border-l-primary/10"
+            />
+            <BrainCircuit className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-primary" />
+          </div>
           <motion.h1
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.8 }}
-            className="mt-6 text-3xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent"
+            className="mt-6 text-2xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent"
           >
             Quizora AI
           </motion.h1>
@@ -118,35 +76,31 @@ export default function LandingPage() {
   }
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-background/80 overflow-hidden">
-      <div className="container px-4 py-16 mx-auto relative">
+    <div className="min-h-screen bg-gradient-to-b from-background to-background/80">
+      <div className="container px-4 py-12 mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="flex flex-col items-center justify-center text-center pt-8 md:pt-16"
+          className="flex flex-col items-center justify-center text-center pt-12"
         >
-          <motion.div
-            initial={{ scale: 0.8, rotate: 0 }}
-            animate={{ 
-              scale: 1,
-              rotate: [0, 5, -5, 0],
-              transition: {
-                rotate: {
-                  duration: 2,
-                  repeat: Infinity,
-                  repeatType: "reverse",
-                  ease: "easeInOut"
-                }
-              }
-            }}
-            className="bg-primary/10 p-6 rounded-full mb-8"
-          >
-            <BrainCircuit className="h-12 w-12 text-primary" />
-          </motion.div>
+          <div className="flex items-center mb-6">
+            <motion.div
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              transition={{ 
+                duration: 0.5,
+                type: "spring",
+                stiffness: 200
+              }}
+              className="bg-primary/10 p-4 rounded-full"
+            >
+              <BrainCircuit className="h-10 w-10 text-primary" />
+            </motion.div>
+          </div>
           
           <motion.h1 
-            className="text-5xl md:text-6xl font-bold tracking-tighter mb-4 bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent"
+            className="text-4xl md:text-5xl font-bold tracking-tighter mb-4 bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.8 }}
@@ -155,7 +109,7 @@ export default function LandingPage() {
           </motion.h1>
           
           <motion.p 
-            className="text-muted-foreground max-w-md mx-auto mb-4 italic text-lg"
+            className="text-muted-foreground max-w-md mx-auto mb-2 italic"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.8 }}
@@ -163,26 +117,34 @@ export default function LandingPage() {
             "{quote}"
           </motion.p>
           
+          <motion.p 
+            className="text-lg text-foreground/80 max-w-xl mx-auto mb-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6, duration: 0.8 }}
+          >
+            Your AI-powered learning companion that transforms the way you study, quiz, and remember information.
+          </motion.p>
+          
           <motion.div
-            className="flex flex-col sm:flex-row gap-4 my-10"
+            className="flex flex-col sm:flex-row gap-4 mb-16"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.8 }}
+            transition={{ delay: 0.8, duration: 0.8 }}
           >
             <Button 
               size="lg" 
-              onClick={handleStartLearning}
-              className="gap-2 bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700 transition-all duration-300 transform hover:scale-105"
+              onClick={() => navigate('/quiz')}
+              className="gap-2 bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700"
             >
-              <Sparkles className="h-4 w-4 animate-pulse" />
+              <Sparkles className="h-4 w-4" />
               Start Learning
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
             <Button 
               variant="outline" 
               size="lg" 
-              onClick={handleCreateFlashcards}
-              className="transition-all duration-300 transform hover:scale-105"
+              onClick={() => navigate('/flashcards')}
             >
               <Book className="h-4 w-4 mr-2" />
               Create Flashcards
@@ -190,53 +152,26 @@ export default function LandingPage() {
           </motion.div>
         </motion.div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto mt-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
           <FeatureCard 
             title="AI-Generated Quizzes" 
-            description="Instant personalized quizzes with detailed AI explanations"
+            description="Custom quizzes tailored to your needs, created instantly by AI with detailed explanations."
             delay={1.0}
             icon="quiz"
           />
           <FeatureCard 
             title="Smart Flashcards" 
-            description="Master concepts faster with spaced repetition learning"
+            description="Create and study flashcards with spaced repetition learning."
             delay={1.2}
             icon="flashcards"
           />
           <FeatureCard 
             title="Detailed Analytics" 
-            description="Track progress with AI-powered insights"
+            description="Track your progress and identify areas for improvement with AI-powered insights."
             delay={1.4}
             icon="analytics"
           />
         </div>
-
-        <motion.div
-          className="absolute top-20 right-10 w-32 h-32 opacity-20 rounded-full bg-purple-500 blur-3xl"
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.15, 0.25, 0.15],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            repeatType: "reverse",
-          }}
-        />
-        
-        <motion.div
-          className="absolute bottom-20 left-10 w-48 h-48 opacity-20 rounded-full bg-blue-500 blur-3xl"
-          animate={{
-            scale: [1, 1.3, 1],
-            opacity: [0.15, 0.2, 0.15],
-          }}
-          transition={{
-            duration: 10,
-            repeat: Infinity,
-            repeatType: "reverse",
-            delay: 2,
-          }}
-        />
       </div>
     </div>
   );
@@ -261,21 +196,11 @@ function FeatureCard({ title, description, delay, icon }: FeatureCardProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.8 }}
-      whileHover={{ 
-        y: -5,
-        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-      }}
-      className="bg-card/50 backdrop-blur-sm border border-primary/10 rounded-lg p-6 shadow-lg"
+      className="bg-card/50 backdrop-blur-sm border border-primary/10 rounded-lg p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:translate-y-[-4px]"
     >
-      <motion.div 
-        className="bg-primary/10 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4"
-        whileHover={{ 
-          rotate: [0, 10, -10, 0],
-          transition: { duration: 0.5 }
-        }}
-      >
+      <div className="bg-primary/10 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
         {icons[icon]}
-      </motion.div>
+      </div>
       <h3 className="text-lg font-medium mb-2">{title}</h3>
       <p className="text-muted-foreground text-sm">{description}</p>
     </motion.div>
