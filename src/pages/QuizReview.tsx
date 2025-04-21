@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Question } from "@/components/FileUpload";
@@ -9,6 +8,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, BarChart, RefreshCw, Home } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { QuizAnalytics } from "@/components/QuizAnalytics";
+import { supabase } from "@/integrations/supabase/client";
 
 interface QuizHistoryEntry {
   id: string;
@@ -24,45 +24,34 @@ interface QuizHistoryEntry {
 const QuizReview = () => {
   const { quizId } = useParams();
   const navigate = useNavigate();
-  const [quiz, setQuiz] = useState<QuizHistoryEntry | null>(null);
+  const [quiz, setQuiz] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const { toast } = useToast();
-  
+
   useEffect(() => {
-    const fetchQuiz = () => {
+    const fetchQuiz = async () => {
       setLoading(true);
       try {
-        const selectedQuizString = localStorage.getItem("selectedQuiz");
-        const historyString = localStorage.getItem("quizHistory");
-        
-        if (selectedQuizString) {
-          // Try to load from selectedQuiz first
-          const selectedQuiz = JSON.parse(selectedQuizString);
-          setQuiz(selectedQuiz);
-        } else if (historyString && quizId) {
-          // Fall back to finding by ID in history
-          const historyData = JSON.parse(historyString);
-          const foundQuiz = historyData.find((q: QuizHistoryEntry) => q.id === quizId);
-          
-          if (foundQuiz) {
-            setQuiz(foundQuiz);
-          } else {
-            toast({
-              title: "Error",
-              description: "Quiz not found",
-              variant: "destructive"
-            });
-            navigate("/history");
-          }
-        } else {
+        const user = (await supabase.auth.getUser()).data.user;
+        if (!user || !quizId) throw new Error("User or quiz ID missing");
+        const { data, error } = await supabase
+          .from("quiz_attempts")
+          .select("*")
+          .eq("id", quizId)
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (error || !data) {
           toast({
             title: "Error",
             description: "Quiz not found",
             variant: "destructive"
           });
           navigate("/history");
+          return;
         }
+        setQuiz(data);
       } catch (error) {
         console.error("Failed to load quiz:", error);
         toast({
@@ -70,14 +59,15 @@ const QuizReview = () => {
           description: "Failed to load quiz details",
           variant: "destructive"
         });
+        navigate("/history");
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchQuiz();
   }, [quizId, navigate, toast]);
-  
+
   const handleRetakeQuiz = () => {
     if (!quiz) return;
     
@@ -107,9 +97,9 @@ const QuizReview = () => {
   };
   
   const getCorrectAnswersCount = () => {
-    if (!quiz || !quiz.userAnswers || !quiz.questions) return 0;
+    if (!quiz || !quiz.user_answers || !quiz.questions) return 0;
     
-    return quiz.userAnswers.reduce((count, answer, index) => {
+    return quiz.user_answers.reduce((count, answer, index) => {
       return count + (answer === quiz.questions[index].correctAnswer ? 1 : 0);
     }, 0);
   };
@@ -174,7 +164,7 @@ const QuizReview = () => {
               questions={quiz.questions}
               correctAnswers={getCorrectAnswersCount()}
               incorrectAnswers={quiz.questions.length - getCorrectAnswersCount()}
-              userAnswers={quiz.userAnswers || []}
+              userAnswers={quiz.user_answers || []}
             />
           </motion.div>
         ) : (
@@ -191,7 +181,7 @@ const QuizReview = () => {
                   <div>
                     <CardTitle className="text-2xl font-bold">{quiz.title}</CardTitle>
                     <CardDescription>
-                      Completed on {new Date(quiz.date).toLocaleDateString()} • {quiz.attempts || 1} {quiz.attempts === 1 ? 'attempt' : 'attempts'}
+                      Completed on {new Date(quiz.created_at).toLocaleDateString()} • {quiz.attempts || 1} {quiz.attempts === 1 ? 'attempt' : 'attempts'}
                     </CardDescription>
                   </div>
                   <div className={`text-2xl font-bold p-3 rounded-full ${
@@ -210,7 +200,7 @@ const QuizReview = () => {
                     <h3 className="font-medium text-lg mb-2">Quiz Summary</h3>
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                       <div className="bg-muted/50 p-4 rounded-lg">
-                        <div className="text-2xl font-semibold">{quiz.questions.length}</div>
+                        <div className="text-2xl font-semibold">{quiz.total_questions}</div>
                         <div className="text-sm text-muted-foreground">Questions</div>
                       </div>
                       
@@ -220,7 +210,7 @@ const QuizReview = () => {
                       </div>
                       
                       <div className="bg-muted/50 p-4 rounded-lg">
-                        <div className="text-2xl font-semibold">{quiz.questions.length - getCorrectAnswersCount()}</div>
+                        <div className="text-2xl font-semibold">{quiz.total_questions - getCorrectAnswersCount()}</div>
                         <div className="text-sm text-muted-foreground">Incorrect</div>
                       </div>
                     </div>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { History, BookOpen, Trash2, ArrowRight, BarChart } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 interface QuizHistoryEntry {
   id: string;
@@ -27,27 +27,37 @@ export function QuizHistory() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Fetch history from localStorage
-    const fetchHistory = () => {
+    // Fetch history from Supabase instead of localStorage!
+    const fetchHistory = async () => {
       setLoading(true);
       try {
-        const historyString = localStorage.getItem("quizHistory");
-        const historyData = historyString ? JSON.parse(historyString) : [];
-        setHistory(historyData);
-        
-        // Check if user has premium subscription
-        const userSettings = localStorage.getItem("userSettings");
-        if (userSettings) {
-          const settings = JSON.parse(userSettings);
-          const isPremium = settings.isPremium === true;
-          
-          // Only show warning for non-premium users who have created 2+ quizzes
-          if (!isPremium && historyData.length >= 2) {
-            setShowFreeWarning(true);
-          } else {
-            setShowFreeWarning(false);
-          }
+        const user = (await supabase.auth.getUser()).data.user;
+        if(!user) {
+          setHistory([]);
+          setLoading(false);
+          return;
         }
+        const { data, error } = await supabase
+          .from("quiz_attempts")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        // Add calculated attempts field from number of attempts
+        const output = data?.map((quiz: any) => ({
+          ...quiz,
+          attempts: quiz.user_answers ? 1 : 0 // basic, enhance as needed
+        })) || [];
+        setHistory(output);
+
+        // Check premium status
+        const profileData = await supabase.from('profiles').select("*").eq("id", user.id).single();
+        const isPremium = profileData.data?.isPremium;
+        if (!isPremium && output.length >= 2) setShowFreeWarning(true);
+        else setShowFreeWarning(false);
+
       } catch (error) {
         console.error("Failed to load quiz history:", error);
         toast({

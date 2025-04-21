@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from "uuid";
 import { LegalPages } from "@/components/LegalPages";
+import { supabase } from "@/integrations/supabase/client";
 
 enum AppState {
   CREATE,
@@ -97,38 +98,70 @@ const Index = ({ initialTab = "generate" }: IndexProps) => {
 
   useEffect(() => {
     if (appState === AppState.RESULTS && questions.length > 0 && userAnswers.length > 0) {
-      const userSettingsStr = localStorage.getItem("userSettings");
-      const userSettings = userSettingsStr ? JSON.parse(userSettingsStr) : {};
-      const autoSave = localStorage.getItem("autoSave") !== "false";
-      
-      if (autoSave) {
-        const correctAnswers = getCorrectAnswersCount();
-        const score = Math.round((correctAnswers / questions.length) * 100);
+      (async () => {
+        try {
+          const user = (await supabase.auth.getUser()).data.user;
+          if (!user) return;
 
-        const existingHistoryString = localStorage.getItem("quizHistory");
-        const existingHistory: QuizHistory[] = existingHistoryString 
-          ? JSON.parse(existingHistoryString) 
-          : [];
-        
-        const newQuizEntry: QuizHistory = {
-          id: uuidv4(),
-          date: new Date().toISOString(),
-          title: quizTitle,
-          questionsCount: questions.length,
-          score,
-          questions: questions
-        };
-        
-        const updatedHistory = [newQuizEntry, ...existingHistory];
-        localStorage.setItem("quizHistory", JSON.stringify(updatedHistory));
-        
-        toast({
-          title: "Quiz saved",
-          description: `Your quiz has been saved to history.`
-        });
-      }
+          const { data: existingAttempts } = await supabase
+            .from("quiz_attempts")
+            .select("id")
+            .eq("user_id", user.id);
+
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("isPremium,free_quizzes_used")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          const isPremium = profile?.isPremium;
+          const maxFree = 2;
+          if (!isPremium && (existingAttempts?.length ?? 0) >= maxFree) {
+            toast({
+              title: "Upgrade Required",
+              description: "Upgrade to premium to save more than 2 quizzes!",
+              variant: "destructive"
+            });
+            return;
+          }
+
+          const correctAnswers = getCorrectAnswersCount();
+          await supabase.from("quiz_attempts").insert({
+            user_id: user.id,
+            title: quizTitle,
+            questions: questions,
+            user_answers: userAnswers,
+            score: Math.round((correctAnswers / questions.length) * 100),
+            total_questions: questions.length,
+            correct_answers: correctAnswers
+          });
+
+          toast({
+            title: "Quiz saved",
+            description: "Your quiz has been saved and can be revisited from history."
+          });
+
+        } catch (e) {
+          toast({
+            title: "Save failed",
+            description: "Could not save quiz. Please try again.",
+            variant: "destructive"
+          });
+        }
+      })();
     }
   }, [appState, questions, userAnswers, quizTitle, toast]);
+
+  useEffect(() => {
+    if (appState === AppState.QUIZ && questions.length > 10) {
+      toast({
+        title: "Too many questions",
+        description: "You can only have up to 10 questions in a quiz.",
+        variant: "destructive"
+      });
+      setAppState(AppState.CREATE);
+    }
+  }, [appState, questions]);
 
   const pageVariants = {
     initial: { opacity: 0, x: 50 },

@@ -32,6 +32,7 @@ import {
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UserSettings {
   name: string;
@@ -90,6 +91,11 @@ export function SettingsPanel() {
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [quizHistory, setQuizHistory] = useState<any[]>([]);
+  const [supabaseUser, setSupabaseUser] = useState<any>(null);
+  const [supabaseSession, setSupabaseSession] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -126,6 +132,31 @@ export function SettingsPanel() {
     }
   }, []);
   
+  useEffect(() => {
+    // Subscribe to Supabase auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSupabaseSession(session);
+      setSupabaseUser(session?.user ?? null);
+      setIsLoggedIn(!!session?.user);
+      setAuthLoading(false);
+
+      // Optionally fetch profile here
+      if (session?.user) {
+        // Optionally fetch from profiles table here if needed
+      }
+    });
+
+    // Get current session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSupabaseSession(session);
+      setSupabaseUser(session?.user ?? null);
+      setIsLoggedIn(!!session?.user);
+      setAuthLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const saveSettings = () => {
     try {
       localStorage.setItem("userSettings", JSON.stringify(settings));
@@ -145,37 +176,113 @@ export function SettingsPanel() {
     }
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!settings.email) {
+    setErrorMessage(null);
+
+    const form = e.target as HTMLFormElement;
+    const email = (form.elements.namedItem("email") as HTMLInputElement)?.value;
+    const password = (form.elements.namedItem("password") as HTMLInputElement)?.value;
+
+    if (!email || !password) {
+      setErrorMessage("Please enter email and password");
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      if (error.message?.toLowerCase().includes("invalid login")) {
+        toast({ title: "Login failed", description: "Invalid email or password.", variant: "destructive" });
+      } else {
+        toast({ title: "Login failed", description: error.message, variant: "destructive" });
+      }
+      setErrorMessage(error.message);
+    } else {
+      toast({ title: "Login successful", description: `Welcome, ${settings.name || email}` });
+      setIsLoggedIn(true);
+      setActiveTab("profile");
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+
+    // Basic check
+    if (!settings.email || !settings.name) {
+      setErrorMessage("Name and email are required.");
+      return;
+    }
+    // Passwords must match (and have minimum requirements in a real app)
+    const form = e.target as HTMLFormElement;
+    const password = (form.elements.namedItem("password") as HTMLInputElement)?.value;
+    const confirm = (form.elements.namedItem("confirmPassword") as HTMLInputElement)?.value;
+    if (!password || password.length < 6) {
+      setErrorMessage("Password must be at least 6 characters.");
+      return;
+    }
+    if (password !== confirm) {
+      setErrorMessage("Passwords do not match.");
+      return;
+    }
+
+    // Call Supabase signup
+    const { data, error } = await supabase.auth.signUp({
+      email: settings.email,
+      password,
+      options: {
+        data: { name: settings.name, course: settings.course }
+      }
+    });
+
+    if (error) {
+      if (error.message?.includes("already registered")) {
+        toast({ title: "Account exists", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Signup error", description: error.message, variant: "destructive" });
+      }
+      setErrorMessage(error.message);
+      return;
+    }
+    toast({ title: "Registration successful", description: "Please check your email to verify your account." });
+    setIsLoggedIn(true);
+    setActiveTab("profile");
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotPasswordEmail) {
       toast({
-        title: "Login failed",
-        description: "Email is required",
+        title: "Reset failed",
+        description: "Please enter your email address.",
         variant: "destructive"
       });
       return;
     }
-    
-    localStorage.setItem("userEmail", settings.email);
-    setIsLoggedIn(true);
-    
-    toast({
-      title: "Login successful",
-      description: `Welcome back, ${settings.name || settings.email}!`
-    });
+    const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail);
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Reset Email Sent",
+        description: "Check your inbox for reset instructions."
+      });
+      setActiveTab("profile");
+    }
   };
-  
-  const handleLogout = () => {
-    localStorage.removeItem("userEmail");
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setSupabaseUser(null);
+    setSupabaseSession(null);
     setIsLoggedIn(false);
-    
-    toast({
-      title: "Logged out",
-      description: "You have been logged out successfully"
-    });
+    toast({ title: "Logged out", description: "You have been logged out successfully" });
   };
-  
+
   const activatePremium = (tier: string) => {
     if (window.Razorpay) {
       const options = {
@@ -352,12 +459,16 @@ export function SettingsPanel() {
                 variants={containerVariants}
                 className="space-y-6"
               >
-                {isLoggedIn ? (
+                {authLoading ? (
+                  <div className="flex items-center justify-center p-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                  </div>
+                ) : isLoggedIn && supabaseUser ? (
                   <>
                     <motion.div variants={itemVariants} className="flex items-center justify-between p-4 bg-primary/5 rounded-lg">
                       <div>
                         <h3 className="font-medium">Logged in as</h3>
-                        <p className="text-sm text-muted-foreground">{settings.email}</p>
+                        <p className="text-sm text-muted-foreground">{supabaseUser.email}</p>
                       </div>
                       <Button onClick={handleLogout} variant="outline" size="sm">Log Out</Button>
                     </motion.div>
@@ -406,10 +517,27 @@ export function SettingsPanel() {
                       
                       <div className="space-y-4">
                         <Button type="submit" className="w-full">Sign In</Button>
-                        <div className="text-center">
-                          <span className="text-sm text-muted-foreground">Don't have an account? </span>
-                          <Button variant="link" className="p-0 h-auto" onClick={() => setActiveTab("register")}>Register</Button>
+                        <div className="flex justify-between">
+                          <Button
+                            variant="link"
+                            className="p-0 h-auto"
+                            onClick={() => setActiveTab("register")}
+                            type="button"
+                          >
+                            Register
+                          </Button>
+                          <Button
+                            variant="link"
+                            className="p-0 h-auto"
+                            onClick={() => setActiveTab("forgot")}
+                            type="button"
+                          >
+                            Forgot password?
+                          </Button>
                         </div>
+                        {errorMessage && (
+                          <div className="text-red-500 text-center text-sm">{errorMessage}</div>
+                        )}
                       </div>
                     </motion.div>
                   </form>
@@ -417,8 +545,33 @@ export function SettingsPanel() {
               </motion.div>
             </TabsContent>
             
+            <TabsContent value="forgot">
+              <motion.div
+                variants={containerVariants}
+                className="space-y-6"
+              >
+                <form onSubmit={handleForgotPassword}>
+                  <div className="space-y-2">
+                    <Label htmlFor="forgot-email">Enter your email</Label>
+                    <Input
+                      id="forgot-email"
+                      name="forgot-email"
+                      type="email"
+                      value={forgotPasswordEmail}
+                      onChange={e => setForgotPasswordEmail(e.target.value)}
+                      placeholder="your.email@example.com"
+                      required
+                    />
+                  </div>
+                  <div className="pt-4">
+                    <Button type="submit" className="w-full">Send Reset Email</Button>
+                  </div>
+                </form>
+              </motion.div>
+            </TabsContent>
+            
             <TabsContent value="register">
-              <motion.div 
+              <motion.div
                 variants={containerVariants}
                 className="space-y-6"
               >
@@ -426,69 +579,64 @@ export function SettingsPanel() {
                   <h2 className="text-xl font-bold">Create an Account</h2>
                   <p className="text-sm text-muted-foreground">Join Quizora AI to save your quizzes and track progress</p>
                 </motion.div>
-                
-                <form onSubmit={(e) => {
-                  e.preventDefault();
-                  localStorage.setItem("userEmail", settings.email);
-                  setIsLoggedIn(true);
-                  toast({
-                    title: "Account created",
-                    description: "Your account has been created successfully!"
-                  });
-                }}>
+                <form onSubmit={handleRegister}>
                   <motion.div variants={itemVariants} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="reg-name">Name</Label>
-                      <Input 
-                        id="reg-name" 
-                        name="name" 
-                        value={settings.name} 
+                      <Input
+                        id="reg-name"
+                        name="name"
+                        value={settings.name}
                         onChange={handleChange}
                         placeholder="Your name"
                         required
                       />
                     </div>
-                    
                     <div className="space-y-2">
                       <Label htmlFor="reg-email">Email</Label>
-                      <Input 
-                        id="reg-email" 
-                        name="email" 
-                        value={settings.email} 
+                      <Input
+                        id="reg-email"
+                        name="email"
+                        value={settings.email}
                         onChange={handleChange}
                         placeholder="your.email@example.com"
                         type="email"
                         required
                       />
                     </div>
-                    
                     <div className="space-y-2">
                       <Label htmlFor="reg-password">Password</Label>
-                      <Input 
-                        id="reg-password" 
-                        name="password" 
+                      <Input
+                        id="reg-password"
+                        name="password"
                         type="password"
                         placeholder="••••••••"
                         required
                       />
                     </div>
-                    
                     <div className="space-y-2">
                       <Label htmlFor="reg-confirm-password">Confirm Password</Label>
-                      <Input 
-                        id="reg-confirm-password" 
-                        name="confirmPassword" 
+                      <Input
+                        id="reg-confirm-password"
+                        name="confirmPassword"
                         type="password"
                         placeholder="••••••••"
                         required
                       />
                     </div>
-                    
+                    {errorMessage && (
+                      <div className="text-red-500 text-center text-sm">{errorMessage}</div>
+                    )}
                     <div className="space-y-4 pt-2">
                       <Button type="submit" className="w-full">Create Account</Button>
                       <div className="text-center">
                         <span className="text-sm text-muted-foreground">Already have an account? </span>
-                        <Button variant="link" className="p-0 h-auto" onClick={() => setActiveTab("profile")}>Sign In</Button>
+                        <Button
+                          variant="link"
+                          className="p-0 h-auto"
+                          onClick={() => setActiveTab("profile")}
+                          type="button"
+                        >Sign In</Button>
                       </div>
                     </div>
                   </motion.div>
