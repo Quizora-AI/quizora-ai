@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { History, BookOpen, Trash2, ArrowRight, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 interface QuizHistoryEntry {
   id: string;
@@ -23,7 +24,9 @@ interface QuizHistoryEntry {
 export function QuizHistory() {
   const [history, setHistory] = useState<QuizHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isPremium, setIsPremium] = useState(false);
   const [showFreeWarning, setShowFreeWarning] = useState(false);
+  const [showPremiumDialog, setShowPremiumDialog] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -46,10 +49,10 @@ export function QuizHistory() {
         const userSettings = localStorage.getItem("userSettings");
         if (userSettings) {
           const settings = JSON.parse(userSettings);
-          const isPremium = settings.isPremium === true;
+          setIsPremium(settings.isPremium === true);
           
           // Only show warning for non-premium users who have created 2+ quizzes
-          if (!isPremium && historyData.length >= 2) {
+          if (!settings.isPremium && historyData.length >= 2) {
             setShowFreeWarning(true);
           } else {
             setShowFreeWarning(false);
@@ -112,6 +115,19 @@ export function QuizHistory() {
   const retakeQuiz = (entry: QuizHistoryEntry, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering the parent onClick
 
+    // If the user has reached free limit and isn't premium, show dialog
+    const userSettings = localStorage.getItem("userSettings");
+    let isPremiumUser = false;
+    if (userSettings) {
+      const settings = JSON.parse(userSettings);
+      isPremiumUser = settings.isPremium === true;
+    }
+
+    if (!isPremiumUser && history.length >= 2) {
+      setShowPremiumDialog(true);
+      return;
+    }
+
     // Save quiz data for retaking
     localStorage.setItem("quizToRetake", JSON.stringify({
       questions: entry.questions,
@@ -169,11 +185,7 @@ export function QuizHistory() {
     if (userSettings) {
       const settings = JSON.parse(userSettings);
       if (!settings.isPremium && history.length >= 2) {
-        navigate('/settings?tab=premium');
-        toast({
-          title: "Free Quiz Limit Reached",
-          description: "Upgrade to premium for unlimited quizzes!"
-        });
+        setShowPremiumDialog(true);
         return;
       }
     }
@@ -223,18 +235,19 @@ export function QuizHistory() {
           {showFreeWarning && (
             <motion.div
               variants={itemVariants}
-              className="mb-4 p-4 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg text-center"
+              className="mb-4 p-4 bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 rounded-lg text-center"
             >
-              <p className="text-red-800 dark:text-red-300 font-medium">
+              <p className="text-amber-800 dark:text-amber-300 font-medium">
                 Free Quiz Limit Reached
               </p>
-              <p className="text-sm text-red-700 dark:text-red-400 mb-2">
+              <p className="text-sm text-amber-700 dark:text-amber-400 mb-2">
                 You've reached the limit of 2 free quizzes. Upgrade to premium for unlimited quizzes!
               </p>
               <Button 
                 size="sm" 
-                variant="destructive"
+                variant="outline"
                 onClick={() => navigate('/settings?tab=premium')}
+                className="border-amber-500 text-amber-700 hover:text-amber-800 hover:bg-amber-100 dark:text-amber-400 dark:hover:bg-amber-900/50"
               >
                 Upgrade to Premium
               </Button>
@@ -320,6 +333,55 @@ export function QuizHistory() {
           )}
         </CardContent>
       </Card>
+
+      {/* Premium Upgrade Dialog */}
+      <Dialog open={showPremiumDialog} onOpenChange={setShowPremiumDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upgrade to Premium</DialogTitle>
+            <DialogDescription>
+              You've reached the limit of 2 free quizzes. Upgrade to premium for unlimited quizzes!
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col space-y-4 my-4">
+            <p className="text-center">
+              With Quizora Premium, you'll get:
+            </p>
+            <ul className="space-y-2">
+              <li className="flex items-center gap-2">
+                <span className="text-green-500">✓</span>
+                <span>Unlimited quizzes</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-green-500">✓</span>
+                <span>Up to 50 questions per quiz</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-green-500">✓</span>
+                <span>AI Assistant for personalized help</span>
+              </li>
+            </ul>
+          </div>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowPremiumDialog(false)}
+              className="sm:flex-1"
+            >
+              Maybe later
+            </Button>
+            <Button 
+              onClick={() => {
+                setShowPremiumDialog(false);
+                navigate('/settings?tab=premium');
+              }}
+              className="sm:flex-1"
+            >
+              Upgrade now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }

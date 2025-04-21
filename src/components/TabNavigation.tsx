@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { AIAssistant } from "@/components/AIAssistant";
 import { SettingsPanel } from "@/components/SettingsPanel";
 import { Question } from "@/components/FileUpload";
 import { motion } from "framer-motion";
-import { BrainCircuit, History, MessageSquare, Settings } from "lucide-react";
+import { BrainCircuit, History, MessageSquare, Settings, ArrowLeft } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +28,7 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
   const [isChangingTab, setIsChangingTab] = useState(false);
   
   useEffect(() => {
+    // Determine active tab from URL path
     const pathParts = location.pathname.split('/');
     const lastPart = pathParts[pathParts.length - 1];
 
@@ -35,6 +37,7 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
     else if (lastPart === 'settings') setActiveTab('settings');
     else setActiveTab('generate');
 
+    // Check premium status from local storage
     const userSettings = localStorage.getItem("userSettings");
     if (userSettings) {
       const settings = JSON.parse(userSettings);
@@ -44,15 +47,18 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
 
   const handleTabChange = (value: string) => {
     if (isChangingTab) return;
+    
     setIsChangingTab(true);
     setActiveTab(value);
 
+    // Check premium access for assistant tab
     if (value === "assistant" && !isPremium) {
       navigate('/settings?tab=premium');
       setTimeout(() => setIsChangingTab(false), 300);
       return;
     }
 
+    // Handle navigation based on selected tab
     switch (value) {
       case 'history':
         navigate('/history');
@@ -67,7 +73,36 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
         navigate('/');
         break;
     }
+    
     setTimeout(() => setIsChangingTab(false), 300);
+  };
+
+  const handleGoBack = () => {
+    navigate(-1);
+  };
+
+  const handleCreateNewQuiz = () => {
+    // Check if user has reached free limit
+    const userSettings = localStorage.getItem("userSettings");
+    const quizHistory = localStorage.getItem("quizHistory");
+    const historyData = quizHistory ? JSON.parse(quizHistory) : [];
+    
+    if (userSettings) {
+      const settings = JSON.parse(userSettings);
+      if (!settings.isPremium && historyData.length >= 2) {
+        navigate('/settings?tab=premium');
+        toast({
+          title: "Free Quiz Limit Reached",
+          description: "Upgrade to premium for unlimited quizzes!"
+        });
+        return;
+      }
+    }
+    
+    // Clear any existing data for a fresh quiz
+    localStorage.removeItem("quizToRetake");
+    window.location.href = "/";
+    setActiveTab("generate");
   };
 
   const containerVariants = {
@@ -103,15 +138,16 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
               variant="outline" 
               size="sm"
               className="gap-2"
-              onClick={() => navigate(-1)}
+              onClick={handleGoBack}
             >
+              <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Back</span>
             </Button>
             <Button 
               variant="default"
               size="sm"
               className="gap-2"
-              onClick={() => { window.location.href = "/"; setActiveTab("generate"); }}
+              onClick={handleCreateNewQuiz}
             >
               Create New Quiz
             </Button>
@@ -159,12 +195,12 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
                     <p className="text-muted-foreground mb-6">
                       Upgrade to premium to access the Quizora AI Assistant and get personalized help with your studies.
                     </p>
-                    <button
+                    <Button
                       onClick={() => navigate('/settings?tab=premium')}
                       className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded"
                     >
                       Upgrade to Premium
-                    </button>
+                    </Button>
                   </motion.div>
                 </Card>
               )}
