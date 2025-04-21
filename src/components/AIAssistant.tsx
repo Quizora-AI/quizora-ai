@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { MessageSquare, SendHorizonal, User, BrainCircuit, ArrowDown, Lock, Crown } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
 interface Message {
@@ -34,25 +35,6 @@ export function AIAssistant() {
   }, [messages]);
 
   useEffect(() => {
-    // Load previous conversation from localStorage
-    const savedMessages = localStorage.getItem("assistantMessages");
-    if (savedMessages) {
-      try {
-        const parsedMessages = JSON.parse(savedMessages);
-        setMessages(parsedMessages);
-      } catch (error) {
-        console.error("Error loading saved messages:", error);
-      }
-    }
-    if (!savedMessages) {
-      const welcomeMessage: Message = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: "Hello! I'm your Quizora Assistant. How can I help you with your medical studies today?",
-        timestamp: new Date(),
-      };
-      setMessages([welcomeMessage]);
-    }
     // Check if user has premium subscription
     const userSettings = localStorage.getItem("userSettings");
     if (userSettings) {
@@ -63,17 +45,12 @@ export function AIAssistant() {
       }
     }
   }, []);
-  
-  useEffect(() => {
-    if (messages.length > 0) {
-      localStorage.setItem("assistantMessages", JSON.stringify(messages));
-    }
-  }, [messages]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
 
+    // If not premium, show message and redirect
     if (!isPremium) {
       navigate('/settings?tab=premium');
       toast({
@@ -95,61 +72,23 @@ export function AIAssistant() {
     setIsLoading(true);
 
     try {
-      // Show a typing indicator
-      const tempId = crypto.randomUUID();
-      setMessages(prev => [...prev, {
-        id: tempId,
-        role: "assistant",
-        content: "Thinking...",
-        timestamp: new Date(),
-      }]);
+      // Call the Supabase function to get AI response
+      const { data, error } = await supabase.functions.invoke('ai-assistant', {
+        body: { message: userMessage.content, course }
+      });
 
-      // Use AIMLAPI instead of OpenAI
-      const { response } = await fetch("https://api.aimlapi.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${import.meta.env.VITE_AIMLAPI_KEY || ""}`, // Optionally pass via env var, or implement as per your backend's integration
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "gpt-4o",
-          messages: [
-            ...(course ? [{role: "system", content: `You are a Quizora medical assistant for ${course}`}]: []),
-            ...messages.slice(-4).map(m => ({
-              role: m.role,
-              content: m.content
-            })),
-            { role: "user", content: input.trim() }
-          ]
-        })
-      }).then(r => r.json());
-
-      // Remove typing indicator
-      setMessages(prev => prev.filter(m => m.id !== tempId));
+      if (error) throw new Error(error.message);
 
       const aiResponse: Message = {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: response?.choices?.[0]?.message?.content || response?.result || "I'm sorry, I couldn't process your request at this time.",
+        content: data.response || "I'm sorry, I couldn't process your request at this time.",
         timestamp: new Date(),
       };
 
       setMessages((prev) => [...prev, aiResponse]);
-      
-      toast({
-        title: "Assistant Response",
-        description: "Got an answer to your question",
-      });
-    } catch (error:any) {
-      setMessages(prev => {
-        const filtered = prev.filter(m => m.content !== "Thinking...");
-        return [...filtered, {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: "I'm sorry, I encountered an error. Please try again in a moment.",
-          timestamp: new Date(),
-        }];
-      });
+    } catch (error) {
+      console.error("Error getting AI response:", error);
       toast({
         title: "Error",
         description: "Failed to get response from the assistant",
@@ -175,21 +114,6 @@ export function AIAssistant() {
     navigate('/settings?tab=premium');
   };
 
-  const clearConversation = () => {
-    const welcomeMessage: Message = {
-      id: crypto.randomUUID(),
-      role: "assistant",
-      content: "Hello! I'm your Quizora Assistant. How can I help you with your medical studies today?",
-      timestamp: new Date(),
-    };
-    setMessages([welcomeMessage]);
-    localStorage.setItem("assistantMessages", JSON.stringify([welcomeMessage]));
-    toast({
-      title: "Conversation cleared",
-      description: "Starting a new conversation",
-    });
-  };
-
   return (
     <motion.div
       className="w-full max-w-4xl mx-auto"
@@ -203,30 +127,19 @@ export function AIAssistant() {
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ type: "spring", stiffness: 500, damping: 30 }}
-            className="flex items-center justify-between gap-3"
+            className="flex items-center gap-3"
           >
-            <div className="flex items-center gap-3">
-              <div className="bg-primary/10 p-3 rounded-full">
-                <MessageSquare className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-indigo-500 bg-clip-text text-transparent">
-                  Quizora Assistant
-                </CardTitle>
-                <CardDescription>
-                  Ask questions about any medical subject and get personalized learning assistance
-                </CardDescription>
-              </div>
+            <div className="bg-primary/10 p-3 rounded-full">
+              <MessageSquare className="h-6 w-6 text-primary" />
             </div>
-            {isPremium && messages.length > 1 && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={clearConversation}
-              >
-                Clear chat
-              </Button>
-            )}
+            <div>
+              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-indigo-500 bg-clip-text text-transparent">
+                Quizora Assistant
+              </CardTitle>
+              <CardDescription>
+                Ask questions about any subject and get personalized learning assistance
+              </CardDescription>
+            </div>
           </motion.div>
         </CardHeader>
 
@@ -343,15 +256,7 @@ export function AIAssistant() {
                             : "bg-primary text-primary-foreground"
                         }`}
                       >
-                        {message.content === "Thinking..." ? (
-                          <div className="flex items-center gap-1">
-                            <div className="h-2 w-2 bg-current rounded-full animate-pulse"></div>
-                            <div className="h-2 w-2 bg-current rounded-full animate-pulse" style={{ animationDelay: "0.2s" }}></div>
-                            <div className="h-2 w-2 bg-current rounded-full animate-pulse" style={{ animationDelay: "0.4s" }}></div>
-                          </div>
-                        ) : (
-                          message.content
-                        )}
+                        {message.content}
                       </div>
                     </motion.div>
                   ))}
@@ -367,7 +272,7 @@ export function AIAssistant() {
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={isPremium ? "Ask about your medical queries..." : "Upgrade to premium to use Quizora Assistant"}
+              placeholder={isPremium ? "Ask about your academic queries..." : "Upgrade to premium to use Quizora Assistant"}
               className="flex-1"
               disabled={isLoading || !isPremium}
             />
@@ -385,4 +290,3 @@ export function AIAssistant() {
     </motion.div>
   );
 }
-// This file is getting long. Please ask me to refactor AIAssistant into smaller files after you're done reviewing these changes.
