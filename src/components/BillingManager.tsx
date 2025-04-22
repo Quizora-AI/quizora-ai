@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,44 +17,52 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
-  const hasInAppPurchase = typeof window !== 'undefined' && 'cordova' in window && 
-    'plugins' in (window as any).cordova && 'InAppPurchase2' in (window as any).cordova.plugins;
+  const hasStore = typeof window !== 'undefined' && 'cordova' in window && 
+    'plugins' in (window as any).cordova && 'store' in (window as any).cordova.plugins;
 
   useEffect(() => {
-    if (hasInAppPurchase) {
-      initializeIAP();
+    if (hasStore) {
+      initializeStore();
     }
-  }, [hasInAppPurchase]);
+  }, [hasStore]);
   
-  const initializeIAP = async () => {
+  const initializeStore = async () => {
     try {
-      const iap = (window as any).cordova.plugins.InAppPurchase2;
+      const store = (window as any).cordova.plugins.store;
       
-      const products = [
-        {
-          id: 'monthly_subscription',
-          type: iap.PAID_SUBSCRIPTION
-        },
-        {
-          id: 'yearly_subscription',
-          type: iap.PAID_SUBSCRIPTION
+      // Register products
+      store.register({
+        id: 'monthly_subscription',
+        type: store.PAID_SUBSCRIPTION
+      });
+      
+      store.register({
+        id: 'yearly_subscription',
+        type: store.PAID_SUBSCRIPTION
+      });
+      
+      // When purchase is approved
+      store.when('monthly_subscription').approved(async (product: any) => {
+        try {
+          await verifyPurchase('monthly_subscription', product.transaction.id);
+          product.finish();
+        } catch (err) {
+          console.error('Error processing monthly subscription:', err);
         }
-      ];
-      
-      iap.verbosity = iap.DEBUG;
-      
-      iap.when('monthly_subscription').approved(async (purchase: any) => {
-        await verifyPurchase('monthly_subscription', purchase.receipt);
-        purchase.finish();
       });
       
-      iap.when('yearly_subscription').approved(async (purchase: any) => {
-        await verifyPurchase('yearly_subscription', purchase.receipt);
-        purchase.finish();
+      store.when('yearly_subscription').approved(async (product: any) => {
+        try {
+          await verifyPurchase('yearly_subscription', product.transaction.id);
+          product.finish();
+        } catch (err) {
+          console.error('Error processing yearly subscription:', err);
+        }
       });
       
-      iap.error((error: any) => {
-        console.error('IAP Error:', error);
+      // When purchase fails
+      store.error((error: any) => {
+        console.error('Store Error:', error);
         setError('Purchase failed. Please try again later.');
         setLoading(false);
         
@@ -64,12 +73,11 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
         });
       });
       
-      iap.register(products);
-      await iap.refresh();
-      
-      console.log('IAP initialized successfully');
+      // Initialize the store
+      store.refresh();
+      console.log('In-app purchase store initialized successfully');
     } catch (error) {
-      console.error('Error initializing IAP:', error);
+      console.error('Error initializing in-app purchase store:', error);
       setError('Failed to initialize in-app purchases');
     }
   };
@@ -129,10 +137,10 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
     setLoading(true);
     setError(null);
     
-    if (hasInAppPurchase) {
+    if (hasStore) {
       try {
-        const iap = (window as any).cordova.plugins.InAppPurchase2;
-        iap.order(productId);
+        const store = (window as any).cordova.plugins.store;
+        store.order(productId);
       } catch (error) {
         console.error('Error purchasing product:', error);
         setError('Purchase failed');
