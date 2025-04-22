@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,23 +16,19 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
-  // Check if running in a mobile context with In-App Purchase capabilities
   const hasInAppPurchase = typeof window !== 'undefined' && 'cordova' in window && 
     'plugins' in (window as any).cordova && 'InAppPurchase2' in (window as any).cordova.plugins;
 
-  // Initialize IAP on component mount
   useEffect(() => {
     if (hasInAppPurchase) {
       initializeIAP();
     }
   }, [hasInAppPurchase]);
   
-  // Initialize the in-app purchase plugin
   const initializeIAP = async () => {
     try {
       const iap = (window as any).cordova.plugins.InAppPurchase2;
       
-      // Register products
       const products = [
         {
           id: 'monthly_subscription',
@@ -45,23 +40,18 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
         }
       ];
       
-      // Register products with the IAP plugin
       iap.verbosity = iap.DEBUG;
       
-      // Handle successful purchase
       iap.when('monthly_subscription').approved(async (purchase: any) => {
-        // Verify receipt with backend
         await verifyPurchase('monthly_subscription', purchase.receipt);
         purchase.finish();
       });
       
       iap.when('yearly_subscription').approved(async (purchase: any) => {
-        // Verify receipt with backend
         await verifyPurchase('yearly_subscription', purchase.receipt);
         purchase.finish();
       });
       
-      // Handle errors
       iap.error((error: any) => {
         console.error('IAP Error:', error);
         setError('Purchase failed. Please try again later.');
@@ -74,7 +64,6 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
         });
       });
       
-      // Initialize
       iap.register(products);
       await iap.refresh();
       
@@ -85,7 +74,6 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
     }
   };
   
-  // Verify purchase with your backend
   const verifyPurchase = async (productId: string, purchaseToken: string) => {
     if (!userId) {
       setError('User must be logged in to make purchases');
@@ -95,7 +83,6 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
     try {
       setLoading(true);
       
-      // Call your backend to verify the purchase and update the user's premium status
       const { data, error } = await supabase.functions.invoke('billing-init', {
         body: {
           userId,
@@ -108,14 +95,12 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
         throw new Error(error.message);
       }
       
-      // Success! Update UI
       toast({
         title: "Purchase Successful!",
         description: "Your premium subscription is now active.",
         variant: "success",
       });
       
-      // Notify parent component that purchase is complete
       onPurchaseComplete(productId);
       setLoading(false);
     } catch (error) {
@@ -131,13 +116,12 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
     }
   };
   
-  // Purchase a product
   const purchaseProduct = (productId: string) => {
     if (!userId) {
       toast({
         title: "Login Required",
         description: "Please log in to make a purchase",
-        variant: "warning"
+        variant: "default"
       });
       return;
     }
@@ -155,12 +139,10 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
         setLoading(false);
       }
     } else {
-      // Simulate a purchase for web preview
       setTimeout(() => {
-        const success = Math.random() > 0.2; // 80% success rate for demo
+        const success = Math.random() > 0.2;
         
         if (success) {
-          // For the web preview, just call the callback directly
           toast({
             title: "Purchase Successful (Demo)",
             description: "This is a simulated purchase for the web preview.",
