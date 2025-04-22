@@ -12,6 +12,10 @@ interface CordovaPlugins {
       error: (callback: (err: any, product: any) => void) => void;
     };
     error: (callback: (err: any) => void) => void;
+    // Add additional store properties
+    ready: (callback: () => void) => void;
+    products: Record<string, any>;
+    validator: string | ((url: string, callback: (url: string) => void) => void);
   };
   
   admob: {
@@ -36,3 +40,10 @@ interface CordovaWindow extends Window {
     plugins: CordovaPlugins;
   };
 }
+
+// Extend the global Window interface
+declare global {
+  interface Window extends CordovaWindow {}
+}
+
+export {};

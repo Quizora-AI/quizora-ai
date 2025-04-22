@@ -1,0 +1,45 @@
+
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.quizora.ai" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
+    <name>Quizora AI</name>
+    <description>AI-powered quiz and flashcard generator</description>
+    <author email="support@quizora.com" href="https://quizora.com">Quizora Team</author>
+    <content src="index.html" />
+    
+    <preference name="Orientation" value="default" />
+    <preference name="DisallowOverscroll" value="true" />
+    <preference name="BackgroundColor" value="0xffffffff" />
+    <preference name="SplashScreenDelay" value="0" />
+    
+    <platform name="android">
+        <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest">
+            <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+                <uses-permission android:name="com.android.vending.BILLING" />
+                <uses-permission android:name="android.permission.INTERNET" />
+            </manifest>
+        </edit-config>
+        
+        <!-- Declare billing library version -->
+        <framework src="com.android.billingclient:billing:5.1.0" />
+        
+        <!-- Add Google Play Billing version meta-data -->
+        <config-file target="AndroidManifest.xml" parent="/manifest/application">
+            <meta-data android:name="com.google.android.play.billingclient.version" android:value="5.1.0" />
+        </config-file>
+    </platform>
+    
+    <!-- Configure purchase plugin -->
+    <plugin name="cordova-plugin-purchase" spec="^13.10.0">
+        <variable name="BILLING_KEY" value="YOUR_GOOGLE_PLAY_BILLING_KEY" />
+    </plugin>
+    
+    <!-- Define subscription products -->
+    <product id="monthly_subscription" type="subscription">
+        <title>Monthly Premium</title>
+        <description>Monthly Premium Subscription</description>
+    </product>
+    <product id="yearly_subscription" type="subscription">
+        <title>Annual Premium</title>
+        <description>Annual Premium Subscription</description>
+    </product>
+</widget>

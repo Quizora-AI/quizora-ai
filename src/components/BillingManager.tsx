@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { SUBSCRIPTION_PRODUCTS, SUBSCRIPTION_PRICES } from "@/utils/purchaseConfig";
 
 interface BillingManagerProps {
   userId?: string;
@@ -30,30 +30,30 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
     try {
       const store = (window as any).cordova.plugins.store;
       
-      // Register products
+      // Register products using our consistent product IDs
       store.register({
-        id: 'monthly_subscription',
+        id: SUBSCRIPTION_PRODUCTS.MONTHLY,
         type: store.PAID_SUBSCRIPTION
       });
       
       store.register({
-        id: 'yearly_subscription',
+        id: SUBSCRIPTION_PRODUCTS.YEARLY,
         type: store.PAID_SUBSCRIPTION
       });
       
       // When purchase is approved
-      store.when('monthly_subscription').approved(async (product: any) => {
+      store.when(SUBSCRIPTION_PRODUCTS.MONTHLY).approved(async (product: any) => {
         try {
-          await verifyPurchase('monthly_subscription', product.transaction.id);
+          await verifyPurchase(SUBSCRIPTION_PRODUCTS.MONTHLY, product.transaction.id);
           product.finish();
         } catch (err) {
           console.error('Error processing monthly subscription:', err);
         }
       });
       
-      store.when('yearly_subscription').approved(async (product: any) => {
+      store.when(SUBSCRIPTION_PRODUCTS.YEARLY).approved(async (product: any) => {
         try {
-          await verifyPurchase('yearly_subscription', product.transaction.id);
+          await verifyPurchase(SUBSCRIPTION_PRODUCTS.YEARLY, product.transaction.id);
           product.finish();
         } catch (err) {
           console.error('Error processing yearly subscription:', err);
@@ -140,6 +140,7 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
     if (hasStore) {
       try {
         const store = (window as any).cordova.plugins.store;
+        console.log(`Attempting to purchase product: ${productId}`);
         store.order(productId);
       } catch (error) {
         console.error('Error purchasing product:', error);
@@ -205,11 +206,11 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
         <Card className="border-primary/30 hover:border-primary/50 transition-all shadow-sm">
           <CardHeader>
             <CardTitle>Monthly Premium</CardTitle>
-            <p className="text-2xl font-bold">$2.49 <span className="text-sm font-normal text-muted-foreground">/month</span></p>
+            <p className="text-2xl font-bold">{SUBSCRIPTION_PRICES[SUBSCRIPTION_PRODUCTS.MONTHLY].formattedPrice} <span className="text-sm font-normal text-muted-foreground">/month</span></p>
           </CardHeader>
           <CardContent>
             <Button 
-              onClick={() => purchaseProduct('monthly_subscription')}
+              onClick={() => purchaseProduct(SUBSCRIPTION_PRODUCTS.MONTHLY)}
               disabled={loading}
               className="w-full"
             >
@@ -221,11 +222,11 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
         <Card className="border-primary/30 hover:border-primary/50 transition-all shadow-sm">
           <CardHeader>
             <CardTitle>Annual Premium</CardTitle>
-            <p className="text-2xl font-bold">$15.00 <span className="text-sm font-normal text-muted-foreground">/year</span></p>
+            <p className="text-2xl font-bold">{SUBSCRIPTION_PRICES[SUBSCRIPTION_PRODUCTS.YEARLY].formattedPrice} <span className="text-sm font-normal text-muted-foreground">/year</span></p>
           </CardHeader>
           <CardContent>
             <Button 
-              onClick={() => purchaseProduct('yearly_subscription')}
+              onClick={() => purchaseProduct(SUBSCRIPTION_PRODUCTS.YEARLY)}
               disabled={loading}
               className="w-full bg-gradient-to-r from-primary to-indigo-600"
             >

@@ -29,9 +29,12 @@ serve(async (req) => {
       );
     }
 
-    // Verify with Google Play Developer API
-    // In a real implementation, you would use Google's API to verify the purchase
-    // For now, we'll simulate a successful verification
+    console.log(`Processing subscription for user ${userId} with product ${productId}`);
+
+    // Determine subscription type from product ID
+    const isYearly = productId.includes('yearly');
+    
+    // For production, you would verify with Google Play Developer API
     // const verified = await verifyWithGooglePlay(productId, purchaseToken);
 
     // For demo purposes, we'll assume verification succeeded
@@ -39,10 +42,12 @@ serve(async (req) => {
     const expiryDate = new Date();
     
     // Set expiry date based on subscription type
-    if (productId === 'monthly_subscription') {
-      expiryDate.setMonth(expiryDate.getMonth() + 1);
-    } else if (productId === 'yearly_subscription') {
+    if (isYearly) {
       expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+      console.log(`Setting yearly subscription expiry to ${expiryDate.toISOString()}`);
+    } else {
+      expiryDate.setMonth(expiryDate.getMonth() + 1);
+      console.log(`Setting monthly subscription expiry to ${expiryDate.toISOString()}`);
     }
 
     if (verified) {
@@ -51,9 +56,11 @@ serve(async (req) => {
         .from('profiles')
         .update({ 
           isPremium: true,
-          premiumTier: productId === 'yearly_subscription' ? 'yearly' : 'monthly',
+          premiumTier: isYearly ? 'yearly' : 'monthly',
           expiryDate: expiryDate.toISOString(),
-          lastPayment: new Date().toISOString()
+          lastPayment: new Date().toISOString(),
+          purchaseToken: purchaseToken,
+          productId: productId
         })
         .eq('id', userId);
 
@@ -65,14 +72,14 @@ serve(async (req) => {
         );
       }
 
-      // Record subscription in a new table (if you have one)
-      // await supabase.from('subscriptions').insert({...})
+      console.log('Successfully updated user profile with subscription information');
 
       return new Response(
         JSON.stringify({ 
           success: true, 
           message: 'Premium subscription activated', 
-          expiryDate: expiryDate.toISOString() 
+          expiryDate: expiryDate.toISOString(),
+          tier: isYearly ? 'yearly' : 'monthly'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
