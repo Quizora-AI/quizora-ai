@@ -88,29 +88,58 @@ function resetAppData() {
   console.log("App data has been reset. Fresh start!");
 }
 
-// Inside the App component, add initialization for AdMob
+// Inside the App component, enhanced initialization for AdMob
 function App() {
   useEffect(() => {
     // Platform detection - only initialize on actual mobile devices
-    if (typeof document !== 'undefined') {
+    const initializePlugins = () => {
+      console.log("Checking for Cordova and initializing plugins if available");
+      
       if ('cordova' in window) {
-        document.addEventListener('deviceready', () => {
-          console.log("Device is ready, initializing AdMob");
-          initializeAdMob();
-        }, false);
+        console.log("Cordova detected, setting up event listeners");
+        
+        // Set up the deviceready listener
+        document.addEventListener('deviceready', onDeviceReady, false);
       } else {
-        console.log("Running in browser environment, AdMob initialization skipped");
+        console.log("Running in browser environment, skipping native plugins initialization");
       }
+    };
+    
+    // Function to run when device is ready
+    const onDeviceReady = () => {
+      console.log("Device is ready, initializing AdMob");
       
-      // Add event listener for pause/resume to manage ads appropriately
-      document.addEventListener('pause', () => {
-        console.log("App paused");
-      }, false);
+      // Initialize AdMob
+      initializeAdMob();
       
-      document.addEventListener('resume', () => {
-        console.log("App resumed");
-      }, false);
-    }
+      // Add other Cordova-specific initializations here
+      document.addEventListener('pause', onPause, false);
+      document.addEventListener('resume', onResume, false);
+    };
+    
+    // Handle app going to background
+    const onPause = () => {
+      console.log("App paused");
+      // Add any cleanup needed when app goes to background
+    };
+    
+    // Handle app coming to foreground
+    const onResume = () => {
+      console.log("App resumed");
+      // Refresh ads or other state when app comes back to foreground
+    };
+    
+    // Initialize plugins
+    initializePlugins();
+    
+    // Clean up event listeners
+    return () => {
+      if ('cordova' in window) {
+        document.removeEventListener('deviceready', onDeviceReady);
+        document.removeEventListener('pause', onPause);
+        document.removeEventListener('resume', onResume);
+      }
+    };
   }, []);
 
   const [initialLoad, setInitialLoad] = React.useState(true);

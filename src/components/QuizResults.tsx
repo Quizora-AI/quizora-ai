@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +25,7 @@ export function QuizResults({
   const score = Math.round((correctAnswers / totalQuestions) * 100);
   const navigate = useNavigate();
   const { trackQuizCompletion } = useAdFrequencyTracker();
-  const { showInterstitial } = useInterstitialAd({ 
+  const { showInterstitial, adError } = useInterstitialAd({ 
     adUnitId: "ca-app-pub-8270549953677995/9564071776",
     onAdDismissed: () => {
       // Wait for ad to dismiss before showing results
@@ -38,7 +37,10 @@ export function QuizResults({
     // Try to show interstitial ad when results page loads
     const shouldShowAd = trackQuizCompletion();
     if (shouldShowAd) {
+      console.log("Attempting to show interstitial ad at quiz completion");
       showInterstitial();
+    } else {
+      console.log("Skipping interstitial ad this time");
     }
   }, []);
   
@@ -177,9 +179,15 @@ export function QuizResults({
             </motion.div>
           </motion.div>
           
-          {/* Banner ad placement */}
           <div className="w-full mt-6">
-            <BannerAd adUnitId="ca-app-pub-8270549953677995/2218567244" />
+            <BannerAd 
+              adUnitId="ca-app-pub-8270549953677995/2218567244" 
+              size="BANNER"
+              className="max-w-md mx-auto"
+            />
+            {adError && (
+              <div className="text-xs text-red-500 text-center mt-1">{adError}</div>
+            )}
           </div>
         </CardContent>
         

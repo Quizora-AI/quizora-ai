@@ -34,5 +34,9 @@ export default defineConfig(({ mode }) => ({
         assetFileNames: 'assets/[name].[ext]'
       }
     }
+  },
+  // Define global variables for Cordova plugins
+  define: {
+    'process.env.CORDOVA_ENVIRONMENT': JSON.stringify(true)
   }
 }));

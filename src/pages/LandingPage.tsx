@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -237,8 +238,14 @@ export default function LandingPage() {
         </motion.div>
       </div>
       
-      <div className="mt-8">
-        <BannerAd adUnitId="ca-app-pub-8270549953677995/2218567244" position="bottom" />
+      {/* Update the banner ad with specific positioning and sizing */}
+      <div className="mt-8 w-full flex justify-center">
+        <BannerAd 
+          adUnitId="ca-app-pub-8270549953677995/2218567244" 
+          position="bottom" 
+          size="BANNER"
+          className="max-w-md mx-auto"
+        />
       </div>
       
       <div className="container px-4 py-20 mx-auto">
