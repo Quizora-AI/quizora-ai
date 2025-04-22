@@ -22,4 +22,17 @@ export default defineConfig(({ mode }) => ({
   },
   // Add base configuration for Cordova
   base: './',
+  // Add build options for proper Cordova integration
+  build: {
+    outDir: 'dist',
+    assetsInlineLimit: 0,
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        entryFileNames: 'assets/[name].js',
+        chunkFileNames: 'assets/[name].js',
+        assetFileNames: 'assets/[name].[ext]'
+      }
+    }
+  }
 }));

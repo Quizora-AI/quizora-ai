@@ -12,25 +12,31 @@ export function BannerAd({ adUnitId, size = 'BANNER', position = 'bottom', class
   const adContainerRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
-    // Check if running in a mobile context with AdMob
-    if (typeof window !== 'undefined' && 'admob' in window) {
-      const admob = (window as any).admob;
+    // Check if running in a Cordova mobile context with AdMob
+    if (typeof window !== 'undefined' && 
+        'cordova' in window && 
+        'plugins' in (window as any).cordova && 
+        'admob' in (window as any).cordova.plugins) {
       
-      if (admob && admob.BannerAd) {
+      const admob = (window as any).cordova.plugins.admob;
+      
+      if (admob && admob.banner) {
         try {
-          // Create banner ad
-          const bannerAd = new admob.BannerAd({
-            adUnitId,
+          // Create banner ad options
+          const options = {
+            adId: adUnitId,
             position: position === 'top' ? 'top' : 'bottom',
-            size
-          });
+            size: size,
+            autoShow: true
+          };
           
-          // Show the banner
-          bannerAd.show();
+          // Create and show the banner
+          admob.banner.config(options);
+          admob.banner.prepare();
           
           return () => {
-            // Hide banner on component unmount
-            bannerAd.hide();
+            // Remove banner on component unmount
+            admob.banner.remove();
           };
         } catch (error) {
           console.error('Error showing AdMob banner:', error);
@@ -40,8 +46,8 @@ export function BannerAd({ adUnitId, size = 'BANNER', position = 'bottom', class
       // For web preview, show a placeholder
       if (adContainerRef.current) {
         adContainerRef.current.innerHTML = `
-          <div style="background-color: #f0f0f0; border: 1px dashed #ccc; padding: 10px; text-align: center; width: 100%; min-height: 50px; display: flex; align-items: center; justify-content: center;">
-            <span style="color: #666;">Ad Banner Placeholder (${adUnitId})</span>
+          <div style="background-color: #f0f0f0; border: 1px solid #ccc; padding: 10px; text-align: center; width: 100%; min-height: 60px; display: flex; align-items: center; justify-content: center; margin: 10px 0;">
+            <span style="color: #666; font-size: 14px;">Ad Banner (${adUnitId})</span>
           </div>
         `;
       }
@@ -65,49 +71,58 @@ export function useInterstitialAd({ adUnitId, onAdDismissed }: InterstitialAdPro
   const isReadyRef = useRef<boolean>(false);
   
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'admob' in window) {
-      const admob = (window as any).admob;
+    if (typeof window !== 'undefined' && 
+        'cordova' in window && 
+        'plugins' in (window as any).cordova && 
+        'admob' in (window as any).cordova.plugins) {
       
-      if (admob && admob.InterstitialAd) {
+      const admob = (window as any).cordova.plugins.admob;
+      
+      if (admob && admob.interstitial) {
         try {
-          // Create interstitial ad
-          const interstitialAd = new admob.InterstitialAd({
-            adUnitId
-          });
+          // Create interstitial ad options
+          const options = {
+            adId: adUnitId,
+            autoShow: false
+          };
           
           // Add event listeners
-          interstitialAd.on('load', () => {
+          document.addEventListener('admob.interstitial.events.LOAD', () => {
+            console.log('Interstitial loaded');
             isReadyRef.current = true;
           });
           
-          interstitialAd.on('show', () => {
+          document.addEventListener('admob.interstitial.events.LOAD_FAIL', () => {
+            console.error('Interstitial failed to load');
             isReadyRef.current = false;
-            lastShownRef.current = Date.now();
           });
           
-          interstitialAd.on('dismiss', () => {
+          document.addEventListener('admob.interstitial.events.OPEN', () => {
+            console.log('Interstitial opened');
+            lastShownRef.current = Date.now();
+            isReadyRef.current = false;
+          });
+          
+          document.addEventListener('admob.interstitial.events.CLOSE', () => {
+            console.log('Interstitial closed');
             // Load the next interstitial
-            interstitialAd.load();
+            admob.interstitial.prepare();
             
             if (onAdDismissed) {
               onAdDismissed();
             }
           });
           
-          interstitialAd.on('error', (error: any) => {
-            console.error('Interstitial ad error:', error);
-            isReadyRef.current = false;
-          });
-          
-          // Initial ad load
-          interstitialAd.load();
+          // Initial ad preparation
+          admob.interstitial.config(options);
+          admob.interstitial.prepare();
           
           return () => {
             // Clean up event listeners
-            interstitialAd.off('load');
-            interstitialAd.off('show');
-            interstitialAd.off('dismiss');
-            interstitialAd.off('error');
+            document.removeEventListener('admob.interstitial.events.LOAD', () => {});
+            document.removeEventListener('admob.interstitial.events.LOAD_FAIL', () => {});
+            document.removeEventListener('admob.interstitial.events.OPEN', () => {});
+            document.removeEventListener('admob.interstitial.events.CLOSE', () => {});
           };
         } catch (error) {
           console.error('Error setting up interstitial ad:', error);
@@ -123,14 +138,17 @@ export function useInterstitialAd({ adUnitId, onAdDismissed }: InterstitialAdPro
     
     // Only show if ready and if enough time has passed since last shown
     if (typeof window !== 'undefined' && 
-        'admob' in window && 
+        'cordova' in window && 
+        'plugins' in (window as any).cordova && 
+        'admob' in (window as any).cordova.plugins && 
         isReadyRef.current && 
         (now - lastShownRef.current) > minimumInterval) {
         
-      const admob = (window as any).admob;
-      if (admob && admob.InterstitialAd) {
+      const admob = (window as any).cordova.plugins.admob;
+      
+      if (admob && admob.interstitial) {
         try {
-          admob.InterstitialAd.show();
+          admob.interstitial.show();
           return true;
         } catch (error) {
           console.error('Error showing interstitial ad:', error);
@@ -159,16 +177,22 @@ export function initializeAdMob() {
       const admob = (window as any).cordova.plugins.admob;
       
       // Initialize with your app ID
-      admob.start({
-        applicationId: 'ca-app-pub-8270549953677995~3236753992'
-      }).then(() => {
-        console.log('AdMob initialized successfully');
-      }).catch((error: any) => {
-        console.error('AdMob initialization error:', error);
-      });
+      const options = {
+        bannerAtTop: false,
+        overlap: false,
+        offsetTopBar: false,
+        isTesting: false,
+        adId: null,
+        autoShow: false
+      };
+      
+      admob.setOptions(options);
+      console.log('AdMob initialized with options');
     } catch (error) {
-      console.error('Error accessing AdMob plugin:', error);
+      console.error('Error initializing AdMob:', error);
     }
+  } else {
+    console.log('AdMob plugin not available (expected in web preview)');
   }
 }
 

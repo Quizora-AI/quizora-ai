@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import { Toaster as ToastUIToaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
@@ -91,19 +92,25 @@ function resetAppData() {
 function App() {
   useEffect(() => {
     // Platform detection - only initialize on actual mobile devices
-    document.addEventListener('deviceready', () => {
-      console.log("Device is ready, initializing AdMob");
-      initializeAdMob();
-    }, false);
-    
-    // Add event listener for pause/resume to manage ads appropriately
-    document.addEventListener('pause', () => {
-      console.log("App paused");
-    }, false);
-    
-    document.addEventListener('resume', () => {
-      console.log("App resumed");
-    }, false);
+    if (typeof document !== 'undefined') {
+      if ('cordova' in window) {
+        document.addEventListener('deviceready', () => {
+          console.log("Device is ready, initializing AdMob");
+          initializeAdMob();
+        }, false);
+      } else {
+        console.log("Running in browser environment, AdMob initialization skipped");
+      }
+      
+      // Add event listener for pause/resume to manage ads appropriately
+      document.addEventListener('pause', () => {
+        console.log("App paused");
+      }, false);
+      
+      document.addEventListener('resume', () => {
+        console.log("App resumed");
+      }, false);
+    }
   }, []);
 
   const [initialLoad, setInitialLoad] = React.useState(true);
