@@ -32,6 +32,9 @@ export function QuizQuestion({
   const optionLabels = ["A", "B", "C", "D"];
   const timerProgressRef = useRef<HTMLDivElement>(null);
 
+  // Generate a unique ID for this question instance to prevent state sharing
+  const instanceId = useRef(`q-${question.id}-${Math.random().toString(36).substring(2, 9)}`);
+
   useEffect(() => {
     // Reset timer when question changes
     setTimeLeft(defaultTimePerQuestion);
@@ -87,7 +90,12 @@ export function QuizQuestion({
   };
 
   const handleNextQuestion = () => {
-    onNext(selectedOption !== null ? selectedOption : -1);
+    if (selectedOption === null) {
+      // If time ran out and no option was selected
+      onNext(-1);
+    } else {
+      onNext(selectedOption);
+    }
   };
 
   const getOptionClassName = (optionIndex: number) => {
@@ -184,7 +192,7 @@ export function QuizQuestion({
   return (
     <AnimatePresence mode="wait">
       <motion.div 
-        key={question.id}
+        key={instanceId.current}
         className="w-full max-w-4xl mx-auto"
         variants={containerVariants}
         initial="hidden"
@@ -234,7 +242,7 @@ export function QuizQuestion({
             <div className="space-y-2">
               {question.options.map((option, index) => (
                 <motion.button
-                  key={index}
+                  key={`${instanceId.current}-option-${index}`}
                   className={`w-full text-left p-4 rounded-lg flex items-start border-2 transition-all ${
                     isAnswered && index === question.correctAnswer
                       ? "border-success bg-success/5"

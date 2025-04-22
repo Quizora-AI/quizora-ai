@@ -5,6 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Crown } from "lucide-react";
 import { CardFooter } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import { BillingManager } from "./BillingManager";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface PremiumPanelProps {
   isPremium: boolean;
@@ -26,6 +30,36 @@ const itemVariants = {
 };
 
 export function PremiumPanel({ isPremium, settings, activatePremium }: PremiumPanelProps) {
+  const [userId, setUserId] = useState<string | undefined>(undefined);
+  const { toast } = useToast();
+  
+  // Get current user
+  useState(() => {
+    async function getUserId() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setUserId(user.id);
+        }
+      } catch (error) {
+        console.error("Error getting user:", error);
+      }
+    }
+    
+    getUserId();
+  });
+  
+  const handlePurchaseComplete = (productId: string) => {
+    // Activate premium based on the product purchased
+    const tier = productId.includes('yearly') ? 'yearly' : 'monthly';
+    activatePremium(tier);
+    
+    toast({
+      title: "Premium Activated",
+      description: `Your ${tier} subscription is now active.`,
+    });
+  };
+  
   return (
     <motion.div variants={containerVariants} className="space-y-8">
       <motion.div variants={itemVariants} className="text-center">
@@ -37,6 +71,7 @@ export function PremiumPanel({ isPremium, settings, activatePremium }: PremiumPa
           Unlock the full potential of your learning with Quizora AI Premium
         </p>
       </motion.div>
+      
       {isPremium ? (
         <motion.div variants={itemVariants} className="bg-gradient-to-r from-amber-500/20 to-orange-600/20 p-6 rounded-lg border border-amber-500/30">
           <div className="flex items-center gap-3">
@@ -59,68 +94,15 @@ export function PremiumPanel({ isPremium, settings, activatePremium }: PremiumPa
           )}
         </motion.div>
       ) : (
-        <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="border-amber-500/30 hover:border-amber-500/50 transition-all">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Monthly</span>
-                <Badge className="bg-amber-500">Popular</Badge>
-              </CardTitle>
-              <div className="flex items-baseline">
-                <span className="text-3xl font-bold">$2.49</span>
-                <span className="text-muted-foreground ml-1">/ month</span>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                <li className="flex items-center gap-2"><span>✓</span><span>Unlimited quizzes</span></li>
-                <li className="flex items-center gap-2"><span>✓</span><span>Up to 50 questions per quiz</span></li>
-                <li className="flex items-center gap-2"><span>✓</span><span>Custom time per question</span></li>
-                <li className="flex items-center gap-2"><span>✓</span><span>Up to 30 flashcards per set</span></li>
-                <li className="flex items-center gap-2"><span>✓</span><span>Detailed analytics</span></li>
-              </ul>
-            </CardContent>
-            <CardFooter>
-              <Button 
-                onClick={() => activatePremium('monthly')}
-                className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
-              >
-                Subscribe Monthly
-              </Button>
-            </CardFooter>
-          </Card>
-          
-          <Card className="border-amber-500/30 hover:border-amber-500/50 transition-all">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Annual</span>
-                <Badge className="bg-green-600">Save 50%</Badge>
-              </CardTitle>
-              <div className="flex items-baseline">
-                <span className="text-3xl font-bold">$15.00</span>
-                <span className="text-muted-foreground ml-1">/ year</span>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                <li className="flex items-center gap-2"><span>✓</span><span>All monthly features</span></li>
-                <li className="flex items-center gap-2"><span>✓</span><span>50% discount vs. monthly</span></li>
-                <li className="flex items-center gap-2"><span>✓</span><span>Priority support</span></li>
-                <li className="flex items-center gap-2"><span>✓</span><span>Early access to new features</span></li>
-              </ul>
-            </CardContent>
-            <CardFooter>
-              <Button 
-                onClick={() => activatePremium('yearly')}
-                className="w-full"
-                variant="outline"
-              >
-                Subscribe Yearly
-              </Button>
-            </CardFooter>
-          </Card>
+        <motion.div variants={itemVariants}>
+          <BillingManager
+            userId={userId}
+            isPremium={isPremium}
+            onPurchaseComplete={handlePurchaseComplete}
+          />
         </motion.div>
       )}
+      
       <motion.div variants={itemVariants}>
         <div className="rounded-lg bg-muted p-4">
           <h3 className="text-lg font-medium mb-2">Free vs Premium</h3>

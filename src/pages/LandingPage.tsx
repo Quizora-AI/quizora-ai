@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,8 +10,8 @@ import {
   ChevronRight,
   Lightbulb
 } from 'lucide-react';
+import { BannerAd } from "@/components/GoogleAds";
 
-// Inspirational quotes that will rotate
 const quotes = [
   "Knowledge is power.",
   "The only limit to our realization of tomorrow is our doubts of today.",
@@ -32,17 +31,14 @@ export default function LandingPage() {
   const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0);
   
   useEffect(() => {
-    // Select a random starting quote
     const randomIndex = Math.floor(Math.random() * quotes.length);
     setCurrentQuoteIndex(randomIndex);
     setQuote(quotes[randomIndex]);
     
-    // Simulate loading time
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 1500);
     
-    // Setup quote rotation
     const quoteInterval = setInterval(() => {
       setCurrentQuoteIndex(prevIndex => (prevIndex + 1) % quotes.length);
     }, 8000);
@@ -102,10 +98,8 @@ export default function LandingPage() {
   }
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-background/80 overflow-hidden">
-      {/* Hero Section */}
+    <div className="container px-4 py-8 mx-auto">
       <div className="relative h-screen flex items-center justify-center px-4">
-        {/* Abstract background elements */}
         <div className="absolute inset-0 overflow-hidden">
           <motion.div 
             className="absolute top-[10%] left-[5%] w-64 h-64 rounded-full bg-primary/5"
@@ -229,7 +223,6 @@ export default function LandingPage() {
           </motion.div>
         </motion.div>
 
-        {/* Scroll indicator */}
         <motion.div 
           className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
           animate={{ 
@@ -244,7 +237,10 @@ export default function LandingPage() {
         </motion.div>
       </div>
       
-      {/* Features Section */}
+      <div className="mt-8">
+        <BannerAd adUnitId="ca-app-pub-8270549953677995/2218567244" position="bottom" />
+      </div>
+      
       <div className="container px-4 py-20 mx-auto">
         <motion.h2 
           initial={{ opacity: 0, y: 20 }}
@@ -278,7 +274,6 @@ export default function LandingPage() {
         </div>
       </div>
       
-      {/* Call to Action */}
       <motion.div
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}

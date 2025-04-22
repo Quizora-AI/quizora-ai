@@ -5,6 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { CircleCheck, CircleX, RotateCw, BarChart3, PlusCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { BannerAd, useInterstitialAd, useAdFrequencyTracker } from "./GoogleAds";
 
 interface QuizResultsProps {
   totalQuestions: number;
@@ -24,6 +25,22 @@ export function QuizResults({
   const [animatedScore, setAnimatedScore] = useState(0);
   const score = Math.round((correctAnswers / totalQuestions) * 100);
   const navigate = useNavigate();
+  const { trackQuizCompletion } = useAdFrequencyTracker();
+  const { showInterstitial } = useInterstitialAd({ 
+    adUnitId: "ca-app-pub-8270549953677995/9564071776",
+    onAdDismissed: () => {
+      // Wait for ad to dismiss before showing results
+      console.log("Interstitial ad dismissed");
+    }
+  });
+  
+  useEffect(() => {
+    // Try to show interstitial ad when results page loads
+    const shouldShowAd = trackQuizCompletion();
+    if (shouldShowAd) {
+      showInterstitial();
+    }
+  }, []);
   
   useEffect(() => {
     const interval = setInterval(() => {
@@ -159,6 +176,11 @@ export function QuizResults({
               <div className="text-sm text-muted-foreground">Wrong Answers</div>
             </motion.div>
           </motion.div>
+          
+          {/* Banner ad placement */}
+          <div className="w-full mt-6">
+            <BannerAd adUnitId="ca-app-pub-8270549953677995/2218567244" />
+          </div>
         </CardContent>
         
         <CardFooter className="flex justify-center gap-4 flex-wrap">

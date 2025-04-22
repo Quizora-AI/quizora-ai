@@ -62,8 +62,16 @@ export function QuizAnalytics({
   
   useEffect(() => {
     // Generate performance suggestions based on user's actual performance
-    setSuggestions(getPerformanceSuggestions());
-  }, [score, correctAnswers, incorrectAnswers]);
+    const personalized = getPerformanceSuggestions(
+      score, 
+      correctAnswers, 
+      incorrectAnswers, 
+      questions, 
+      userAnswers,
+      timePerQuestion
+    );
+    setSuggestions(personalized);
+  }, [score, correctAnswers, incorrectAnswers, questions, userAnswers, timePerQuestion]);
 
   // Prepare data for overview chart
   const overviewData = [
@@ -98,39 +106,83 @@ export function QuizAnalytics({
   // Get incorrect questions for detailed review
   const incorrectQuestions = questions.filter((_, index) => userAnswers[index] !== questions[index].correctAnswer);
 
+  // Get topics or concepts that need improvement based on incorrect answers
+  const getWeakTopics = () => {
+    // Simple analysis of incorrect questions to find common themes
+    const topics: {[key: string]: number} = {};
+    
+    incorrectQuestions.forEach(q => {
+      // Extract potential topics from question text
+      const questionText = q.question.toLowerCase();
+      const words = questionText.split(/\s+/);
+      
+      // Look for key concepts (words longer than 5 chars that aren't common words)
+      const commonWords = ['about', 'after', 'again', 'below', 'could', 'every', 'first', 'found', 'great', 'house', 'large', 'learn', 'never', 'other', 'place', 'small', 'study', 'their', 'there', 'these', 'thing', 'think', 'three', 'water', 'where', 'which', 'world', 'would', 'write'];
+      
+      words.forEach(word => {
+        if (word.length > 5 && !commonWords.includes(word)) {
+          topics[word] = (topics[word] || 0) + 1;
+        }
+      });
+    });
+    
+    // Return top 3 topics that appear most frequently
+    return Object.entries(topics)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([topic]) => topic);
+  };
+
   // Performance suggestions based on score and specific patterns
-  function getPerformanceSuggestions() {
-    const baselineSuggestions = [];
+  function getPerformanceSuggestions(
+    score: number, 
+    correctCount: number, 
+    incorrectCount: number, 
+    questions: Question[],
+    userAnswers: number[],
+    timings: number[] = []
+  ): string[] {
+    const suggestions = [];
+    const weakTopics = getWeakTopics();
     
     // General score-based suggestions
     if (score >= 80) {
-      baselineSuggestions.push(
-        "Excellent work! To further improve, focus on the specific questions you missed.",
-        "Review the explanations for the questions you got wrong to solidify your understanding."
+      suggestions.push(
+        `Excellent work! You scored in the top ${score >= 90 ? '10%' : '20%'} of quiz takers.`,
+        `To further improve, focus on the specific ${incorrectCount} ${incorrectCount === 1 ? 'question' : 'questions'} you missed.`
       );
     } else if (score >= 60) {
-      baselineSuggestions.push(
-        "Good job! To improve, review the concepts related to the questions you missed.",
-        "Create flashcards for the topics you found challenging."
+      suggestions.push(
+        `Good job! Your understanding is solid, but there's room for improvement in ${weakTopics.length > 0 ? weakTopics.join(', ') : 'some areas'}.`,
+        `Create flashcards specifically for the ${incorrectCount} questions you got wrong to reinforce those concepts.`
       );
     } else {
-      baselineSuggestions.push(
-        "Focus on understanding the fundamental concepts related to the questions you missed.",
-        "Consider breaking down your study sessions into smaller, more focused segments."
+      suggestions.push(
+        `Focus on understanding the fundamental concepts related to ${weakTopics.length > 0 ? weakTopics.join(', ') : 'the questions you missed'}.`,
+        `Consider reviewing the material again and breaking your study sessions into smaller, more focused segments.`
       );
     }
     
     // Time-based suggestions
-    if (timePerQuestion && timePerQuestion.length > 0) {
-      const fastAnswers = timePerQuestion.filter(time => time < 5).length;
-      const slowAnswers = timePerQuestion.filter(time => time > 25).length;
+    if (timings.length > 0) {
+      const fastAnswers = timings.filter(time => time < 5).length;
+      const slowAnswers = timings.filter(time => time > 25).length;
       
       if (fastAnswers > 0 && score < 70) {
-        baselineSuggestions.push("You answered some questions very quickly. Consider taking more time to carefully read all options.");
+        suggestions.push(`You answered ${fastAnswers} ${fastAnswers === 1 ? 'question' : 'questions'} very quickly. Taking an extra moment to carefully read all options could improve your accuracy.`);
       }
       
       if (slowAnswers > 0) {
-        baselineSuggestions.push("Some questions took you longer to answer. Focus on practicing similar questions to build confidence and speed.");
+        suggestions.push(`${slowAnswers} ${slowAnswers === 1 ? 'question' : 'questions'} took you longer than average to answer. Focus on practicing similar questions to build confidence and speed.`);
+      }
+      
+      // Find questions where user spent a long time but still got it wrong
+      const hardQuestions = timings.reduce((count, time, index) => {
+        return (time > 20 && userAnswers[index] !== questions[index].correctAnswer) ? count + 1 : count;
+      }, 0);
+      
+      if (hardQuestions > 0) {
+        suggestions.push(`There ${hardQuestions === 1 ? 'was' : 'were'} ${hardQuestions} difficult ${hardQuestions === 1 ? 'question' : 'questions'} that took you longer to answer but you still missed. These areas need particular focus.`);
       }
     }
     
@@ -148,11 +200,27 @@ export function QuizAnalytics({
     });
     
     if (maxConsecutiveWrong >= 2) {
-      baselineSuggestions.push("You missed several questions in a row. Consider taking a short break when you feel your focus declining during an exam.");
+      suggestions.push(`You missed ${maxConsecutiveWrong} questions in a row. Consider taking a short break when you feel your focus declining during an exam.`);
+    }
+    
+    // Check for patterns in answer selection (e.g., always picking the same option)
+    const optionFrequency: {[key: number]: number} = {};
+    userAnswers.forEach(answer => {
+      if (answer >= 0) {
+        optionFrequency[answer] = (optionFrequency[answer] || 0) + 1;
+      }
+    });
+    
+    const mostFrequentOption = Object.entries(optionFrequency)
+      .sort((a, b) => b[1] - a[1])[0];
+    
+    if (mostFrequentOption && mostFrequentOption[1] > questions.length * 0.6) {
+      const optionLabels = ["A", "B", "C", "D"];
+      suggestions.push(`You tend to select option ${optionLabels[Number(mostFrequentOption[0])]} most frequently. Try to evaluate each option carefully to avoid bias.`);
     }
     
     // Ensure we don't have too many suggestions
-    return baselineSuggestions.slice(0, 4);
+    return suggestions.slice(0, 4);
   }
 
   const handleCreateNewQuiz = () => {
@@ -375,6 +443,9 @@ export function QuizAnalytics({
                         <li>You performed well on {correctAnswers} out of {totalQuestions} questions</li>
                         {score > 50 && <li>Your overall understanding of the topics is good</li>}
                         {score > 75 && <li>You have excellent knowledge in this subject area</li>}
+                        {timePerQuestion && timePerQuestion.filter(t => t < averageTime).length > (questions.length / 2) && 
+                          <li>You answer questions efficiently, with good time management</li>
+                        }
                       </ul>
                     </div>
                     
@@ -385,6 +456,9 @@ export function QuizAnalytics({
                         {score < 75 && <li>Review the explanations for incorrect answers carefully</li>}
                         {score < 50 && <li>Consider revisiting the fundamental concepts of this topic</li>}
                         {averageTime > 20 && <li>Work on improving your speed while maintaining accuracy</li>}
+                        {getWeakTopics().length > 0 && (
+                          <li>Pay special attention to topics related to: {getWeakTopics().join(', ')}</li>
+                        )}
                       </ul>
                     </div>
                     

@@ -145,11 +145,7 @@ const QuizFlowContainer = ({
 
   const handleNewQuiz = () => {
     localStorage.removeItem("quizInProgress");
-    onBackToCreate();
-    toast({
-      title: "Create New Quiz",
-      description: "Choose a file or use AI to generate questions",
-    });
+    navigate('/'); // Changed to navigate to root directly
   };
 
   useEffect(() => {
