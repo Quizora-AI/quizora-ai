@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import { Toaster as ToastUIToaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
@@ -9,6 +10,7 @@ import NotFound from "./pages/NotFound";
 import LandingPage from "./pages/LandingPage";
 import QuizReview from "./pages/QuizReview";
 import AuthPage from "./pages/AuthPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { useEffect } from "react";
 import { initializeAdMob } from "./components/GoogleAds";
 import { supabase } from "./integrations/supabase/client";
@@ -146,6 +148,7 @@ function App() {
             <Route path="/" element={<Navigate to="/landing" />} />
             <Route path="/landing" element={<LandingPage />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/quiz" element={<AuthRoute element={<Index initialTab="generate" />} />} />
             <Route path="/flashcards" element={<AuthRoute element={<Index initialTab="flashcards" />} />} />
             <Route path="/history" element={<AuthRoute element={<Index initialTab="history" />} />} />
