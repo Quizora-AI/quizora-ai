@@ -31,7 +31,7 @@ export function ProfileTab() {
       if (!user) return;
 
       const { data, error } = await supabase
-        .from('user_profiles')
+        .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
@@ -56,7 +56,7 @@ export function ProfileTab() {
 
     try {
       const { error } = await supabase
-        .from('user_profiles')
+        .from('profiles')
         .update({
           name: profile.name,
           avatar_url: profile.avatar_url,

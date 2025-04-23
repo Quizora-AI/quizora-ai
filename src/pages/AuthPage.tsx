@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Mail, Eye, EyeOff, Lock, User, Google } from "lucide-react";
+import { Mail, Eye, EyeOff, Lock, User, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -223,7 +223,7 @@ export default function AuthPage() {
               onClick={handleGoogleLogin}
               disabled={loading}
             >
-              <Google className="mr-2 h-4 w-4" />
+              <LogIn className="mr-2 h-4 w-4" />
               Continue with Google
             </Button>
           </form>

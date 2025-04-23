@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Toaster as ToastUIToaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -28,8 +28,8 @@ const queryClient = new QueryClient({
   },
 });
 
-const AuthRoute: React.FC<{element: React.ReactNode}> = ({ element }) => {
-  const [session, setSession] = React.useState<any>(null);
+const AuthRoute = ({ element }) => {
+  const [session, setSession] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const navigate = useNavigate();
 
