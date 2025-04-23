@@ -26,8 +26,18 @@ export function ProfileTab() {
 
   const fetchProfile = async () => {
     try {
+      setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "User not found. Please log in again."
+        });
+        return;
+      }
+
+      console.log("Fetched user:", user);
 
       const { data, error } = await supabase
         .from('profiles')
@@ -35,16 +45,44 @@ export function ProfileTab() {
         .eq('id', user.id)
         .single();
 
-      if (error) throw error;
-
-      setProfile({
-        id: user.id,
-        name: data.name || user.user_metadata?.name || '',
-        avatar_url: data.avatar_url,
-        email: data.email || user.email || ''
-      });
+      if (error) {
+        console.error('Error fetching profile:', error);
+        // If profile doesn't exist, create one
+        if (error.code === 'PGRST116') {
+          const newProfile = {
+            id: user.id,
+            name: user.user_metadata?.name || '',
+            email: user.email || '',
+            avatar_url: null
+          };
+          
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert(newProfile);
+            
+          if (insertError) {
+            throw insertError;
+          }
+          
+          setProfile(newProfile);
+        } else {
+          throw error;
+        }
+      } else {
+        setProfile({
+          id: user.id,
+          name: data.name || user.user_metadata?.name || '',
+          avatar_url: data.avatar_url,
+          email: data.email || user.email || ''
+        });
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load profile. Please try again."
+      });
     } finally {
       setLoading(false);
     }
@@ -84,7 +122,7 @@ export function ProfileTab() {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <div className="flex justify-center items-center p-8">Loading profile...</div>;
   }
 
   return (

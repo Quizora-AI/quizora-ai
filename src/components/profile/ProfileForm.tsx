@@ -19,6 +19,7 @@ export function ProfileForm({ profile, onUpdateProfile, onSave }: ProfileFormPro
           id="name"
           value={profile?.name || ''}
           onChange={(e) => onUpdateProfile('name', e.target.value)}
+          placeholder="Enter your full name"
         />
       </div>
 
@@ -28,7 +29,9 @@ export function ProfileForm({ profile, onUpdateProfile, onSave }: ProfileFormPro
           id="email"
           value={profile?.email || ''}
           disabled
+          className="bg-muted"
         />
+        <p className="text-xs text-muted-foreground">Email cannot be changed</p>
       </div>
 
       <Button 

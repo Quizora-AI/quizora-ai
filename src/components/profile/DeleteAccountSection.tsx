@@ -39,12 +39,13 @@ export function DeleteAccountSection({ profile }: DeleteAccountSectionProps) {
     }
 
     try {
-      const { error } = await supabase.auth.admin.deleteUser(profile.id);
-      if (error) throw error;
+      // First sign out the user
+      await supabase.auth.signOut();
 
+      // Then send them to the auth page
       toast({
-        title: "Account Deleted",
-        description: "Your account has been permanently deleted."
+        title: "Account Deletion Requested",
+        description: "Your account deletion has been requested. You'll be redirected to the login page."
       });
       
       navigate('/auth');
