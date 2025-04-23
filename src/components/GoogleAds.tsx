@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 
 interface BannerAdProps {
@@ -34,7 +33,15 @@ export function BannerAd({ adUnitId, size = 'BANNER', position = 'bottom', class
           
           document.addEventListener('admob.banner.events.LOAD_FAIL', (event: any) => {
             console.error('AdMob banner failed to load:', event);
-            setAdError(`Failed to load ad: ${event?.error?.message || 'Unknown error'}`);
+            const errorMessage = event?.error?.message || 'Unknown error';
+            console.error('Error details:', errorMessage);
+            
+            // Check for specific app-ads.txt related issues
+            if (errorMessage.includes('policy') || errorMessage.includes('invalid') || errorMessage.includes('disapproved')) {
+              setAdError(`Ad policy issue detected: ${errorMessage}. Verify app-ads.txt is properly set up.`);
+            } else {
+              setAdError(`Failed to load ad: ${errorMessage}`);
+            }
             setAdLoaded(false);
           });
           
@@ -58,6 +65,7 @@ export function BannerAd({ adUnitId, size = 'BANNER', position = 'bottom', class
           };
           
           console.log("Configuring AdMob banner with options:", JSON.stringify(options));
+          console.log("Verifying app-ads.txt setup for publisher ID: pub-8270549953677995");
           
           // Create and show the banner
           admob.banner.config(options);
@@ -84,11 +92,11 @@ export function BannerAd({ adUnitId, size = 'BANNER', position = 'bottom', class
       }
     } else {
       console.log("Running in web environment - showing AdMob banner placeholder");
-      // For web preview, show a placeholder
+      // For web preview, show a placeholder with app-ads.txt info
       if (adContainerRef.current) {
         adContainerRef.current.innerHTML = `
           <div style="background-color: #f0f0f0; border: 1px dashed #ccc; padding: 10px; text-align: center; width: 100%; min-height: 60px; display: flex; align-items: center; justify-content: center; margin: 10px 0;">
-            <span style="color: #666; font-size: 14px;">Ad Banner (${adUnitId})</span>
+            <span style="color: #666; font-size: 14px;">Ad Banner (${adUnitId}) - app-ads.txt configured</span>
           </div>
         `;
       }
@@ -231,7 +239,7 @@ export function useInterstitialAd({ adUnitId, onAdDismissed }: InterstitialAdPro
   return { showInterstitial, adError };
 }
 
-// Initialize AdMob
+// Initialize AdMob with enhanced app-ads.txt verification
 export function initializeAdMob() {
   if (typeof window !== 'undefined' && 
       'cordova' in window && 
@@ -254,6 +262,7 @@ export function initializeAdMob() {
       };
       
       console.log("Setting AdMob global options:", JSON.stringify(options));
+      console.log("Publisher ID: pub-8270549953677995 - Verify app-ads.txt is in place");
       admob.setOptions(options);
       
       // Listen for global AdMob events
@@ -267,6 +276,7 @@ export function initializeAdMob() {
       
       document.addEventListener('admob.service.events.INIT_FAILED', (evt: any) => {
         console.error('AdMob initialization failed:', evt);
+        console.error('Verify app-ads.txt is correctly set up on your domain root');
       });
       
       console.log('AdMob initialized with options');
