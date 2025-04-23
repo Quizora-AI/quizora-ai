@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface Profile {
   id: string;
-  name: string;
+  name: string | null;
   avatar_url: string | null;
   email: string;
 }
@@ -40,7 +40,7 @@ export function ProfileTab() {
 
       setProfile({
         id: user.id,
-        name: data.name || '',
+        name: data.name,
         avatar_url: data.avatar_url,
         email: user.email || ''
       });
