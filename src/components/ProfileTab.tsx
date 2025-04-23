@@ -2,26 +2,13 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { useNavigate } from "react-router-dom";
+import { AvatarSection } from "./profile/AvatarSection";
+import { ProfileForm } from "./profile/ProfileForm";
+import { DeleteAccountSection } from "./profile/DeleteAccountSection";
 
-interface Profile {
+export interface Profile {
   id: string;
   name: string | null;
   avatar_url: string | null;
@@ -31,9 +18,7 @@ interface Profile {
 export function ProfileTab() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchProfile();
@@ -94,34 +79,8 @@ export function ProfileTab() {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    if (!profile || deleteConfirmEmail !== profile.email) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Please enter your email correctly to confirm deletion."
-      });
-      return;
-    }
-
-    try {
-      const { error } = await supabase.auth.admin.deleteUser(profile.id);
-      if (error) throw error;
-
-      toast({
-        title: "Account Deleted",
-        description: "Your account has been permanently deleted."
-      });
-      
-      navigate('/auth');
-    } catch (error) {
-      console.error('Error deleting account:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to delete account. Please try again."
-      });
-    }
+  const handleUpdateProfile = (field: keyof Profile, value: string) => {
+    setProfile(prev => prev ? {...prev, [field]: value} : null);
   };
 
   if (loading) {
@@ -140,86 +99,15 @@ export function ProfileTab() {
           <CardTitle>Profile Settings</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex flex-col items-center space-y-4">
-            <Avatar className="h-24 w-24">
-              {profile?.avatar_url ? (
-                <AvatarImage src={profile.avatar_url} alt={profile.name || ''} />
-              ) : (
-                <AvatarFallback>
-                  {profile?.name?.charAt(0) || profile?.email?.charAt(0)}
-                </AvatarFallback>
-              )}
-            </Avatar>
-          </div>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                value={profile?.name || ''}
-                onChange={(e) => setProfile(prev => prev ? {...prev, name: e.target.value} : null)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                value={profile?.email || ''}
-                disabled
-              />
-            </div>
-
-            <Button 
-              onClick={updateProfile}
-              className="w-full"
-            >
-              Update Profile
-            </Button>
-
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="w-full mt-4">
-                  Delete Account
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete your
-                    account and remove all your data from our servers.
-                    
-                    <div className="mt-4 space-y-2">
-                      <Label htmlFor="confirmEmail">
-                        Please type your email to confirm deletion
-                      </Label>
-                      <Input
-                        id="confirmEmail"
-                        type="email"
-                        placeholder={profile?.email}
-                        value={deleteConfirmEmail}
-                        onChange={(e) => setDeleteConfirmEmail(e.target.value)}
-                      />
-                    </div>
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDeleteAccount}
-                    className="bg-destructive hover:bg-destructive/90"
-                  >
-                    Delete Account
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+          <AvatarSection profile={profile} />
+          <ProfileForm 
+            profile={profile}
+            onUpdateProfile={handleUpdateProfile}
+            onSave={updateProfile}
+          />
+          <DeleteAccountSection profile={profile} />
         </CardContent>
       </Card>
     </motion.div>
   );
 }
-
