@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Profile } from "@/components/ProfileTab";
+import { Profile } from "@/hooks/useProfile";
 
 interface ProfileFormProps {
   profile: Profile | null;
@@ -10,7 +10,7 @@ interface ProfileFormProps {
   onSave: () => void;
 }
 
-export function ProfileForm({ profile, onUpdateProfile, onSave }: ProfileFormProps) {
+export function ProfileForm({ profile, onUpdateProfile }: ProfileFormProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -33,13 +33,6 @@ export function ProfileForm({ profile, onUpdateProfile, onSave }: ProfileFormPro
         />
         <p className="text-xs text-muted-foreground">Email cannot be changed</p>
       </div>
-
-      <Button 
-        onClick={onSave}
-        className="w-full"
-      >
-        Update Profile
-      </Button>
     </div>
   );
 }

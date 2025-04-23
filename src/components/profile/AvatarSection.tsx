@@ -1,7 +1,6 @@
 
-import { useState } from "react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Profile } from "@/components/ProfileTab";
+import { Profile } from "@/hooks/useProfile";
 
 interface AvatarSectionProps {
   profile: Profile | null;
