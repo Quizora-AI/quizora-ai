@@ -9,9 +9,13 @@ interface AvatarSectionProps {
 export function AvatarSection({ profile }: AvatarSectionProps) {
   return (
     <div className="flex flex-col items-center space-y-4">
-      <Avatar className="h-24 w-24 border-2 border-primary/20">
+      <Avatar className="h-24 w-24 border-2 border-primary/20 ring-2 ring-primary/10">
         {profile?.avatar_url ? (
-          <AvatarImage src={profile.avatar_url} alt={profile.name || ''} />
+          <AvatarImage 
+            src={profile.avatar_url} 
+            alt={profile.name || ''} 
+            className="object-cover"
+          />
         ) : (
           <AvatarFallback className="text-xl font-medium bg-primary/10 text-primary">
             {profile?.name?.charAt(0) || profile?.email?.charAt(0) || '?'}

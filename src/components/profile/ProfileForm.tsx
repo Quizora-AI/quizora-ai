@@ -1,16 +1,13 @@
 
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Profile } from "@/hooks/useProfile";
 
 interface ProfileFormProps {
   profile: Profile | null;
-  onUpdateProfile: (field: keyof Profile, value: string) => void;
-  onSave: () => void;
 }
 
-export function ProfileForm({ profile, onUpdateProfile }: ProfileFormProps) {
+export function ProfileForm({ profile }: ProfileFormProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -18,8 +15,8 @@ export function ProfileForm({ profile, onUpdateProfile }: ProfileFormProps) {
         <Input
           id="name"
           value={profile?.name || ''}
-          onChange={(e) => onUpdateProfile('name', e.target.value)}
-          placeholder="Enter your full name"
+          disabled
+          className="bg-muted"
         />
       </div>
 
@@ -31,7 +28,7 @@ export function ProfileForm({ profile, onUpdateProfile }: ProfileFormProps) {
           disabled
           className="bg-muted"
         />
-        <p className="text-xs text-muted-foreground">Email cannot be changed</p>
+        <p className="text-xs text-muted-foreground">Account email address</p>
       </div>
     </div>
   );

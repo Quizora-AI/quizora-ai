@@ -7,7 +7,7 @@ import { DeleteAccountSection } from "./profile/DeleteAccountSection";
 import { useProfile } from "@/hooks/useProfile";
 
 export function ProfileTab() {
-  const { profile, loading, updateProfile } = useProfile();
+  const { profile, loading } = useProfile();
 
   if (loading) {
     return <div className="flex justify-center items-center p-8">Loading profile...</div>;
@@ -22,18 +22,12 @@ export function ProfileTab() {
     >
       <Card>
         <CardHeader>
-          <CardTitle>Profile Settings</CardTitle>
+          <CardTitle>Profile</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <AvatarSection profile={profile} />
-          <ProfileForm 
-            profile={profile}
-            onUpdateProfile={(field, value) => {
-              updateProfile({ [field]: value });
-            }}
-            onSave={() => {}} // Remove this as we're now updating immediately
-          />
-          <DeleteAccountSection profile={profile} />
+          <ProfileForm profile={profile} />
+          <DeleteAccountSection />
         </CardContent>
       </Card>
     </motion.div>
