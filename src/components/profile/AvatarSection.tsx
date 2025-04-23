@@ -13,8 +13,8 @@ export function AvatarSection({ profile }: AvatarSectionProps) {
         {profile?.avatar_url ? (
           <AvatarImage 
             src={profile.avatar_url} 
-            alt={profile.name || ''} 
-            className="object-cover"
+            alt={profile?.name || 'Avatar'}
+            className="object-contain p-1"
           />
         ) : (
           <AvatarFallback className="text-xl font-medium bg-primary/10 text-primary">
@@ -25,6 +25,10 @@ export function AvatarSection({ profile }: AvatarSectionProps) {
       {profile?.name && (
         <h3 className="text-lg font-medium">{profile.name}</h3>
       )}
+      {profile?.email && (
+        <p className="text-sm text-muted-foreground">{profile.email}</p>
+      )}
     </div>
   );
 }
+
