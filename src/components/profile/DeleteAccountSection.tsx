@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Profile } from "@/components/ProfileTab";
+import { Profile } from "@/hooks/useProfile";
 import {
   AlertDialog,
   AlertDialogAction,

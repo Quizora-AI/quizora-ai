@@ -27,7 +27,7 @@ export function ProfileTab() {
         <CardContent className="space-y-6">
           <AvatarSection profile={profile} />
           <ProfileForm profile={profile} />
-          <DeleteAccountSection />
+          <DeleteAccountSection profile={profile} />
         </CardContent>
       </Card>
     </motion.div>
