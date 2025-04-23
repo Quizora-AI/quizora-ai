@@ -1,2 +1,3 @@
 
+# AdMob app-ads.txt for domain: medquiz-pro-extract.lovable.app
 google.com, pub-8270549953677995, DIRECT, f08c47fec0942fa0

@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 
 interface BannerAdProps {
@@ -66,6 +67,7 @@ export function BannerAd({ adUnitId, size = 'BANNER', position = 'bottom', class
           
           console.log("Configuring AdMob banner with options:", JSON.stringify(options));
           console.log("Verifying app-ads.txt setup for publisher ID: pub-8270549953677995");
+          console.log("Using domain: medquiz-pro-extract.lovable.app for AdMob verification");
           
           // Create and show the banner
           admob.banner.config(options);
@@ -96,7 +98,7 @@ export function BannerAd({ adUnitId, size = 'BANNER', position = 'bottom', class
       if (adContainerRef.current) {
         adContainerRef.current.innerHTML = `
           <div style="background-color: #f0f0f0; border: 1px dashed #ccc; padding: 10px; text-align: center; width: 100%; min-height: 60px; display: flex; align-items: center; justify-content: center; margin: 10px 0;">
-            <span style="color: #666; font-size: 14px;">Ad Banner (${adUnitId}) - app-ads.txt configured</span>
+            <span style="color: #666; font-size: 14px;">Ad Banner (${adUnitId}) - app-ads.txt configured on medquiz-pro-extract.lovable.app</span>
           </div>
         `;
       }
@@ -263,6 +265,7 @@ export function initializeAdMob() {
       
       console.log("Setting AdMob global options:", JSON.stringify(options));
       console.log("Publisher ID: pub-8270549953677995 - Verify app-ads.txt is in place");
+      console.log("Domain for verification: medquiz-pro-extract.lovable.app");
       admob.setOptions(options);
       
       // Listen for global AdMob events
@@ -276,7 +279,7 @@ export function initializeAdMob() {
       
       document.addEventListener('admob.service.events.INIT_FAILED', (evt: any) => {
         console.error('AdMob initialization failed:', evt);
-        console.error('Verify app-ads.txt is correctly set up on your domain root');
+        console.error('Verify app-ads.txt is correctly set up on medquiz-pro-extract.lovable.app domain');
       });
       
       console.log('AdMob initialized with options');
