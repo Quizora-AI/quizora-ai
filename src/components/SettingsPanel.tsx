@@ -1,15 +1,15 @@
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Settings, Book, Crown, Info, BarChart } from "lucide-react";
+import { Settings, Book, Crown, Info, BarChart, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { SettingsPreferences } from "./SettingsPreferences";
 import { PremiumPanel } from "./PremiumPanel";
 import { AnalyticsPanel } from "./AnalyticsPanel";
 import { LegalPanel } from "./LegalPanel";
+import { ProfileTab } from "./ProfileTab";
 
 interface UserSettings {
   course: string;
@@ -178,7 +178,7 @@ export function SettingsPanel() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-4 mb-6">
+            <TabsList className="grid grid-cols-5 mb-6">
               <TabsTrigger value="preferences" className="flex items-center gap-2">
                 <Book className="h-4 w-4" />
                 <span className="hidden sm:inline">Preferences</span>
@@ -190,6 +190,10 @@ export function SettingsPanel() {
               <TabsTrigger value="analytics" className="flex items-center gap-2">
                 <BarChart className="h-4 w-4" />
                 <span className="hidden sm:inline">Analytics</span>
+              </TabsTrigger>
+              <TabsTrigger value="profile" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                <span className="hidden sm:inline">Profile</span>
               </TabsTrigger>
               <TabsTrigger value="legal" className="flex items-center gap-2">
                 <Info className="h-4 w-4" />
@@ -216,6 +220,9 @@ export function SettingsPanel() {
                 quizHistory={quizHistory}
                 navigate={navigate}
               />
+            </TabsContent>
+            <TabsContent value="profile">
+              <ProfileTab />
             </TabsContent>
             <TabsContent value="legal">
               <LegalPanel navigate={navigate} />

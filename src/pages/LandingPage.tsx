@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,6 +11,7 @@ import {
   Lightbulb
 } from 'lucide-react';
 import { BannerAd } from "@/components/GoogleAds";
+import { supabase } from '@/integrations/supabase/client';
 
 const quotes = [
   "Knowledge is power.",
@@ -30,7 +30,20 @@ export default function LandingPage() {
   const [quote, setQuote] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0);
-  
+  const [session, setSession] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   useEffect(() => {
     const randomIndex = Math.floor(Math.random() * quotes.length);
     setCurrentQuoteIndex(randomIndex);
@@ -49,11 +62,19 @@ export default function LandingPage() {
       clearInterval(quoteInterval);
     };
   }, []);
-  
+
   useEffect(() => {
     setQuote(quotes[currentQuoteIndex]);
   }, [currentQuoteIndex]);
-  
+
+  const handleActionClick = (path: string) => {
+    if (session) {
+      navigate(path);
+    } else {
+      navigate('/auth');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-gradient-to-b from-background to-background/80">
@@ -97,7 +118,7 @@ export default function LandingPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="container px-4 py-8 mx-auto">
       <div className="relative h-screen flex items-center justify-center px-4">
@@ -205,7 +226,7 @@ export default function LandingPage() {
           >
             <Button 
               size="lg" 
-              onClick={() => navigate('/quiz')}
+              onClick={() => handleActionClick('/quiz')}
               className="gap-2 bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700 group"
             >
               <Sparkles className="h-4 w-4" />
@@ -215,7 +236,7 @@ export default function LandingPage() {
             <Button 
               variant="outline" 
               size="lg" 
-              onClick={() => navigate('/flashcards')}
+              onClick={() => handleActionClick('/flashcards')}
               className="group border border-primary/20 hover:border-primary/40"
             >
               <Book className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
@@ -238,7 +259,6 @@ export default function LandingPage() {
         </motion.div>
       </div>
       
-      {/* Update the banner ad with specific positioning and sizing */}
       <div className="mt-8 w-full flex justify-center">
         <BannerAd 
           adUnitId="ca-app-pub-8270549953677995/2218567244" 
@@ -333,7 +353,7 @@ export default function LandingPage() {
             >
               <Button 
                 size="lg" 
-                onClick={() => navigate('/quiz')}
+                onClick={() => handleActionClick('/quiz')}
                 className="bg-white text-primary hover:bg-white/90 group"
               >
                 Start Now
