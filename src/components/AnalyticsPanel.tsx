@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,23 @@ import {
   LineChart,
   Line 
 } from "recharts";
-import { Calendar, ChartBar, ChartPie } from "lucide-react";
+import { 
+  Award,
+  BarChart2,
+  Book,
+  Brain,
+  CalendarDays,
+  ChartPieIcon,
+  CheckCircle,
+  Circle,
+  Compass,
+  Lightbulb,
+  LineChart as LineChartIcon,
+  Medal,
+  Ruler,
+  Target, 
+  Zap
+} from "lucide-react";
 
 interface AnalyticsPanelProps {
   isPremium: boolean;
@@ -26,6 +43,9 @@ interface AnalyticsPanelProps {
     title: string;
     date: string;
     attempts?: number;
+    userAnswers?: number[];
+    questions?: any[];
+    timePerQuestion?: number[];
   }>;
   navigate: (path: string) => void;
 }
@@ -48,163 +68,125 @@ export function AnalyticsPanel({ isPremium, quizHistory, navigate }: AnalyticsPa
     return (
       <motion.div variants={itemVariants} className="text-center p-8">
         <div className="flex justify-center mb-4">
-          {/* Using Lock icon */}
-          <svg className="h-12 w-12 text-muted-foreground" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <rect x="3" y="11" width="18" height="9" rx="2" />
-            <path d="M7 11V7a5 5 0 0110 0v4" />
-          </svg>
+          <Award className="h-12 w-12 text-muted-foreground" />
         </div>
         <h3 className="text-xl font-medium mb-2">Premium Feature</h3>
         <p className="text-muted-foreground mb-6">
           Advanced analytics is a premium feature. Upgrade to access detailed insights and performance tracking.
         </p>
         <Button onClick={() => navigate('/settings?tab=premium')}>
-          <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path d="M17 4a1 1 0 0 1 2 0l1.38 4.24a1 1 0 0 0 .95.69h4.38a1 1 0 0 1 .59 1.81l-3.54 2.58a1 1 0 0 0-.36 1.12l1.38 4.24a1 1 0 0 1-1.54 1.12L12 17.77l-3.54 2.58a1 1 0 0 1-1.54-1.12l1.38-4.24a1 1 0 0 0-.36-1.12L2.4 10.74A1 1 0 0 1 3 8.93h4.38a1 1 0 0 0 .95-.69L10.7 4A1 1 0 0 1 12 4z" />
-          </svg>
+          <Medal className="mr-2 h-4 w-4" />
           Go Premium
         </Button>
       </motion.div>
     );
   }
 
-  // Analyze quiz history to find topics and performance
-  const analyzedTopics = analyzeQuizTopics(quizHistory);
-  const scoreDistribution = analyzeScoreDistribution(quizHistory);
-  const strengths = calculateStrengths(analyzedTopics);
-  const weaknesses = calculateWeaknesses(analyzedTopics);
+  // Analyze quiz data
+  const analytics = analyzeQuizData(quizHistory);
   const progressData = generateProgressData(quizHistory);
-  const categoryPerformance = analyzeCategoryPerformance(quizHistory);
-  const conceptualChallenges = analyzeChallenges(quizHistory);
-  
-  // New: Structure for course, subject, topic breakdown
-  const courseAnalysis = {};
-  const subjectAnalysis = {};
-  const topicAnalysis = {};
-
-  quizHistory.forEach((quiz) => {
-    // This example treats course/subject/topic as repeat of the extraction logic.
-    // Replace with real hierarchy if available.
-    const course = extractCourse(quiz.title);
-    const subject = extractSubject(quiz.title);
-    const topic = extractTopic(quiz.title);
-
-    // Aggregate for course
-    if (!courseAnalysis[course]) courseAnalysis[course] = { total: 0, count: 0 };
-    courseAnalysis[course].total += quiz.score;
-    courseAnalysis[course].count += 1;
-
-    // Aggregate for subject
-    if (!subjectAnalysis[subject]) subjectAnalysis[subject] = { total: 0, count: 0 };
-    subjectAnalysis[subject].total += quiz.score;
-    subjectAnalysis[subject].count += 1;
-
-    // Aggregate for topic
-    if (!topicAnalysis[topic]) topicAnalysis[topic] = { total: 0, count: 0 };
-    topicAnalysis[topic].total += quiz.score;
-    topicAnalysis[topic].count += 1;
-  });
-
-  // Helper for display of each category
-  function getAnalysisArr(analysisObj: Record<string, { total: number; count: number }>) {
-    return Object.entries(analysisObj)
-      .filter(([_, data]) => data.count > 0)
-      .map(([label, data]) => ({
-        label,
-        avg: Math.round(data.total / data.count),
-        count: data.count,
-      }))
-      .sort((a, b) => b.avg - a.avg);
-  }
-
-  const courseArr = getAnalysisArr(courseAnalysis);
-  const subjectArr = getAnalysisArr(subjectAnalysis);
-  const topicArr = getAnalysisArr(topicAnalysis).slice(0, 5); // top 5 topics
-  
-  // Convert performance data for visualization
-  const topicPerformanceData = Object.entries(analyzedTopics).map(([topic, data]) => ({
-    name: topic,
-    score: data.averageScore,
-    quizzes: data.count,
-    fill: getColorByScore(data.averageScore)
-  })).slice(0, 5); // Take top 5 topics
+  const scoreDistribution = analyzeScoreDistribution(quizHistory);
   
   return (
     <motion.div variants={containerVariants} className="space-y-6">
-      <motion.div variants={itemVariants} className="text-center">
-        <h2 className="text-xl font-bold mb-2">Performance Overview</h2>
+      <motion.div variants={itemVariants} className="text-center mb-8">
+        <h2 className="text-xl font-bold mb-2 flex justify-center items-center gap-2">
+          <Brain className="h-5 w-5 text-primary" />
+          Performance Analytics
+        </h2>
         <p className="text-muted-foreground text-sm">
-          See your course-wise, subject-wise, and topic-wise performance at a glance
+          Detailed insights based on your quiz history and learning patterns
         </p>
       </motion.div>
+      
       {quizHistory.length > 0 ? (
         <>
-          {/* Course-wise Analysis */}
-          <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Course Overview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {courseArr.length ? (
-                  <ul>
-                    {courseArr.map((data, i) => (
-                      <li key={i} className="flex justify-between mb-1">
-                        <span>{data.label}</span>
-                        <span className="font-medium">{data.avg}%</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-muted-foreground">No data</p>
-                )}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Subject Overview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {subjectArr.length ? (
-                  <ul>
-                    {subjectArr.map((data, i) => (
-                      <li key={i} className="flex justify-between mb-1">
-                        <span>{data.label}</span>
-                        <span className="font-medium">{data.avg}%</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-muted-foreground">No data</p>
-                )}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Topics</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {topicArr.length ? (
-                  <ul>
-                    {topicArr.map((data, i) => (
-                      <li key={i} className="flex justify-between mb-1">
-                        <span>{data.label}</span>
-                        <span className="font-medium">{data.avg}%</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-muted-foreground">No data</p>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-          
+          {/* Performance Overview */}
           <motion.div variants={itemVariants}>
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Calendar className="h-5 w-5 mr-2" />
+                <CardTitle className="flex items-center gap-2">
+                  <ChartPieIcon className="h-5 w-5 text-primary" />
+                  Performance Overview
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div className="bg-muted/50 p-4 rounded-lg text-center">
+                    <div className="text-xs uppercase text-muted-foreground mb-1">Quizzes Taken</div>
+                    <div className="text-3xl font-bold">{quizHistory.length}</div>
+                  </div>
+                  <div className="bg-muted/50 p-4 rounded-lg text-center">
+                    <div className="text-xs uppercase text-muted-foreground mb-1">Avg. Score</div>
+                    <div className="text-3xl font-bold">{analytics.averageScore}%</div>
+                  </div>
+                  <div className="bg-muted/50 p-4 rounded-lg text-center">
+                    <div className="text-xs uppercase text-muted-foreground mb-1">Questions Answered</div>
+                    <div className="text-3xl font-bold">{analytics.totalQuestions}</div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  {/* Your Strengths */}
+                  <div>
+                    <h3 className="font-medium text-base mb-2 flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-success" />
+                      Your Strengths
+                    </h3>
+                    {analytics.strengths.length > 0 ? (
+                      <div className="space-y-2">
+                        {analytics.strengths.map((item, index) => (
+                          <div key={index} className="flex justify-between items-center p-2 bg-success/10 rounded border border-success/20">
+                            <span className="flex items-center gap-1">
+                              <Circle className="h-2 w-2 fill-success text-success" />
+                              {item.topic}
+                            </span>
+                            <span className="font-medium">{item.score}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground p-2">
+                        Complete more quizzes to identify your strengths
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Areas for Improvement */}
+                  <div>
+                    <h3 className="font-medium text-base mb-2 flex items-center gap-2">
+                      <Target className="h-4 w-4 text-destructive" />
+                      Areas for Improvement
+                    </h3>
+                    {analytics.weaknesses.length > 0 ? (
+                      <div className="space-y-2">
+                        {analytics.weaknesses.map((item, index) => (
+                          <div key={index} className="flex justify-between items-center p-2 bg-destructive/10 rounded border border-destructive/20">
+                            <span className="flex items-center gap-1">
+                              <Circle className="h-2 w-2 fill-destructive text-destructive" />
+                              {item.topic}
+                            </span>
+                            <span className="font-medium">{item.score}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground p-2">
+                        Complete more quizzes to identify areas for improvement
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Quiz Progress Chart */}
+          <motion.div variants={itemVariants}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <LineChartIcon className="h-5 w-5 text-primary" />
                   Progress Over Time
                 </CardTitle>
               </CardHeader>
@@ -236,53 +218,20 @@ export function AnalyticsPanel({ isPremium, quizHistory, navigate }: AnalyticsPa
                     </ResponsiveContainer>
                   </div>
                 ) : (
-                  <p className="text-center text-muted-foreground">
+                  <div className="text-center text-muted-foreground py-8">
                     Take more quizzes to see your progress over time
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-          
-          <motion.div variants={itemVariants}>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <ChartBar className="h-5 w-5 mr-2" />
-                  Topic Performance
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {topicPerformanceData.length > 0 ? (
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={topicPerformanceData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis domain={[0, 100]} />
-                        <Tooltip formatter={(value) => `${value}%`} />
-                        <Bar dataKey="score" fill="#8884d8" name="Average Score">
-                          {topicPerformanceData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
                   </div>
-                ) : (
-                  <p className="text-center text-muted-foreground">
-                    Not enough topic data to display visualization
-                  </p>
                 )}
               </CardContent>
             </Card>
           </motion.div>
           
+          {/* Score Distribution */}
           <motion.div variants={itemVariants}>
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <ChartPie className="h-5 w-5 mr-2" />
+                <CardTitle className="flex items-center gap-2">
+                  <ChartPieIcon className="h-5 w-5 text-primary" />
                   Score Distribution
                 </CardTitle>
               </CardHeader>
@@ -313,165 +262,136 @@ export function AnalyticsPanel({ isPremium, quizHistory, navigate }: AnalyticsPa
             </Card>
           </motion.div>
           
+          {/* Topic Performance */}
           <motion.div variants={itemVariants}>
             <Card>
               <CardHeader>
-                <CardTitle>Category Performance Analysis</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart2 className="h-5 w-5 text-primary" />
+                  Topic Performance
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="font-medium text-lg mb-3">Strengths</h3>
-                    {strengths.length > 0 ? (
-                      <ul className="space-y-2">
-                        {strengths.map((strength, index) => (
-                          <li key={index} className="flex items-start gap-2 p-2 bg-green-50 dark:bg-green-900/10 rounded-md border border-green-100 dark:border-green-800/20">
-                            <span className="text-green-600 dark:text-green-400">✓</span>
-                            <span>{strength.topic}: <span className="font-medium">{strength.score}%</span> average score</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-muted-foreground">Take more quizzes to identify your strengths</p>
-                    )}
+                {analytics.topicPerformance.length > 0 ? (
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={analytics.topicPerformance}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis domain={[0, 100]} />
+                        <Tooltip formatter={(value) => `${value}%`} />
+                        <Legend />
+                        <Bar dataKey="score" fill="#8884d8" name="Average Score" />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
-                  
-                  <div>
-                    <h3 className="font-medium text-lg mb-3">Areas for Improvement</h3>
-                    {weaknesses.length > 0 ? (
-                      <ul className="space-y-2">
-                        {weaknesses.map((weakness, index) => (
-                          <li key={index} className="flex items-start gap-2 p-2 bg-red-50 dark:bg-red-900/10 rounded-md border border-red-100 dark:border-red-800/20">
-                            <span className="text-red-600 dark:text-red-400">!</span>
-                            <span>{weakness.topic}: <span className="font-medium">{weakness.score}%</span> average score</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-muted-foreground">Take more quizzes to identify areas for improvement</p>
-                    )}
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    Take more varied quizzes to analyze topic performance
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
           
+          {/* AI Recommendations */}
           <motion.div variants={itemVariants}>
             <Card>
               <CardHeader>
-                <CardTitle>Conceptual Analysis</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Lightbulb className="h-5 w-5 text-primary" />
+                  AI-Powered Recommendations
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div>
-                    <h3 className="font-medium text-lg mb-3">Challenging Concepts</h3>
-                    {conceptualChallenges.length > 0 ? (
-                      <ul className="space-y-2">
-                        {conceptualChallenges.map((challenge, index) => (
-                          <li key={index} className="p-2 bg-amber-50 dark:bg-amber-900/10 rounded-md border border-amber-100 dark:border-amber-800/20">
-                            <div className="font-medium">{challenge.concept}</div>
-                            <div className="text-sm text-muted-foreground mt-1">
-                              Appears in {challenge.count} quiz(zes) with average score of {challenge.averageScore}%
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-muted-foreground">Not enough data to identify challenging concepts</p>
-                    )}
+                  <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-900/20">
+                    <div className="bg-blue-100 dark:bg-blue-800 rounded-full p-1.5 mt-0.5">
+                      <Zap className="h-4 w-4 text-blue-600 dark:text-blue-300" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium">Priority Focus</h4>
+                      <p className="text-muted-foreground text-sm">
+                        {analytics.weaknesses.length > 0 
+                          ? `Concentrate on ${analytics.weaknesses[0].topic} where your performance is lowest (${analytics.weaknesses[0].score}%).`
+                          : "Complete more quizzes with varied topics to identify focus areas."}
+                      </p>
+                    </div>
                   </div>
                   
-                  <div>
-                    <h3 className="font-medium text-lg mb-3">Subject Proficiency</h3>
-                    {categoryPerformance.length > 0 ? (
-                      <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {categoryPerformance.map((category, index) => (
-                          <li key={index} className="p-2 rounded-md border border-border">
-                            <div className="font-medium">{category.category}</div>
-                            <div className="flex items-center mt-1">
-                              <div className="h-2 flex-1 bg-muted rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full rounded-full" 
-                                  style={{ 
-                                    width: `${category.proficiency}%`,
-                                    backgroundColor: getColorByScore(category.proficiency)
-                                  }}
-                                />
-                              </div>
-                              <span className="ml-2 text-sm">{category.proficiency}%</span>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-muted-foreground">Complete more quizzes to see subject proficiency</p>
-                    )}
+                  <div className="flex items-start gap-3 p-3 bg-purple-50 dark:bg-purple-900/10 rounded-lg border border-purple-100 dark:border-purple-900/20">
+                    <div className="bg-purple-100 dark:bg-purple-800 rounded-full p-1.5 mt-0.5">
+                      <CalendarDays className="h-4 w-4 text-purple-600 dark:text-purple-300" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium">Performance Trend</h4>
+                      <p className="text-muted-foreground text-sm">
+                        {quizHistory.length >= 3
+                          ? `Your performance is ${analytics.trend}. ${
+                              analytics.trend === "improving" 
+                                ? "Keep up the good work!" 
+                                : analytics.trend === "declining" 
+                                  ? "Try to review your recent errors to improve." 
+                                  : "Try more challenging questions to continue growing."
+                            }`
+                          : "Take at least 3 quizzes to establish a performance trend."}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3 p-3 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-100 dark:border-green-900/20">
+                    <div className="bg-green-100 dark:bg-green-800 rounded-full p-1.5 mt-0.5">
+                      <Book className="h-4 w-4 text-green-600 dark:text-green-300" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium">Study Strategy</h4>
+                      <p className="text-muted-foreground text-sm">
+                        Create flashcards for specific concepts you consistently miss, focusing on definitions and key principles.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-100 dark:border-amber-900/20">
+                    <div className="bg-amber-100 dark:bg-amber-800 rounded-full p-1.5 mt-0.5">
+                      <Ruler className="h-4 w-4 text-amber-600 dark:text-amber-300" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium">Daily Review</h4>
+                      <p className="text-muted-foreground text-sm">
+                        Spend 10-15 minutes daily reviewing {analytics.weaknesses.length > 0 
+                          ? analytics.weaknesses.map(w => w.topic).join(", ") 
+                          : "challenging topics"}.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3 p-3 bg-indigo-50 dark:bg-indigo-900/10 rounded-lg border border-indigo-100 dark:border-indigo-900/20">
+                    <div className="bg-indigo-100 dark:bg-indigo-800 rounded-full p-1.5 mt-0.5">
+                      <Compass className="h-4 w-4 text-indigo-600 dark:text-indigo-300" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium">Next Steps</h4>
+                      <p className="text-muted-foreground text-sm">
+                        {analytics.nextStepsRecommendation}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-          
-          <motion.div variants={itemVariants}>
-            <Card>
-              <CardHeader>
-                <CardTitle>AI-Powered Recommendations</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3">
-                  <li className="flex items-start gap-2 p-2 bg-blue-50 dark:bg-blue-900/10 rounded-md">
-                    <span className="text-primary mt-0.5">✓</span>
-                    <span><strong>Priority Focus:</strong> {weaknesses.length > 0 
-                      ? `Concentrate on ${weaknesses[0].topic} where your performance is lowest (${weaknesses[0].score}%).` 
-                      : "Take more quizzes to identify your focus areas."}</span>
-                  </li>
-                  <li className="flex items-start gap-2 p-2 bg-blue-50 dark:bg-blue-900/10 rounded-md">
-                    <span className="text-primary mt-0.5">✓</span>
-                    <span><strong>Performance Trend:</strong> {quizHistory.length >= 3 
-                      ? `Your performance is ${getPerformanceTrend(quizHistory)}. ${
-                          getPerformanceTrend(quizHistory) === "improving" 
-                            ? "Keep up the good work!" 
-                            : getPerformanceTrend(quizHistory) === "declining" 
-                              ? "Try to review your recent errors to improve." 
-                              : "Try more challenging questions to continue growing."
-                        }` 
-                      : "Not enough data yet to establish a performance trend."}</span>
-                  </li>
-                  <li className="flex items-start gap-2 p-2 bg-blue-50 dark:bg-blue-900/10 rounded-md">
-                    <span className="text-primary mt-0.5">✓</span>
-                    <span><strong>Study Strategy:</strong> Create flashcards specifically for {conceptualChallenges.length > 0 
-                      ? conceptualChallenges.map(c => c.concept).join(", ") 
-                      : "concepts you consistently miss"}.</span>
-                  </li>
-                  <li className="flex items-start gap-2 p-2 bg-blue-50 dark:bg-blue-900/10 rounded-md">
-                    <span className="text-primary mt-0.5">✓</span>
-                    <span><strong>Daily Review:</strong> Spend 10-15 minutes daily reviewing {weaknesses.length > 0 
-                      ? weaknesses.map(w => w.topic).join(", ") 
-                      : "challenging topics"}.</span>
-                  </li>
-                  <li className="flex items-start gap-2 p-2 bg-blue-50 dark:bg-blue-900/10 rounded-md">
-                    <span className="text-primary mt-0.5">✓</span>
-                    <span><strong>Learning Approach:</strong> Try using {getRecommendedLearningStyles(quizHistory)} for better retention and understanding.</span>
-                  </li>
-                  <li className="flex items-start gap-2 p-2 bg-blue-50 dark:bg-blue-900/10 rounded-md">
-                    <span className="text-primary mt-0.5">✓</span>
-                    <span><strong>Next Steps:</strong> {getNextStepsRecommendation(strengths, weaknesses)}</span>
-                  </li>
-                </ul>
               </CardContent>
             </Card>
           </motion.div>
         </>
       ) : (
         <motion.div variants={itemVariants} className="text-center p-8">
-          <p className="text-muted-foreground">
+          <Brain className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground mb-6">
             No quiz history found. Take some quizzes to see your analytics!
           </p>
           <Button 
-            onClick={() => navigate('/')} 
-            variant="outline"
-            className="mt-4"
+            onClick={() => navigate('/quiz')} 
+            className="gap-2"
           >
+            <Book className="h-4 w-4" />
             Create Your First Quiz
           </Button>
         </motion.div>
@@ -481,26 +401,110 @@ export function AnalyticsPanel({ isPremium, quizHistory, navigate }: AnalyticsPa
 }
 
 // Helper functions for analytics
-function analyzeQuizTopics(quizHistory: Array<{ title: string; score: number }>) {
-  const topics: Record<string, { totalScore: number; count: number; averageScore: number }> = {};
+function analyzeQuizData(quizHistory: AnalyticsPanelProps['quizHistory']) {
+  // Calculate overall stats
+  const totalQuizzes = quizHistory.length;
+  const totalQuestions = quizHistory.reduce((acc, quiz) => acc + quiz.questionsCount, 0);
+  const totalScore = quizHistory.reduce((acc, quiz) => acc + quiz.score, 0);
+  const averageScore = totalQuizzes ? Math.round(totalScore / totalQuizzes) : 0;
+
+  // Extract topics and performance
+  const topicsData: Record<string, { totalScore: number; count: number }> = {};
   
   quizHistory.forEach(quiz => {
-    // Extract topic from quiz title
-    const topic = extractTopic(quiz.title);
+    // Extract topics from quiz title and extract course/subject data
+    const { topic, course, subject } = extractQuizMetadata(quiz.title);
     
-    if (!topics[topic]) {
-      topics[topic] = { totalScore: 0, count: 0, averageScore: 0 };
+    // Process topics
+    if (!topicsData[topic]) {
+      topicsData[topic] = { totalScore: 0, count: 0 };
+    }
+    topicsData[topic].totalScore += quiz.score;
+    topicsData[topic].count += 1;
+    
+    // Process course data
+    if (course && course.trim() !== '') {
+      if (!topicsData[course]) {
+        topicsData[course] = { totalScore: 0, count: 0 };
+      }
+      topicsData[course].totalScore += quiz.score;
+      topicsData[course].count += 1;
     }
     
-    topics[topic].totalScore += quiz.score;
-    topics[topic].count += 1;
-    topics[topic].averageScore = Math.round(topics[topic].totalScore / topics[topic].count);
+    // Process subject data
+    if (subject && subject.trim() !== '') {
+      if (!topicsData[subject]) {
+        topicsData[subject] = { totalScore: 0, count: 0 };
+      }
+      topicsData[subject].totalScore += quiz.score;
+      topicsData[subject].count += 1;
+    }
+    
+    // Also extract concepts from question text when available
+    if (quiz.questions && quiz.questions.length > 0) {
+      quiz.questions.forEach(question => {
+        const conceptKeywords = extractKeywords(question.question);
+        conceptKeywords.forEach(keyword => {
+          if (!topicsData[keyword]) {
+            topicsData[keyword] = { totalScore: 0, count: 0 };
+          }
+          topicsData[keyword].totalScore += quiz.score;
+          topicsData[keyword].count += 1;
+        });
+      });
+    }
   });
   
-  return topics;
+  // Calculate average score per topic
+  const topicsPerformance = Object.entries(topicsData).map(([topic, data]) => ({
+    topic,
+    averageScore: Math.round(data.totalScore / data.count),
+    count: data.count
+  }));
+  
+  // Find strengths and weaknesses
+  const strengths = topicsPerformance
+    .filter(t => t.count >= 1 && t.averageScore >= 70)
+    .map(t => ({ topic: t.topic, score: t.averageScore }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+    
+  const weaknesses = topicsPerformance
+    .filter(t => t.count >= 1)
+    .map(t => ({ topic: t.topic, score: t.averageScore }))
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 3);
+  
+  // Performance trend analysis
+  const trend = determinePerformanceTrend(quizHistory);
+  
+  // Generate topic performance data for charts
+  const topicPerformance = topicsPerformance
+    .filter(t => t.count > 0)
+    .map(t => ({
+      name: t.topic,
+      score: t.averageScore,
+      count: t.count
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+  
+  // Generate next steps recommendation
+  const nextStepsRecommendation = generateNextStepsRecommendation(strengths, weaknesses, averageScore);
+  
+  return {
+    totalQuizzes,
+    totalQuestions,
+    averageScore,
+    strengths,
+    weaknesses,
+    topicPerformance,
+    trend,
+    nextStepsRecommendation
+  };
 }
 
-function analyzeScoreDistribution(quizHistory: Array<{ score: number }>) {
+function analyzeScoreDistribution(quizHistory: AnalyticsPanelProps['quizHistory']) {
   const ranges = [
     { name: "90-100%", min: 90, max: 100, value: 0, color: "#10B981" },
     { name: "80-89%", min: 80, max: 89, value: 0, color: "#3B82F6" },
@@ -510,35 +514,35 @@ function analyzeScoreDistribution(quizHistory: Array<{ score: number }>) {
   ];
   
   quizHistory.forEach(quiz => {
-    for (const range of ranges) {
-      if (quiz.score >= range.min && quiz.score <= range.max) {
-        range.value += 1;
-        break;
-      }
-    }
+    const range = ranges.find(r => quiz.score >= r.min && quiz.score <= r.max);
+    if (range) range.value += 1;
   });
   
   // Only return ranges with values
   return ranges.filter(range => range.value > 0);
 }
 
-function calculateStrengths(analyzedTopics: Record<string, { averageScore: number; count: number }>) {
-  return Object.entries(analyzedTopics)
-    .filter(([_, data]) => data.count >= 1 && data.averageScore >= 70)
-    .map(([topic, data]) => ({ topic, score: data.averageScore }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
+function generateProgressData(quizHistory: AnalyticsPanelProps['quizHistory']) {
+  if (quizHistory.length === 0) return [];
+  
+  // Sort by date
+  const sortedQuizzes = [...quizHistory].sort((a, b) => 
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+  
+  let runningTotal = 0;
+  
+  return sortedQuizzes.map((quiz, index) => {
+    runningTotal += quiz.score;
+    return {
+      date: new Date(quiz.date).toLocaleDateString(),
+      score: quiz.score,
+      average: Math.round(runningTotal / (index + 1))
+    };
+  });
 }
 
-function calculateWeaknesses(analyzedTopics: Record<string, { averageScore: number; count: number }>) {
-  return Object.entries(analyzedTopics)
-    .filter(([_, data]) => data.count >= 1)
-    .map(([topic, data]) => ({ topic, score: data.averageScore }))
-    .sort((a, b) => a.score - b.score)
-    .slice(0, 3);
-}
-
-function getPerformanceTrend(quizHistory: Array<{ score: number; date: string }>) {
+function determinePerformanceTrend(quizHistory: AnalyticsPanelProps['quizHistory']) {
   if (quizHistory.length < 3) return "stable";
   
   // Sort quizzes by date
@@ -559,171 +563,127 @@ function getPerformanceTrend(quizHistory: Array<{ score: number; date: string }>
   }
 }
 
-function getColorByScore(score: number) {
-  if (score >= 90) return "#10B981"; // Green
-  if (score >= 80) return "#3B82F6"; // Blue
-  if (score >= 70) return "#6366F1"; // Indigo
-  if (score >= 60) return "#8B5CF6"; // Violet
-  return "#EF4444"; // Red
-}
-
-function extractTopic(title: string): string {
-  // Clean up and extract the main topic
-  const cleanTitle = title.replace(/Quiz|Test|\d+|[-—:]/gi, '').trim();
+// Extract relevant metadata from quiz titles
+function extractQuizMetadata(title: string) {
+  const lowerTitle = title.toLowerCase();
+  let course = "";
+  let subject = "";
+  let topic = "";
   
-  // If the title contains "Medical" or other subject identifiers, use that
-  if (cleanTitle.includes("Medical")) {
-    return "Medicine";
+  // Try to extract structured info (Course: X, Subject: Y, Topic: Z)
+  const courseMatch = /course:?\s*([^,]+)/i.exec(title);
+  const subjectMatch = /subject:?\s*([^,]+)/i.exec(title);
+  const topicMatch = /topic:?\s*([^,]+)/i.exec(title);
+  
+  if (courseMatch) course = courseMatch[1].trim();
+  if (subjectMatch) subject = subjectMatch[1].trim();
+  if (topicMatch) topic = topicMatch[1].trim();
+  
+  // If no structured info found, try common patterns
+  if (!course) {
+    if (lowerTitle.includes('neet') || lowerTitle.includes('medical')) course = 'Medical';
+    else if (lowerTitle.includes('engineering')) course = 'Engineering';
+    else if (lowerTitle.includes('upsc')) course = 'UPSC';
+    else if (lowerTitle.includes('gk')) course = 'General Knowledge';
+    else course = 'General';
   }
   
-  // Otherwise, just return the first word or the whole string if it's short
-  const words = cleanTitle.split(' ');
-  return words[0] || "General";
-}
-
-// Add these helpers to extract course/subject/topic from titles.
-// In real-world, you'd want quiz.question/course/subject info on the object
-function extractCourse(title: string): string {
-  // Example: extract by looking for known keywords, or fallback to start
-  if (title.toLowerCase().includes("engineering")) return "Engineering";
-  if (title.toLowerCase().includes("medical")) return "Medical";
-  if (title.toLowerCase().includes("upsc")) return "UPSC";
-  if (title.toLowerCase().includes("class 1")) return "Class 1";
-  return "Other";
-}
-
-function extractSubject(title: string): string {
-  if (title.toLowerCase().includes("anatomy")) return "Anatomy";
-  if (title.toLowerCase().includes("physics")) return "Physics";
-  if (title.toLowerCase().includes("history")) return "History";
-  if (title.toLowerCase().includes("mathematics")) return "Mathematics";
-  if (title.toLowerCase().includes("physiology")) return "Physiology";
-  if (title.toLowerCase().includes("biochemistry")) return "Biochemistry";
-  if (title.toLowerCase().includes("upsc")) return "UPSC";
-  return "General";
-}
-
-// New helper functions for enhanced analytics
-function generateProgressData(quizHistory: Array<{ score: number; date: string }>) {
-  if (quizHistory.length === 0) return [];
-  
-  // Sort by date
-  const sortedQuizzes = [...quizHistory].sort((a, b) => 
-    new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
-  
-  let runningTotal = 0;
-  
-  return sortedQuizzes.map((quiz, index) => {
-    runningTotal += quiz.score;
-    return {
-      date: new Date(quiz.date).toLocaleDateString(),
-      score: quiz.score,
-      average: Math.round(runningTotal / (index + 1))
-    };
-  });
-}
-
-function analyzeCategoryPerformance(quizHistory: Array<{ title: string; score: number }>) {
-  const categories: Record<string, { totalScore: number; count: number }> = {};
-  
-  quizHistory.forEach(quiz => {
-    const category = extractCategory(quiz.title);
+  // Extract subject based on common medical/academic subjects
+  if (!subject) {
+    const subjects = [
+      'anatomy', 'physiology', 'biochemistry', 'pathology', 'microbiology',
+      'pharmacology', 'medicine', 'surgery', 'pediatrics', 'gynecology',
+      'physics', 'chemistry', 'biology', 'mathematics', 'history',
+      'geography', 'economics', 'political science'
+    ];
     
-    if (!categories[category]) {
-      categories[category] = { totalScore: 0, count: 0 };
+    for (const s of subjects) {
+      if (lowerTitle.includes(s)) {
+        subject = s.charAt(0).toUpperCase() + s.slice(1);
+        break;
+      }
     }
     
-    categories[category].totalScore += quiz.score;
-    categories[category].count += 1;
-  });
+    if (!subject) subject = 'General';
+  }
   
-  return Object.entries(categories)
-    .map(([category, data]) => ({
-      category,
-      proficiency: Math.round(data.totalScore / data.count),
-      quizCount: data.count
-    }))
-    .sort((a, b) => b.proficiency - a.proficiency);
-}
-
-function extractCategory(title: string): string {
-  if (title.includes("Medical")) return "Medicine";
-  if (title.includes("Anatomy")) return "Anatomy";
-  if (title.includes("Physiology")) return "Physiology";
-  if (title.includes("Pathology")) return "Pathology";
-  if (title.includes("Pharmacology")) return "Pharmacology";
-  if (title.includes("Biochemistry")) return "Biochemistry";
-  
-  // Default categorization based on title
-  const words = title.split(' ');
-  return words.length > 1 ? words[0] : "General";
-}
-
-function analyzeChallenges(quizHistory: Array<{ title: string; score: number }>) {
-  // This would typically use question-level data to identify specific concepts
-  // Here we're simulating based on titles and scores
-  
-  const concepts: Record<string, { totalScore: number; count: number }> = {};
-  
-  quizHistory.forEach(quiz => {
-    if (quiz.score < 70) {
-      // Extract potential challenging concepts from low-scoring quizzes
-      const potentialConcepts = extractConcepts(quiz.title);
-      
-      potentialConcepts.forEach(concept => {
-        if (!concepts[concept]) {
-          concepts[concept] = { totalScore: 0, count: 0 };
+  // Extract topic from remaining words or use default
+  if (!topic) {
+    // Clean up the title
+    const cleanTitle = title
+      .replace(/quiz|test|exam|course:.*|subject:.*|topic:.*/gi, '')
+      .replace(/[^\w\s]/gi, ' ')
+      .trim();
+    
+    const words = cleanTitle.split(/\s+/);
+    if (words.length > 0) {
+      // Find the most specific word (not already used as course/subject)
+      for (const word of words) {
+        if (word.length > 3 && 
+            !word.toLowerCase().includes(course.toLowerCase()) && 
+            !word.toLowerCase().includes(subject.toLowerCase())) {
+          topic = word.charAt(0).toUpperCase() + word.slice(1);
+          break;
         }
-        
-        concepts[concept].totalScore += quiz.score;
-        concepts[concept].count += 1;
-      });
+      }
     }
-  });
+    
+    if (!topic) topic = cleanTitle || 'General';
+  }
   
-  return Object.entries(concepts)
-    .map(([concept, data]) => ({
-      concept,
-      averageScore: Math.round(data.totalScore / data.count),
-      count: data.count
-    }))
-    .sort((a, b) => a.averageScore - b.averageScore)
-    .slice(0, 3);
+  return { course, subject, topic };
 }
 
-function extractConcepts(title: string): string[] {
-  // This is a simplified approach - in a real app, we would analyze actual question content
-  const keywords = ["physiology", "anatomy", "diagnosis", "treatment", "pathology", "diseases", 
-                   "symptoms", "examination", "lab", "medicine", "emergency", "surgical"];
-                   
-  return keywords.filter(keyword => title.toLowerCase().includes(keyword));
-}
-
-function getRecommendedLearningStyles(quizHistory: Array<{ score: number }>) {
-  // This would typically be based on performance patterns
-  // For now we're providing generic recommendations
-  const styles = [
-    "visual diagrams and illustrations",
-    "verbal explanations and discussions",
-    "problem-based learning with case studies",
-    "interactive quizzes and active recall practice",
-    "spaced repetition review sessions"
+// Extract potential keywords from text for concept analysis
+function extractKeywords(text: string): string[] {
+  if (!text) return [];
+  
+  // Common medical/academic keywords to look for
+  const commonKeywords = [
+    'kidney', 'heart', 'liver', 'brain', 'lung', 'bone', 'muscle',
+    'nerve', 'artery', 'vein', 'cell', 'tissue', 'organ', 'system',
+    'disease', 'syndrome', 'treatment', 'diagnosis', 'therapy',
+    'equation', 'formula', 'theory', 'principle', 'law', 'reaction'
   ];
   
-  // Return 2-3 random learning styles
-  return styles
-    .sort(() => 0.5 - Math.random())
-    .slice(0, Math.floor(Math.random() * 2) + 2)
-    .join(", ");
+  const words = text.toLowerCase()
+    .replace(/[^\w\s]/gi, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 3);
+  
+  // Prioritize common keywords, then find other potentially meaningful words
+  const foundKeywords = new Set<string>();
+  
+  // First check for common keywords
+  for (const keyword of commonKeywords) {
+    if (text.toLowerCase().includes(keyword)) {
+      foundKeywords.add(keyword.charAt(0).toUpperCase() + keyword.slice(1));
+    }
+  }
+  
+  // If no common keywords found, extract nouns or important-looking words
+  if (foundKeywords.size === 0) {
+    // Simple heuristic: longer words are more likely to be meaningful
+    const potentialKeywords = words
+      .filter(w => w.length > 5 && !['about', 'because', 'through', 'without', 'between'].includes(w))
+      .slice(0, 2);
+    
+    potentialKeywords.forEach(k => {
+      foundKeywords.add(k.charAt(0).toUpperCase() + k.slice(1));
+    });
+  }
+  
+  return Array.from(foundKeywords);
 }
 
-function getNextStepsRecommendation(
-  strengths: Array<{topic: string; score: number}>, 
-  weaknesses: Array<{topic: string; score: number}>
-) {
+// Generate personalized next steps recommendation
+function generateNextStepsRecommendation(
+  strengths: {topic: string, score: number}[], 
+  weaknesses: {topic: string, score: number}[],
+  averageScore: number
+): string {
   if (weaknesses.length === 0) {
-    return "Challenge yourself with more advanced topics and consider helping others learn these subjects too.";
+    return "Challenge yourself with more advanced topics. Consider creating more complex quizzes.";
   }
   
   if (weaknesses.length > 0) {
@@ -736,6 +696,10 @@ function getNextStepsRecommendation(
     } else {
       return `Continue regular practice on ${worstTopic} while leveraging your strengths in ${strengths.length > 0 ? strengths[0].topic : 'other areas'}.`;
     }
+  }
+  
+  if (averageScore > 85) {
+    return "You're performing excellently. Try increasing quiz difficulty or exploring new topics.";
   }
   
   return "Take more varied quizzes to better understand your strengths and weaknesses.";

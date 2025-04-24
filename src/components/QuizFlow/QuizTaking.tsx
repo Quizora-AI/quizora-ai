@@ -42,7 +42,7 @@ const QuizTaking = ({
     }
   }, [currentQuestionNumber, totalQuestions]);
 
-  // Create a wrapper for onNext to track time spent on this question
+  // Handle timing for the current question
   const handleNextQuestion = (selectedOption: number) => {
     const timeSpent = Math.round((new Date().getTime() - startTime.getTime()) / 1000);
     console.log(`Question ${currentQuestionNumber} took ${timeSpent} seconds to answer`);
@@ -65,7 +65,6 @@ const QuizTaking = ({
           }));
           
           console.log(`Saved timing for question ${currentQuestionNumber}: ${timeSpent} seconds`);
-          console.log(`Updated timings array:`, timings);
         }
       }
     } catch (error) {
@@ -81,6 +80,8 @@ const QuizTaking = ({
       onNext={handleNextQuestion}
       currentQuestionNumber={currentQuestionNumber}
       totalQuestions={totalQuestions}
+      // Pass autoSelectMode as false to disable auto-selection
+      autoSelectMode={false}
     />
   );
 };

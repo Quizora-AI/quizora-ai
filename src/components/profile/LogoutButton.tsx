@@ -4,10 +4,49 @@ import { LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 export function LogoutButton() {
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Show toast for auth state changes
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN') {
+        toast({
+          title: "Signed in successfully",
+          description: "Welcome back to your account!",
+        });
+      }
+    });
+
+    // Check if we have a "login_success" or "login_error" param in the URL
+    const params = new URLSearchParams(window.location.search);
+    const loginSuccess = params.get('login_success');
+    const loginError = params.get('login_error');
+    
+    if (loginSuccess === 'true') {
+      toast({
+        title: "Login successful",
+        description: "You're now signed in to your account",
+      });
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (loginError) {
+      toast({
+        title: "Login failed",
+        description: loginError || "Please try again",
+        variant: "destructive",
+      });
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [toast]);
 
   const handleLogout = async () => {
     try {

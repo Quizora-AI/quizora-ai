@@ -14,7 +14,9 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend
+  Legend,
+  LineChart,
+  Line
 } from "recharts";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -105,89 +107,15 @@ export function QuizAnalytics({
     };
   });
 
-  // Get incorrect questions for detailed review
-  const incorrectQuestions = questions.filter((_, index) => 
-    userAnswers[index] !== questions[index].correctAnswer
-  );
-
-  // Get key topics from quiz content
-  const extractTopics = () => {
-    const topics = new Map<string, number>();
-    
-    questions.forEach(q => {
-      const text = q.question.toLowerCase();
-      
-      // Extract potential keywords
-      const keywords = text.match(/\b\w{5,}\b/g) || [];
-      keywords.forEach(word => {
-        if (!word.match(/^(about|because|before|between|during|through|without)$/)) {
-          topics.set(word, (topics.get(word) || 0) + 1);
-        }
-      });
-    });
-    
-    // Return top 3 topics
-    return [...topics.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([topic]) => topic.charAt(0).toUpperCase() + topic.slice(1));
-  };
-  
-  const quizTopics = extractTopics();
-  
-  // Generate smart recommendations based on performance
-  const getRecommendations = () => {
-    const recs = [];
-    
-    // Priority focus area
-    if (incorrectAnswers > 0) {
-      recs.push({
-        title: "Priority Focus",
-        content: `Focus on reviewing the ${incorrectAnswers} question${incorrectAnswers > 1 ? 's' : ''} you missed.`,
-        icon: <Flag className="h-5 w-5 text-primary" />
-      });
-    } else {
-      recs.push({
-        title: "Great Job!",
-        content: "You got all questions correct. Try more challenging quizzes next.",
-        icon: <Award className="h-5 w-5 text-primary" />
-      });
-    }
-    
-    // Time management
-    if (averageTime && averageTime > 20) {
-      recs.push({
-        title: "Time Management",
-        content: "Work on improving your speed while maintaining accuracy.",
-        icon: <Clock className="h-5 w-5 text-primary" />
-      });
-    } else if (averageTime && averageTime < 5 && incorrectAnswers > 0) {
-      recs.push({
-        title: "Careful Reading",
-        content: "You answered quickly but missed some questions. Take time to read carefully.",
-        icon: <BookOpen className="h-5 w-5 text-primary" />
-      });
-    }
-    
-    // Study strategy
-    recs.push({
-      title: "Study Strategy",
-      content: "Create flashcards for difficult concepts to reinforce your learning.",
-      icon: <BookMarked className="h-5 w-5 text-primary" />
-    });
-    
-    // Next steps
-    recs.push({
-      title: "Next Steps",
-      content: "Take another quiz soon to build on what you've learned.",
-      icon: <ArrowRight className="h-5 w-5 text-primary" />
-    });
-    
-    return recs;
-  };
+  // Get all questions for review, both correct and incorrect
+  const allQuestions = questions.map((question, index) => ({
+    question,
+    isCorrect: userAnswers[index] === question.correctAnswer,
+    userAnswer: userAnswers[index]
+  }));
 
   const handleCreateNewQuiz = () => {
-    navigate('/quiz');
+    navigate('/quiz'); // Navigate to quiz page
   };
 
   const containerVariants = {
@@ -340,31 +268,6 @@ export function QuizAnalytics({
                     <span className="font-medium">{formatTime(totalTime)}</span>
                   </div>
                 </div>
-                
-                {/* Quiz Topics Section */}
-                <div className="mt-6">
-                  <h3 className="font-medium text-lg mb-3 flex items-center gap-2">
-                    <BookOpen className="h-5 w-5 text-primary" />
-                    <span>Quiz Topics</span>
-                  </h3>
-                  
-                  <div className="space-y-3">
-                    {quizTopics.length > 0 ? (
-                      <ul className="space-y-2">
-                        {quizTopics.map((topic, index) => (
-                          <li key={index} className="flex items-center gap-2 bg-muted/50 p-2 rounded-md">
-                            <Flag className="h-4 w-4 text-primary" />
-                            <span>{topic}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <div className="text-muted-foreground text-sm">
-                        Complete more quizzes to identify key topics
-                      </div>
-                    )}
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -392,30 +295,61 @@ export function QuizAnalytics({
                       </ResponsiveContainer>
                     </div>
                     
-                    {incorrectQuestions.length > 0 && (
-                      <div className="space-y-4">
-                        <h3 className="font-medium text-lg flex items-center gap-2">
-                          <AlertCircle className="h-4 w-4 text-destructive" />
-                          Questions to Review:
-                        </h3>
-                        {incorrectQuestions.map((q, index) => (
-                          <div key={index} className="p-4 border rounded-md bg-destructive/5">
-                            <p className="font-medium text-destructive mb-2 flex items-center gap-2">
-                              <BookOpen className="h-4 w-4" />
-                              Question {questions.findIndex(question => question.id === q.id) + 1}:
-                            </p>
-                            <p className="mb-2">{q.question}</p>
-                            <p className="text-sm font-medium flex items-center gap-2">
-                              <CheckCircle className="h-4 w-4 text-success" />
-                              Correct Answer: {q.options[q.correctAnswer]}
-                            </p>
-                            {q.explanation && (
-                              <p className="mt-2 text-sm text-muted-foreground">{q.explanation}</p>
+                    <div className="space-y-4">
+                      <h3 className="font-medium text-lg flex items-center gap-2">
+                        <BookOpen className="h-4 w-4 text-primary" />
+                        All Questions Review:
+                      </h3>
+                      {allQuestions.map((item, index) => (
+                        <div 
+                          key={index} 
+                          className={`p-4 border rounded-md ${
+                            item.isCorrect ? 'bg-success/5' : 'bg-destructive/5'
+                          }`}
+                        >
+                          <p className={`font-medium mb-2 flex items-center gap-2 ${
+                            item.isCorrect ? 'text-success' : 'text-destructive'
+                          }`}>
+                            {item.isCorrect ? (
+                              <CheckCircle className="h-4 w-4" />
+                            ) : (
+                              <AlertCircle className="h-4 w-4" />
                             )}
+                            Question {index + 1}:
+                          </p>
+                          <p className="mb-2">{item.question.question}</p>
+                          <p className="text-sm font-medium flex items-center gap-2">
+                            <CheckCircle className="h-4 w-4 text-success" />
+                            Correct Answer: {item.question.options[item.question.correctAnswer]}
+                          </p>
+                          {!item.isCorrect && (
+                            <p className="text-sm font-medium flex items-center gap-2 mt-1">
+                              <XCircle className="h-4 w-4 text-destructive" />
+                              Your Answer: {item.question.options[item.userAnswer]}
+                            </p>
+                          )}
+                          {item.question.explanation && (
+                            <div className="mt-2 text-sm bg-muted p-2 rounded">
+                              <span className="font-medium flex items-center gap-1">
+                                <Info className="h-3.5 w-3.5" />
+                                Explanation:
+                              </span> 
+                              <p className="mt-1">{item.question.explanation}</p>
+                              
+                              {!item.isCorrect && (
+                                <div className="mt-2 text-destructive/80">
+                                  <span className="font-medium">Why you might have chosen this answer:</span>
+                                  <p className="mt-0.5">This option might seem plausible because it relates to the topic, but it misses key aspects of the correct solution.</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          <div className="mt-2 text-xs text-muted-foreground">
+                            Time taken: {formatTime(timePerQuestion[index] || 0)}
                           </div>
-                        ))}
-                      </div>
-                    )}
+                        </div>
+                      ))}
+                    </div>
                   </>
                 ) : (
                   <div className="text-center py-10">
@@ -495,15 +429,59 @@ export function QuizAnalytics({
                         Personalized Recommendations
                       </h3>
                       <div className="space-y-4">
-                        {getRecommendations().map((rec, index) => (
-                          <div key={index} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-                            {rec.icon}
-                            <div>
-                              <h4 className="font-medium">{rec.title}</h4>
-                              <p className="text-muted-foreground text-sm">{rec.content}</p>
-                            </div>
+                        <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg">
+                          <Flag className="h-5 w-5 text-primary mt-1" />
+                          <div>
+                            <h4 className="font-medium">Priority Focus</h4>
+                            <p className="text-muted-foreground text-sm">
+                              {incorrectAnswers > 0 
+                                ? `Focus on reviewing the ${incorrectAnswers} question${incorrectAnswers > 1 ? 's' : ''} you missed.`
+                                : "Great job! Move on to more challenging topics."}
+                            </p>
                           </div>
-                        ))}
+                        </div>
+                        
+                        <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg">
+                          <Chart className="h-5 w-5 text-primary mt-1" />
+                          <div>
+                            <h4 className="font-medium">Performance Trend</h4>
+                            <p className="text-muted-foreground text-sm">
+                              Not enough data yet to establish a performance trend. Take more quizzes for insights.
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg">
+                          <BookMarked className="h-5 w-5 text-primary mt-1" />
+                          <div>
+                            <h4 className="font-medium">Study Strategy</h4>
+                            <p className="text-muted-foreground text-sm">
+                              Create flashcards for concepts you consistently miss, focusing on key terminology.
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg">
+                          <Clock className="h-5 w-5 text-primary mt-1" />
+                          <div>
+                            <h4 className="font-medium">Daily Review</h4>
+                            <p className="text-muted-foreground text-sm">
+                              Spend 10-15 minutes daily reviewing challenging topics from this quiz.
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg">
+                          <ArrowRight className="h-5 w-5 text-primary mt-1" />
+                          <div>
+                            <h4 className="font-medium">Next Steps</h4>
+                            <p className="text-muted-foreground text-sm">
+                              {score > 80 
+                                ? "Challenge yourself with more advanced topics or try quizzes with more questions." 
+                                : "Retake this quiz after reviewing the material to solidify your understanding."}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                     
