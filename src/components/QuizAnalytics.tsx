@@ -29,7 +29,7 @@ import {
   BarChart3,
   CheckCircle,
   XCircle,
-  Line,
+  LineChart,
   Hourglass,
   Timer,
   Target,
