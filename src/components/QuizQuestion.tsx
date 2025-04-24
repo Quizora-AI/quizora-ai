@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -7,7 +6,7 @@ import { Question } from "./FileUpload";
 import { Progress } from "@/components/ui/progress";
 import { motion, AnimatePresence } from "framer-motion";
 
-interface QuizQuestionProps {
+export interface QuizQuestionProps {
   question: Question;
   onNext: (selectedOption: number) => void;
   currentQuestionNumber: number;

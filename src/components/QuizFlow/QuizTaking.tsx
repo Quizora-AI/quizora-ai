@@ -80,8 +80,6 @@ const QuizTaking = ({
       onNext={handleNextQuestion}
       currentQuestionNumber={currentQuestionNumber}
       totalQuestions={totalQuestions}
-      // Pass autoSelectMode as false to disable auto-selection
-      autoSelectMode={false}
     />
   );
 };

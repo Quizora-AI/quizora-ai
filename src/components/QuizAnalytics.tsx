@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -68,7 +67,6 @@ export function QuizAnalytics({
   const score = Math.round((correctAnswers / totalQuestions) * 100);
   const navigate = useNavigate();
   
-  // Check if user has premium
   const [isPremium, setIsPremium] = useState(() => {
     try {
       const userSettings = localStorage.getItem("userSettings");
@@ -82,7 +80,6 @@ export function QuizAnalytics({
     }
   });
 
-  // Format time for display with proper handling
   const formatTime = (seconds: number): string => {
     if (!seconds || isNaN(seconds)) return "0 sec";
     if (seconds < 60) return `${seconds} sec`;
@@ -91,13 +88,11 @@ export function QuizAnalytics({
     return `${min}m ${sec}s`;
   };
 
-  // Prepare data for overview chart
   const overviewData = [
     { name: "Correct", value: correctAnswers, color: "#10b981" },
     { name: "Incorrect", value: incorrectAnswers, color: "#ef4444" }
   ];
   
-  // Prepare timing data for visualization with safety checks
   const timingData = questions.map((_, index) => {
     const timeSpent = timePerQuestion[index] || 0;
     return {
@@ -107,7 +102,6 @@ export function QuizAnalytics({
     };
   });
 
-  // Get all questions for review, both correct and incorrect
   const allQuestions = questions.map((question, index) => ({
     question,
     isCorrect: userAnswers[index] === question.correctAnswer,
@@ -115,7 +109,7 @@ export function QuizAnalytics({
   }));
 
   const handleCreateNewQuiz = () => {
-    navigate('/quiz'); // Navigate to quiz page
+    navigate('/quiz');
   };
 
   const containerVariants = {
@@ -442,7 +436,7 @@ export function QuizAnalytics({
                         </div>
                         
                         <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg">
-                          <Chart className="h-5 w-5 text-primary mt-1" />
+                          <BarChart2 className="h-5 w-5 text-primary mt-1" />
                           <div>
                             <h4 className="font-medium">Performance Trend</h4>
                             <p className="text-muted-foreground text-sm">
