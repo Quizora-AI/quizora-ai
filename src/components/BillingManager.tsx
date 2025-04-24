@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,73 +13,73 @@ interface BillingManagerProps {
   onPurchaseComplete: (productId: string) => void;
 }
 
+interface Product {
+  productId: string;
+  title: string;
+  description: string;
+  offers: Array<{
+    offerId: string;
+    formattedPrice: string;
+    priceAmountMicros: number;
+    currencyCode: string;
+    billingPeriod: string;
+  }>;
+}
+
 export function BillingManager({ userId, isPremium, onPurchaseComplete }: BillingManagerProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
   const { toast } = useToast();
   
-  const hasStore = typeof window !== 'undefined' && 'cordova' in window && 
-    'plugins' in (window as any).cordova && 'store' in (window as any).cordova.plugins;
+  const hasNativePlugin = typeof window !== 'undefined' && 'cordova' in window && 
+    'plugins' in (window as any) && 'PlayBilling' in (window as any).cordova.plugins;
 
   useEffect(() => {
-    if (hasStore) {
-      initializeStore();
+    if (hasNativePlugin) {
+      initializeBilling();
     }
-  }, [hasStore]);
+  }, [hasNativePlugin]);
   
-  const initializeStore = async () => {
+  const initializeBilling = async () => {
     try {
-      const store = (window as any).cordova.plugins.store;
+      const PlayBilling = (window as any).cordova.plugins.PlayBilling;
       
-      // Register products using our consistent product IDs
-      store.register({
-        id: SUBSCRIPTION_PRODUCTS.MONTHLY,
-        type: store.PAID_SUBSCRIPTION
-      });
-      
-      store.register({
-        id: SUBSCRIPTION_PRODUCTS.YEARLY,
-        type: store.PAID_SUBSCRIPTION
-      });
-      
-      // When purchase is approved
-      store.when(SUBSCRIPTION_PRODUCTS.MONTHLY).approved(async (product: any) => {
-        try {
-          await verifyPurchase(SUBSCRIPTION_PRODUCTS.MONTHLY, product.transaction.id);
-          product.finish();
-        } catch (err) {
-          console.error('Error processing monthly subscription:', err);
+      // Connect to billing service
+      PlayBilling.connect(
+        () => {
+          console.log('Connected to Play Billing');
+          // Query available products
+          queryProducts();
+        },
+        (error: string) => {
+          console.error('Error connecting to Play Billing:', error);
+          setError('Failed to initialize billing service');
         }
-      });
-      
-      store.when(SUBSCRIPTION_PRODUCTS.YEARLY).approved(async (product: any) => {
-        try {
-          await verifyPurchase(SUBSCRIPTION_PRODUCTS.YEARLY, product.transaction.id);
-          product.finish();
-        } catch (err) {
-          console.error('Error processing yearly subscription:', err);
-        }
-      });
-      
-      // When purchase fails
-      store.error((error: any) => {
-        console.error('Store Error:', error);
-        setError('Purchase failed. Please try again later.');
-        setLoading(false);
-        
-        toast({
-          title: "Purchase Error",
-          description: "There was a problem processing your purchase. Please try again later.",
-          variant: "destructive"
-        });
-      });
-      
-      // Initialize the store
-      store.refresh();
-      console.log('In-app purchase store initialized successfully');
+      );
     } catch (error) {
-      console.error('Error initializing in-app purchase store:', error);
-      setError('Failed to initialize in-app purchases');
+      console.error('Error initializing billing:', error);
+      setError('Failed to initialize billing service');
+    }
+  };
+  
+  const queryProducts = () => {
+    try {
+      const PlayBilling = (window as any).cordova.plugins.PlayBilling;
+      
+      PlayBilling.queryProducts(
+        (productList: Product[]) => {
+          console.log('Products retrieved:', productList);
+          setProducts(productList);
+        },
+        (error: string) => {
+          console.error('Error querying products:', error);
+          setError('Failed to retrieve product information');
+        }
+      );
+    } catch (error) {
+      console.error('Error querying products:', error);
+      setError('Failed to retrieve product information');
     }
   };
   
@@ -137,17 +138,36 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
     setLoading(true);
     setError(null);
     
-    if (hasStore) {
+    if (hasNativePlugin) {
       try {
-        const store = (window as any).cordova.plugins.store;
+        const PlayBilling = (window as any).cordova.plugins.PlayBilling;
         console.log(`Attempting to purchase product: ${productId}`);
-        store.order(productId);
+        
+        PlayBilling.purchase(
+          productId,
+          (purchase: any) => {
+            console.log('Purchase successful:', purchase);
+            verifyPurchase(purchase.productId, purchase.purchaseToken);
+          },
+          (error: string) => {
+            console.error('Purchase failed:', error);
+            setError('Purchase failed');
+            setLoading(false);
+            
+            toast({
+              title: "Purchase Failed",
+              description: "There was an error processing your purchase.",
+              variant: "destructive"
+            });
+          }
+        );
       } catch (error) {
         console.error('Error purchasing product:', error);
         setError('Purchase failed');
         setLoading(false);
       }
     } else {
+      // Web fallback for testing
       setTimeout(() => {
         const success = Math.random() > 0.2;
         
@@ -171,6 +191,60 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
     }
   };
   
+  const restorePurchases = () => {
+    if (!hasNativePlugin) {
+      toast({
+        title: "Feature Unavailable",
+        description: "This feature is only available on mobile devices.",
+        variant: "default"
+      });
+      return;
+    }
+    
+    try {
+      const PlayBilling = (window as any).cordova.plugins.PlayBilling;
+      setLoading(true);
+      
+      PlayBilling.restorePurchases(
+        (purchases: any[]) => {
+          console.log('Restored purchases:', purchases);
+          if (purchases.length > 0) {
+            // Find the most recent purchase
+            const mostRecent = purchases.reduce((latest, current) => 
+              current.purchaseTime > latest.purchaseTime ? current : latest, purchases[0]);
+            
+            verifyPurchase(mostRecent.productId, mostRecent.purchaseToken);
+            
+            toast({
+              title: "Purchases Restored",
+              description: "Your subscription has been restored.",
+              variant: "success",
+            });
+          } else {
+            toast({
+              title: "No Purchases Found",
+              description: "No previous subscriptions were found.",
+              variant: "default"
+            });
+          }
+          setLoading(false);
+        },
+        (error: string) => {
+          console.error('Error restoring purchases:', error);
+          toast({
+            title: "Restore Failed",
+            description: "Failed to restore previous purchases.",
+            variant: "destructive"
+          });
+          setLoading(false);
+        }
+      );
+    } catch (error) {
+      console.error('Error restoring purchases:', error);
+      setLoading(false);
+    }
+  };
+  
   if (isPremium) {
     return (
       <Card className="border-success/30 bg-success/5 shadow-sm">
@@ -189,6 +263,14 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
     );
   }
   
+  const getFormattedPrice = (productId: string) => {
+    if (products.length > 0) {
+      const product = products.find(p => p.productId === productId);
+      return product?.offers[0]?.formattedPrice || SUBSCRIPTION_PRICES[productId].formattedPrice;
+    }
+    return SUBSCRIPTION_PRICES[productId].formattedPrice;
+  };
+  
   return (
     <div className="space-y-4">
       {error && (
@@ -206,7 +288,7 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
         <Card className="border-primary/30 hover:border-primary/50 transition-all shadow-sm">
           <CardHeader>
             <CardTitle>Monthly Premium</CardTitle>
-            <p className="text-2xl font-bold">{SUBSCRIPTION_PRICES[SUBSCRIPTION_PRODUCTS.MONTHLY].formattedPrice} <span className="text-sm font-normal text-muted-foreground">/month</span></p>
+            <p className="text-2xl font-bold">{getFormattedPrice(SUBSCRIPTION_PRODUCTS.MONTHLY)} <span className="text-sm font-normal text-muted-foreground">/month</span></p>
           </CardHeader>
           <CardContent>
             <Button 
@@ -222,7 +304,7 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
         <Card className="border-primary/30 hover:border-primary/50 transition-all shadow-sm">
           <CardHeader>
             <CardTitle>Annual Premium</CardTitle>
-            <p className="text-2xl font-bold">{SUBSCRIPTION_PRICES[SUBSCRIPTION_PRODUCTS.YEARLY].formattedPrice} <span className="text-sm font-normal text-muted-foreground">/year</span></p>
+            <p className="text-2xl font-bold">{getFormattedPrice(SUBSCRIPTION_PRODUCTS.YEARLY)} <span className="text-sm font-normal text-muted-foreground">/year</span></p>
           </CardHeader>
           <CardContent>
             <Button 
@@ -234,6 +316,17 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
             </Button>
           </CardContent>
         </Card>
+      </div>
+      
+      <div className="mt-4 flex justify-center">
+        <Button
+          variant="outline"
+          onClick={restorePurchases}
+          disabled={loading}
+          className="text-sm"
+        >
+          Restore Purchases
+        </Button>
       </div>
       
       <p className="text-xs text-center text-muted-foreground mt-4">

@@ -27,12 +27,13 @@
         <config-file target="AndroidManifest.xml" parent="/manifest/application">
             <meta-data android:name="com.google.android.play.billingclient.version" android:value="7.1.1" />
         </config-file>
+        
+        <!-- Include our custom plugin -->
+        <source-file src="src/android/PlayBillingPlugin.kt" target-dir="app/src/main/java/com/quizora/ai/billing" />
     </platform>
     
-    <!-- Configure purchase plugin with latest version -->
-    <plugin name="cordova-plugin-purchase" spec="^13.10.0">
-        <variable name="BILLING_KEY" value="YOUR_GOOGLE_PLAY_BILLING_KEY" />
-    </plugin>
+    <!-- Use our custom plugin instead of the standard one -->
+    <plugin name="cordova-plugin-play-billing" src="src/android" />
     
     <!-- Define subscription products -->
     <product id="monthly_subscription" type="subscription">

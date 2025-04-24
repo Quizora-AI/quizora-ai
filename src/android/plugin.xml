@@ -1,0 +1,35 @@
+
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+        id="cordova-plugin-play-billing"
+        version="1.0.0">
+    
+    <name>Google Play Billing</name>
+    <description>Cordova plugin for Google Play Billing</description>
+    <license>MIT</license>
+    
+    <engines>
+        <engine name="cordova" version=">=9.0.0" />
+        <engine name="cordova-android" version=">=9.0.0" />
+    </engines>
+    
+    <platform name="android">
+        <config-file target="res/xml/config.xml" parent="/*">
+            <feature name="PlayBillingPlugin">
+                <param name="android-package" value="com.quizora.ai.billing.PlayBillingPlugin" />
+            </feature>
+        </config-file>
+        
+        <config-file target="AndroidManifest.xml" parent="/manifest">
+            <uses-permission android:name="com.android.vending.BILLING" />
+        </config-file>
+        
+        <framework src="com.android.billingclient:billing:7.1.1" />
+        
+        <source-file src="src/android/PlayBillingPlugin.kt" target-dir="src/com/quizora/ai/billing" />
+    </platform>
+    
+    <js-module src="www/play-billing.js" name="PlayBilling">
+        <clobbers target="PlayBilling" />
+    </js-module>
+</plugin>
