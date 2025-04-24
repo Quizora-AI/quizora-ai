@@ -33,7 +33,7 @@ export function LogoutButton() {
   };
 
   return (
-    <div className="p-4 border rounded-lg bg-muted/30">
+    <div className="p-4 border rounded-lg bg-muted/30 mb-4">
       <div className="flex flex-col space-y-4">
         <div className="flex items-center justify-between">
           <div>

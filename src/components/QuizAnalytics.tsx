@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Question } from "./FileUpload";
@@ -20,30 +20,26 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { 
-  Plus, 
-  PieChart as PieChartIcon, 
-  Clock, 
-  BookOpen,
-  BrainCircuit,
-  Lightbulb,
-  BarChart3,
   CheckCircle,
   XCircle,
-  LineChart,
-  Hourglass,
+  PieChart as PieChartIcon,
+  Clock,
   Timer,
+  BookOpen,
+  AlertCircle,
+  Info,
+  BarChart2,
   Target,
   Award,
-  ArrowUp,
-  Gauge,
-  AlertCircle,
   GraduationCap,
+  Lightbulb,
+  ArrowRight,
   BookMarked,
-  ListChecks,
-  BarChart2,
-  TrendingUp,
+  Flag,
+  CircleCheck,
   Calendar,
-  Activity
+  ArrowUp,
+  Brain
 } from "lucide-react";
 
 interface QuizAnalyticsProps {
@@ -62,11 +58,10 @@ export function QuizAnalytics({
   incorrectAnswers, 
   userAnswers,
   timePerQuestion = [],
-  averageTime = 15,
-  totalTime = 45
+  averageTime = 0,
+  totalTime = 0
 }: QuizAnalyticsProps) {
   const [activeTab, setActiveTab] = useState("overview");
-  const [suggestions, setSuggestions] = useState<string[]>([]);
   const totalQuestions = questions.length;
   const score = Math.round((correctAnswers / totalQuestions) * 100);
   const navigate = useNavigate();
@@ -84,112 +79,10 @@ export function QuizAnalytics({
       return false;
     }
   });
-  
-  // Extract quiz metadata to categorize by subject/course/topic
-  const [quizMetadata, setQuizMetadata] = useState<{
-    course: string;
-    subject: string;
-    topics: string[];
-  }>({
-    course: "General Knowledge",
-    subject: "Mixed",
-    topics: []
-  });
-  
-  // Extract quiz metadata from questions
-  useEffect(() => {
-    try {
-      // Try to extract topic from quiz title or questions
-      const extractedTopics = new Set<string>();
-      
-      // Extract from question content
-      questions.forEach(q => {
-        const questionText = q.question.toLowerCase();
-        
-        // Look for common subject indicators
-        const subjectPatterns = [
-          { pattern: /math|algebra|calculus|geometry|equation/i, name: "Mathematics" },
-          { pattern: /biology|cell|organ|species|ecosystem/i, name: "Biology" },
-          { pattern: /physics|force|energy|motion|gravity/i, name: "Physics" },
-          { pattern: /chemistry|element|compound|reaction|atom/i, name: "Chemistry" },
-          { pattern: /history|century|era|ancient|king|queen|war/i, name: "History" },
-          { pattern: /geography|country|capital|continent|climate/i, name: "Geography" },
-          { pattern: /literature|author|novel|poem|character/i, name: "Literature" },
-          { pattern: /computer|algorithm|code|program|software/i, name: "Computer Science" },
-          { pattern: /medicine|disease|treatment|symptom|diagnosis/i, name: "Medicine" }
-        ];
-        
-        // Find most common subject
-        for (const {pattern, name} of subjectPatterns) {
-          if (pattern.test(questionText)) {
-            extractedTopics.add(name);
-          }
-        }
-        
-        // Extract keywords (words longer than 5 chars) as potential topics
-        const words = questionText.split(/\s+/).filter(word => 
-          word.length > 5 && !/^(about|because|before|between|during|through|without)$/.test(word)
-        );
-        
-        // Add most significant words as topics
-        words.slice(0, 2).forEach(word => {
-          if (word) extractedTopics.add(word.charAt(0).toUpperCase() + word.slice(1));
-        });
-      });
-      
-      // Default if nothing is detected
-      if (extractedTopics.size === 0) {
-        extractedTopics.add("General");
-      }
-      
-      setQuizMetadata({
-        course: "Quiz Content",
-        subject: Array.from(extractedTopics)[0] || "General",
-        topics: Array.from(extractedTopics).slice(0, 3)
-      });
-      
-      console.log("Extracted quiz metadata:", {
-        course: "Quiz Content",
-        subject: Array.from(extractedTopics)[0] || "General",
-        topics: Array.from(extractedTopics).slice(0, 3)
-      });
-      
-    } catch (error) {
-      console.error("Error extracting quiz metadata:", error);
-      // Set defaults if extraction fails
-      setQuizMetadata({
-        course: "General Knowledge",
-        subject: "Mixed",
-        topics: ["General"]
-      });
-    }
-  }, [questions]);
-  
-  useEffect(() => {
-    // Generate performance suggestions based on user's actual performance
-    try {
-      const personalized = getPerformanceSuggestions(
-        score, 
-        correctAnswers, 
-        incorrectAnswers, 
-        questions, 
-        userAnswers,
-        timePerQuestion,
-        quizMetadata
-      );
-      setSuggestions(personalized);
-    } catch (error) {
-      console.error("Error generating suggestions:", error);
-      setSuggestions([
-        "Focus on reviewing the questions you missed.",
-        "Try creating flashcards for difficult concepts.",
-        "Consider taking more practice quizzes to improve retention."
-      ]);
-    }
-  }, [score, correctAnswers, incorrectAnswers, questions, userAnswers, timePerQuestion, quizMetadata]);
 
-  // Format time for display
+  // Format time for display with proper handling
   const formatTime = (seconds: number): string => {
+    if (!seconds || isNaN(seconds)) return "0 sec";
     if (seconds < 60) return `${seconds} sec`;
     const min = Math.floor(seconds / 60);
     const sec = seconds % 60;
@@ -202,166 +95,99 @@ export function QuizAnalytics({
     { name: "Incorrect", value: incorrectAnswers, color: "#ef4444" }
   ];
   
-  // Prepare data for question breakdown
-  const questionBreakdownData = questions.map((question, index) => {
-    const isCorrect = userAnswers[index] === question.correctAnswer;
-    const timeSpent = timePerQuestion && timePerQuestion[index] ? timePerQuestion[index] : 0;
-    
-    return {
-      name: `Q${index + 1}`,
-      status: isCorrect ? "Correct" : "Incorrect",
-      value: 1,
-      time: timeSpent,
-      color: isCorrect ? "#10b981" : "#ef4444"
-    };
-  });
-
-  // Prepare timing data for visualization
+  // Prepare timing data for visualization with safety checks
   const timingData = questions.map((_, index) => {
-    const timeSpent = timePerQuestion && timePerQuestion[index] ? timePerQuestion[index] : 0;
+    const timeSpent = timePerQuestion[index] || 0;
     return {
       name: `Q${index + 1}`,
       time: timeSpent,
-      avg: averageTime
+      avg: averageTime || 0
     };
   });
-
-  // Prepare course performance data
-  const courseData = [
-    { name: quizMetadata.course, value: score, fullMark: 100 }
-  ];
-  
-  // Prepare subject performance data
-  const subjectData = [
-    { name: quizMetadata.subject, value: score, fullMark: 100 }
-  ];
-  
-  // Prepare topic performance data
-  const topicData = quizMetadata.topics.map(topic => ({
-    name: topic,
-    value: score, // For now, use the overall score for each topic
-    fullMark: 100
-  }));
 
   // Get incorrect questions for detailed review
-  const incorrectQuestions = questions.filter((_, index) => userAnswers[index] !== questions[index].correctAnswer);
+  const incorrectQuestions = questions.filter((_, index) => 
+    userAnswers[index] !== questions[index].correctAnswer
+  );
 
-  // Get topics or concepts that need improvement based on incorrect answers
-  const getWeakTopics = () => {
-    if (incorrectQuestions.length === 0) return [];
+  // Get key topics from quiz content
+  const extractTopics = () => {
+    const topics = new Map<string, number>();
     
-    // Simple analysis of incorrect questions to find common themes
-    const topics: {[key: string]: number} = {};
-    
-    incorrectQuestions.forEach(q => {
-      // Extract potential topics from question text
-      const questionText = q.question.toLowerCase();
-      const words = questionText.split(/\s+/);
+    questions.forEach(q => {
+      const text = q.question.toLowerCase();
       
-      // Look for key concepts (words longer than 5 chars that aren't common words)
-      const commonWords = ['about', 'after', 'again', 'below', 'could', 'every', 'first', 'found', 'great', 'house', 'large', 'learn', 'never', 'other', 'place', 'small', 'study', 'their', 'there', 'these', 'thing', 'think', 'three', 'water', 'where', 'which', 'world', 'would', 'write'];
-      
-      words.forEach(word => {
-        if (word.length > 5 && !commonWords.includes(word)) {
-          topics[word] = (topics[word] || 0) + 1;
+      // Extract potential keywords
+      const keywords = text.match(/\b\w{5,}\b/g) || [];
+      keywords.forEach(word => {
+        if (!word.match(/^(about|because|before|between|during|through|without)$/)) {
+          topics.set(word, (topics.get(word) || 0) + 1);
         }
       });
     });
     
-    // Return top 3 topics that appear most frequently
-    return Object.entries(topics)
+    // Return top 3 topics
+    return [...topics.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
-      .map(([topic]) => topic);
+      .map(([topic]) => topic.charAt(0).toUpperCase() + topic.slice(1));
+  };
+  
+  const quizTopics = extractTopics();
+  
+  // Generate smart recommendations based on performance
+  const getRecommendations = () => {
+    const recs = [];
+    
+    // Priority focus area
+    if (incorrectAnswers > 0) {
+      recs.push({
+        title: "Priority Focus",
+        content: `Focus on reviewing the ${incorrectAnswers} question${incorrectAnswers > 1 ? 's' : ''} you missed.`,
+        icon: <Flag className="h-5 w-5 text-primary" />
+      });
+    } else {
+      recs.push({
+        title: "Great Job!",
+        content: "You got all questions correct. Try more challenging quizzes next.",
+        icon: <Award className="h-5 w-5 text-primary" />
+      });
+    }
+    
+    // Time management
+    if (averageTime && averageTime > 20) {
+      recs.push({
+        title: "Time Management",
+        content: "Work on improving your speed while maintaining accuracy.",
+        icon: <Clock className="h-5 w-5 text-primary" />
+      });
+    } else if (averageTime && averageTime < 5 && incorrectAnswers > 0) {
+      recs.push({
+        title: "Careful Reading",
+        content: "You answered quickly but missed some questions. Take time to read carefully.",
+        icon: <BookOpen className="h-5 w-5 text-primary" />
+      });
+    }
+    
+    // Study strategy
+    recs.push({
+      title: "Study Strategy",
+      content: "Create flashcards for difficult concepts to reinforce your learning.",
+      icon: <BookMarked className="h-5 w-5 text-primary" />
+    });
+    
+    // Next steps
+    recs.push({
+      title: "Next Steps",
+      content: "Take another quiz soon to build on what you've learned.",
+      icon: <ArrowRight className="h-5 w-5 text-primary" />
+    });
+    
+    return recs;
   };
 
-  // Performance suggestions based on score and specific patterns
-  function getPerformanceSuggestions(
-    score: number, 
-    correctCount: number, 
-    incorrectCount: number, 
-    questions: Question[],
-    userAnswers: number[],
-    timings: number[] = [],
-    metadata: {course: string, subject: string, topics: string[]}
-  ): string[] {
-    try {
-      const suggestions = [];
-      const weakTopics = getWeakTopics();
-      
-      // General score-based suggestions
-      if (score >= 80) {
-        suggestions.push(
-          `Excellent work! Your understanding of ${metadata.subject} is strong.`,
-          `To further improve, focus on the ${incorrectCount} ${incorrectCount === 1 ? 'question' : 'questions'} you missed.`
-        );
-      } else if (score >= 60) {
-        suggestions.push(
-          `Good job! Your understanding is solid, but there's room for improvement in ${weakTopics.length > 0 ? weakTopics.join(', ') : 'some areas'}.`,
-          `Create flashcards specifically for the ${incorrectCount} questions you got wrong to reinforce those concepts.`
-        );
-      } else {
-        suggestions.push(
-          `Focus on understanding the fundamental concepts related to ${weakTopics.length > 0 ? weakTopics.join(', ') : 'the questions you missed'}.`,
-          `Consider reviewing the material again and breaking your study sessions into smaller, more focused segments.`
-        );
-      }
-      
-      // Time-based suggestions
-      if (timings.length > 0) {
-        const fastAnswers = timings.filter(time => time < 5).length;
-        const slowAnswers = timings.filter(time => time > 25).length;
-        
-        if (fastAnswers > 0 && score < 70) {
-          suggestions.push(`You answered ${fastAnswers} ${fastAnswers === 1 ? 'question' : 'questions'} very quickly. Taking an extra moment to carefully read all options could improve your accuracy.`);
-        }
-        
-        if (slowAnswers > 0) {
-          suggestions.push(`${slowAnswers} ${slowAnswers === 1 ? 'question' : 'questions'} took you longer than average to answer. Focus on practicing similar questions to build confidence and speed.`);
-        }
-      }
-      
-      // Add specific suggestions based on subject
-      if (metadata.subject) {
-        switch(metadata.subject.toLowerCase()) {
-          case 'mathematics':
-            suggestions.push("Practice solving problems step-by-step and show your work to catch errors.");
-            break;
-          case 'history':
-            suggestions.push("Create a timeline to visualize the sequence of historical events.");
-            break;
-          case 'biology':
-            suggestions.push("Draw diagrams to help remember complex biological processes and structures.");
-            break;
-          case 'physics':
-            suggestions.push("Work through example problems to improve your understanding of physics concepts.");
-            break;
-          case 'chemistry':
-            suggestions.push("Review chemical formulas and reactions by writing them out repeatedly.");
-            break;
-          case 'computer science':
-            suggestions.push("Practice by implementing concepts in actual code to reinforce learning.");
-            break;
-          case 'medicine':
-            suggestions.push("Use medical mnemonics to remember complex medical terminology and processes.");
-            break;
-        }
-      }
-      
-      // Ensure we don't have too many suggestions
-      return suggestions.slice(0, 4);
-    } catch (error) {
-      console.error("Error generating performance suggestions:", error);
-      return [
-        "Review the questions you missed to understand your knowledge gaps.",
-        "Consider taking more practice quizzes to improve your understanding.",
-        "Create flashcards for challenging concepts to reinforce your learning."
-      ];
-    }
-  }
-
   const handleCreateNewQuiz = () => {
-    navigate('/quiz'); // Direct to quiz generation, not landing page
+    navigate('/quiz');
   };
 
   const containerVariants = {
@@ -440,20 +266,20 @@ export function QuizAnalytics({
                   <Timer className="h-4 w-4 text-primary" />
                   <span className="text-sm">Total Time:</span>
                 </div>
-                <span className="font-medium">{formatTime(totalTime || 0)}</span>
+                <span className="font-medium">{formatTime(totalTime)}</span>
               </div>
               <div className="bg-muted/50 p-3 rounded-lg flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Hourglass className="h-4 w-4 text-primary" />
-                  <span className="text-sm">Avg. Question Time:</span>
+                  <Clock className="h-4 w-4 text-primary" />
+                  <span className="text-sm">Avg. Time Per Question:</span>
                 </div>
-                <span className="font-medium">{formatTime(averageTime || 0)}</span>
+                <span className="font-medium">{formatTime(averageTime)}</span>
               </div>
             </div>
             
             <div className="mt-6 flex justify-center">
               <Button onClick={handleCreateNewQuiz} className="gap-2">
-                <Plus className="h-4 w-4" /> Create New Quiz
+                <GraduationCap className="h-4 w-4" /> Create New Quiz
               </Button>
             </div>
           </CardContent>
@@ -504,48 +330,39 @@ export function QuizAnalytics({
                       <Clock className="h-4 w-4 text-primary" />
                       <span>Average Time per Question:</span>
                     </div>
-                    <span className="font-medium">{formatTime(averageTime || 0)}</span>
+                    <span className="font-medium">{formatTime(averageTime)}</span>
                   </div>
                   <div className="flex items-center justify-between px-4 py-2 bg-muted rounded-md">
                     <div className="flex items-center gap-2">
                       <Timer className="h-4 w-4 text-primary" />
                       <span>Completion Time:</span>
                     </div>
-                    <span className="font-medium">{formatTime(totalTime || 0)}</span>
+                    <span className="font-medium">{formatTime(totalTime)}</span>
                   </div>
                 </div>
                 
-                {/* Subject Performance Section */}
+                {/* Quiz Topics Section */}
                 <div className="mt-6">
                   <h3 className="font-medium text-lg mb-3 flex items-center gap-2">
-                    <BookMarked className="h-5 w-5 text-primary" />
-                    <span>Subject Performance</span>
+                    <BookOpen className="h-5 w-5 text-primary" />
+                    <span>Quiz Topics</span>
                   </h3>
                   
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <GraduationCap className="h-4 w-4 text-primary" />
-                        <span>Course:</span>
+                    {quizTopics.length > 0 ? (
+                      <ul className="space-y-2">
+                        {quizTopics.map((topic, index) => (
+                          <li key={index} className="flex items-center gap-2 bg-muted/50 p-2 rounded-md">
+                            <Flag className="h-4 w-4 text-primary" />
+                            <span>{topic}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="text-muted-foreground text-sm">
+                        Complete more quizzes to identify key topics
                       </div>
-                      <span>{quizMetadata.course}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <BookOpen className="h-4 w-4 text-primary" />
-                        <span>Subject:</span>
-                      </div>
-                      <span>{quizMetadata.subject}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <ListChecks className="h-4 w-4 text-primary" />
-                        <span>Topics:</span>
-                      </div>
-                      <span>{quizMetadata.topics.join(", ") || "General"}</span>
-                    </div>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -555,7 +372,7 @@ export function QuizAnalytics({
           <TabsContent value="questions">
             <Card>
               <CardHeader className="flex items-center flex-row gap-2">
-                <BarChart3 className="h-5 w-5 text-primary" />
+                <BarChart2 className="h-5 w-5 text-primary" />
                 <CardTitle>Question Breakdown</CardTitle>
               </CardHeader>
               <CardContent>
@@ -571,37 +388,6 @@ export function QuizAnalytics({
                           <Legend />
                           <Bar name="Time spent" dataKey="time" fill="#8884d8" />
                           <Bar name="Average time" dataKey="avg" fill="#82ca9d" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                    
-                    <div className="h-48 mb-6">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={questionBreakdownData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="name" />
-                          <YAxis hide />
-                          <Tooltip content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
-                              return (
-                                <div className="bg-background p-2 border rounded shadow-md">
-                                  <p className="font-medium">{payload[0].payload.name}</p>
-                                  <p className={payload[0].payload.status === "Correct" ? "text-success" : "text-destructive"}>
-                                    {payload[0].payload.status}
-                                  </p>
-                                  <p>Time: {payload[0].payload.time}s</p>
-                                </div>
-                              );
-                            }
-                            return null;
-                          }} />
-                          <Bar dataKey="value" name="Result">
-                            {
-                              questionBreakdownData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                              ))
-                            }
-                          </Bar>
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -635,7 +421,7 @@ export function QuizAnalytics({
                   <div className="text-center py-10">
                     <h3 className="text-lg font-medium mb-2">Premium Feature</h3>
                     <p className="text-muted-foreground max-w-md mx-auto mb-6">
-                      Upgrade to Quizora AI Premium to access detailed question breakdown and analysis
+                      Upgrade to Premium to access detailed question breakdown and analysis
                     </p>
                     <Button onClick={() => navigate('/settings?tab=premium')}>
                       Upgrade to Premium
@@ -649,8 +435,8 @@ export function QuizAnalytics({
           <TabsContent value="improvement">
             <Card>
               <CardHeader className="flex items-center flex-row gap-2">
-                <BrainCircuit className="h-5 w-5 text-primary" />
-                <CardTitle>Improvement Plan</CardTitle>
+                <Brain className="h-5 w-5 text-primary" />
+                <CardTitle>AI-Powered Recommendations</CardTitle>
               </CardHeader>
               <CardContent>
                 {isPremium ? (
@@ -660,25 +446,25 @@ export function QuizAnalytics({
                         <Award className="h-4 w-4 text-primary" />
                         Strengths
                       </h3>
-                      <ul className="list-disc list-inside space-y-1 pl-4">
-                        <li className="flex gap-2 items-start">
-                          <CheckCircle className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
-                          <span>You performed well on {correctAnswers} out of {totalQuestions} questions</span>
-                        </li>
-                        {score > 50 && <li className="flex gap-2 items-start">
-                          <CheckCircle className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
-                          <span>Your overall understanding of {quizMetadata.subject} is solid</span>
-                        </li>}
-                        {score > 75 && <li className="flex gap-2 items-start">
-                          <CheckCircle className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
-                          <span>You have excellent knowledge in this subject area</span>
-                        </li>}
-                        {timePerQuestion && timePerQuestion.filter(t => t < (averageTime || 15)).length > (questions.length / 2) && 
+                      <ul className="list-disc space-y-3 pl-4">
+                        {correctAnswers > 0 && (
                           <li className="flex gap-2 items-start">
-                            <CheckCircle className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
-                            <span>You answer questions efficiently, with good time management</span>
+                            <CircleCheck className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+                            <span>You answered {correctAnswers} out of {totalQuestions} questions correctly</span>
                           </li>
-                        }
+                        )}
+                        {score > 50 && (
+                          <li className="flex gap-2 items-start">
+                            <CircleCheck className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+                            <span>You have a solid understanding of the material</span>
+                          </li>
+                        )}
+                        {score > 70 && (
+                          <li className="flex gap-2 items-start">
+                            <CircleCheck className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+                            <span>Your knowledge level is excellent</span>
+                          </li>
+                        )}
                       </ul>
                     </div>
                     
@@ -687,27 +473,17 @@ export function QuizAnalytics({
                         <Target className="h-4 w-4 text-primary" />
                         Areas for Improvement
                       </h3>
-                      <ul className="list-disc list-inside space-y-1 pl-4">
-                        {incorrectAnswers > 0 && <li className="flex gap-2 items-start">
-                          <ArrowUp className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
-                          <span>Focus on the {incorrectAnswers} questions you missed</span>
-                        </li>}
-                        {score < 75 && <li className="flex gap-2 items-start">
-                          <ArrowUp className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
-                          <span>Review the explanations for incorrect answers carefully</span>
-                        </li>}
-                        {score < 50 && <li className="flex gap-2 items-start">
-                          <ArrowUp className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
-                          <span>Consider revisiting the fundamental concepts of {quizMetadata.subject}</span>
-                        </li>}
-                        {averageTime && averageTime > 20 && <li className="flex gap-2 items-start">
-                          <ArrowUp className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
-                          <span>Work on improving your speed while maintaining accuracy</span>
-                        </li>}
-                        {getWeakTopics().length > 0 && (
+                      <ul className="list-disc space-y-3 pl-4">
+                        {incorrectAnswers > 0 && (
                           <li className="flex gap-2 items-start">
-                            <ArrowUp className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
-                            <span>Pay special attention to topics related to: {getWeakTopics().join(', ')}</span>
+                            <ArrowUp className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                            <span>Review the {incorrectAnswers} questions you missed</span>
+                          </li>
+                        )}
+                        {score < 70 && (
+                          <li className="flex gap-2 items-start">
+                            <ArrowUp className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                            <span>Focus on understanding the core concepts better</span>
                           </li>
                         )}
                       </ul>
@@ -716,35 +492,38 @@ export function QuizAnalytics({
                     <div>
                       <h3 className="font-medium text-lg mb-2 flex items-center gap-2">
                         <Lightbulb className="h-4 w-4 text-primary" />
-                        AI-Powered Recommendations
+                        Personalized Recommendations
                       </h3>
-                      <ul className="list-disc list-inside space-y-3 pl-4">
-                        {suggestions.map((suggestion, index) => (
-                          <li key={index} className="flex gap-2 items-start">
-                            <Gauge className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                            <span>{suggestion}</span>
-                          </li>
+                      <div className="space-y-4">
+                        {getRecommendations().map((rec, index) => (
+                          <div key={index} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                            {rec.icon}
+                            <div>
+                              <h4 className="font-medium">{rec.title}</h4>
+                              <p className="text-muted-foreground text-sm">{rec.content}</p>
+                            </div>
+                          </div>
                         ))}
-                      </ul>
+                      </div>
                     </div>
                     
                     <div>
                       <h3 className="font-medium text-lg mb-2 flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-primary" />
+                        <Calendar className="h-4 w-4 text-primary" />
                         Study Schedule
                       </h3>
                       <div className="space-y-3 pl-4">
                         <div className="flex gap-2 items-start">
-                          <Calendar className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                          <span><strong>Today:</strong> Review incorrect questions from this quiz</span>
+                          <Info className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                          <span><strong>Today:</strong> Review questions from this quiz</span>
                         </div>
                         <div className="flex gap-2 items-start">
-                          <Calendar className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                          <span><strong>Tomorrow:</strong> Create flashcards for challenging concepts</span>
+                          <Info className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                          <span><strong>Tomorrow:</strong> Create flashcards for key concepts</span>
                         </div>
                         <div className="flex gap-2 items-start">
-                          <Calendar className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                          <span><strong>Next Week:</strong> Take another quiz to measure improvement</span>
+                          <Info className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                          <span><strong>Next Week:</strong> Try another quiz to measure progress</span>
                         </div>
                       </div>
                     </div>
@@ -753,7 +532,7 @@ export function QuizAnalytics({
                   <div className="text-center py-10">
                     <h3 className="text-lg font-medium mb-2">Premium Feature</h3>
                     <p className="text-muted-foreground max-w-md mx-auto mb-6">
-                      Upgrade to Quizora AI Premium to access personalized improvement plans and guidance
+                      Upgrade to Premium to access personalized improvement plans and guidance
                     </p>
                     <Button onClick={() => navigate('/settings?tab=premium')}>
                       Upgrade to Premium

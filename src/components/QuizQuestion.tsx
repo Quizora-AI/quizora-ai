@@ -26,27 +26,22 @@ export function QuizQuestion({
   const [isAnswered, setIsAnswered] = useState(false);
   const [timeLeft, setTimeLeft] = useState(defaultTimePerQuestion);
   const [isTimerRunning, setIsTimerRunning] = useState(true);
-  const [animateOptions, setAnimateOptions] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const optionLabels = ["A", "B", "C", "D"];
   const timerProgressRef = useRef<HTMLDivElement>(null);
 
-  // Generate a unique ID for this question instance to prevent state sharing
-  const questionInstanceId = useRef(`q-${question.id}-${Math.random().toString(36).substring(2, 9)}`);
-
-  // Reset state when question changes - IMPORTANT fix for auto-selection bug
+  // Key generator for the question
+  const questionKey = `question-${question.id}-${currentQuestionNumber}`;
+  
+  // Reset ALL state when question changes - CRITICAL FIX for auto-selection bug
   useEffect(() => {
-    console.log("Question changed, resetting state with ID:", questionInstanceId.current);
+    console.log(`Question changed to ${currentQuestionNumber}, resetting all state with key: ${questionKey}`);
     setTimeLeft(defaultTimePerQuestion);
     setIsTimerRunning(true);
     setSelectedOption(null); 
     setIsAnswered(false);
-    setAnimateOptions(true);
     setShowFeedback(false);
-    
-    // Force a reset of the question instance ID to ensure fresh state
-    questionInstanceId.current = `q-${question.id}-${Math.random().toString(36).substring(2, 9)}`;
-  }, [question.id, defaultTimePerQuestion]);
+  }, [questionKey, defaultTimePerQuestion, currentQuestionNumber]);
 
   useEffect(() => {
     if (!isTimerRunning) return;
@@ -70,7 +65,7 @@ export function QuizQuestion({
     return () => clearTimeout(timer);
   }, [timeLeft, isTimerRunning, defaultTimePerQuestion]);
 
-  // Directly handle option selection without confirmation step
+  // Handle option selection - immediately select without confirmation
   const handleOptionSelect = (optionIndex: number) => {
     if (isAnswered) return;
     
@@ -78,11 +73,7 @@ export function QuizQuestion({
     setSelectedOption(optionIndex);
     setIsAnswered(true);
     setIsTimerRunning(false);
-    
-    // Show feedback immediately after selecting
-    setTimeout(() => {
-      setShowFeedback(true);
-    }, 300);
+    setShowFeedback(true);
   };
 
   const handleNextQuestion = () => {
@@ -93,33 +84,13 @@ export function QuizQuestion({
       onNext(selectedOption);
     }
   };
-
-  const getOptionClassName = (optionIndex: number) => {
-    let className = "option-btn";
-    
-    if (isAnswered) {
-      if (optionIndex === question.correctAnswer) {
-        className += " correct";
-      } else if (optionIndex === selectedOption) {
-        className += " incorrect";
-      }
-    } else if (optionIndex === selectedOption) {
-      className += " selected";
-    }
-    
-    return className;
-  };
-
+  
   const isCorrect = selectedOption === question.correctAnswer;
   const progress = ((currentQuestionNumber) / totalQuestions) * 100;
   
   // Enhanced explanation formatting with vector icons
   const formatExplanation = (explanation: string) => {
     if (!explanation) return "No explanation available.";
-    
-    // Check if the explanation already mentions correct and incorrect answers
-    const hasCorrectReference = /\bcorrect\b/i.test(explanation);
-    const hasIncorrectReference = /\bincorrect\b/i.test(explanation);
     
     let formattedExplanation = '';
     
@@ -199,7 +170,7 @@ export function QuizQuestion({
   return (
     <AnimatePresence mode="wait">
       <motion.div 
-        key={questionInstanceId.current}
+        key={questionKey}
         className="w-full max-w-4xl mx-auto"
         variants={containerVariants}
         initial="hidden"
@@ -250,7 +221,7 @@ export function QuizQuestion({
             <div className="space-y-2">
               {question.options.map((option, index) => (
                 <motion.button
-                  key={`${questionInstanceId.current}-option-${index}`}
+                  key={`${questionKey}-option-${index}`}
                   className={`w-full text-left p-4 rounded-lg flex items-start border-2 transition-all ${
                     isAnswered && index === question.correctAnswer
                       ? "border-success bg-success/5"
@@ -263,9 +234,8 @@ export function QuizQuestion({
                   onClick={() => handleOptionSelect(index)}
                   disabled={isAnswered}
                   variants={optionVariants}
-                  custom={index}
                   initial="hidden"
-                  animate={animateOptions ? "visible" : "hidden"}
+                  animate="visible"
                   whileHover={!isAnswered ? { scale: 1.01, translateX: 5 } : {}}
                   whileTap={!isAnswered ? { scale: 0.98 } : {}}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}

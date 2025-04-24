@@ -111,6 +111,7 @@ const QuizFlowContainer = ({
     }
     
     if (appState !== AppState.QUIZ) {
+      // Remove in-progress state when quiz is complete or in analytics mode
       localStorage.removeItem("quizInProgress");
     }
   }, [appState, currentQuestionIndex, questions, quizTitle, userAnswers, timePerQuestion, startTime]);
@@ -125,6 +126,19 @@ const QuizFlowContainer = ({
     const newUserAnswers = [...userAnswers, selectedOption];
     setUserAnswers(newUserAnswers);
     console.log(`User selected option ${selectedOption} for question ${currentQuestionIndex + 1}`);
+
+    // Get updated timing information from localStorage
+    try {
+      const quizInProgress = localStorage.getItem("quizInProgress");
+      if (quizInProgress) {
+        const parsedQuiz = JSON.parse(quizInProgress);
+        if (parsedQuiz && parsedQuiz.timings) {
+          setTimePerQuestion(parsedQuiz.timings);
+        }
+      }
+    } catch (error) {
+      console.error("Error updating timings:", error);
+    }
 
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
@@ -163,7 +177,7 @@ const QuizFlowContainer = ({
 
   const handleNewQuiz = () => {
     localStorage.removeItem("quizInProgress");
-    navigate('/quiz'); // Navigate to quiz generation page, not the root
+    navigate('/quiz'); // Navigate correctly to quiz generation page
   };
 
   // Save quiz results to history when quiz is completed
@@ -184,10 +198,11 @@ const QuizFlowContainer = ({
         if (startTime && endTime) {
           totalTime = Math.round((endTime.getTime() - startTime.getTime()) / 1000);
         } else if (timePerQuestion.length > 0) {
-          totalTime = timePerQuestion.reduce((sum, time) => sum + time, 0);
+          totalTime = timePerQuestion.reduce((sum, time) => sum + (time || 0), 0);
         }
 
         console.log("Saving quiz history with total time:", totalTime, "seconds");
+        console.log("Time per question array:", timePerQuestion);
 
         const newQuizEntry: QuizHistory = {
           id: uuidv4(),
@@ -241,6 +256,7 @@ const QuizFlowContainer = ({
 
   console.log("Average time per question:", avgTimePerQuestion, "seconds");
   console.log("Total quiz time:", totalTime, "seconds");
+  console.log("Time per question array:", timePerQuestion);
 
   switch (appState) {
     case AppState.QUIZ:
