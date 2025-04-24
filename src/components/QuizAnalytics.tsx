@@ -19,7 +19,25 @@ import {
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Plus } from "lucide-react";
+import { 
+  Plus, 
+  PieChart as PieChartIcon, 
+  Clock, 
+  BookOpen,
+  BrainCircuit,
+  Lightbulb,
+  BarChart3,
+  CheckCircle,
+  XCircle,
+  Line,
+  Hourglass,
+  Timer,
+  Target,
+  Award,
+  ArrowUp,
+  Gauge,
+  AlertCircle 
+} from "lucide-react";
 
 interface QuizAnalyticsProps {
   questions: Question[];
@@ -72,6 +90,14 @@ export function QuizAnalytics({
     );
     setSuggestions(personalized);
   }, [score, correctAnswers, incorrectAnswers, questions, userAnswers, timePerQuestion]);
+
+  // Format time for display
+  const formatTime = (seconds: number): string => {
+    if (seconds < 60) return `${seconds} sec`;
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    return `${min}m ${sec}s`;
+  };
 
   // Prepare data for overview chart
   const overviewData = [
@@ -256,13 +282,16 @@ export function QuizAnalytics({
       <motion.div variants={itemVariants}>
         <Card className="shadow-lg border-t-4 border-primary">
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-center">Performance Summary</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center flex items-center justify-center gap-2">
+              <Award className="h-6 w-6 text-primary" />
+              Performance Summary
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex justify-center mb-6">
               <div className="w-40 h-40 rounded-full border-8 border-primary/20 flex items-center justify-center">
                 <div className="text-center">
-                  <div className={`text-5xl font-bold ${score >= 70 ? "text-success" : score >= 50 ? "text-medical-teal" : "text-error"}`}>
+                  <div className={`text-5xl font-bold ${score >= 70 ? "text-success" : score >= 50 ? "text-primary" : "text-destructive"}`}>
                     {score}%
                   </div>
                   <div className="text-sm font-medium mt-1">Score</div>
@@ -272,16 +301,42 @@ export function QuizAnalytics({
             
             <div className="grid grid-cols-3 gap-4 text-center">
               <div className="bg-muted p-4 rounded-lg">
+                <div className="flex justify-center mb-2">
+                  <BookOpen className="h-5 w-5 text-primary" />
+                </div>
                 <div className="text-2xl font-bold">{totalQuestions}</div>
                 <div className="text-sm text-muted-foreground">Total Questions</div>
               </div>
               <div className="bg-success/10 p-4 rounded-lg">
+                <div className="flex justify-center mb-2">
+                  <CheckCircle className="h-5 w-5 text-success" />
+                </div>
                 <div className="text-2xl font-bold text-success">{correctAnswers}</div>
                 <div className="text-sm text-muted-foreground">Correct</div>
               </div>
-              <div className="bg-error/10 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-error">{incorrectAnswers}</div>
+              <div className="bg-destructive/10 p-4 rounded-lg">
+                <div className="flex justify-center mb-2">
+                  <XCircle className="h-5 w-5 text-destructive" />
+                </div>
+                <div className="text-2xl font-bold text-destructive">{incorrectAnswers}</div>
                 <div className="text-sm text-muted-foreground">Incorrect</div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="bg-muted/50 p-3 rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Timer className="h-4 w-4 text-primary" />
+                  <span className="text-sm">Total Time:</span>
+                </div>
+                <span className="font-medium">{formatTime(totalTime)}</span>
+              </div>
+              <div className="bg-muted/50 p-3 rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Hourglass className="h-4 w-4 text-primary" />
+                  <span className="text-sm">Avg. Question Time:</span>
+                </div>
+                <span className="font-medium">{formatTime(averageTime)}</span>
               </div>
             </div>
             
@@ -304,7 +359,8 @@ export function QuizAnalytics({
           
           <TabsContent value="overview">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex items-center flex-row gap-2">
+                <PieChartIcon className="h-5 w-5 text-primary" />
                 <CardTitle>Performance Overview</CardTitle>
               </CardHeader>
               <CardContent>
@@ -333,12 +389,18 @@ export function QuizAnalytics({
 
                 <div className="mt-4 space-y-2">
                   <div className="flex items-center justify-between px-4 py-2 bg-muted rounded-md">
-                    <span>Average Time per Question:</span>
-                    <span className="font-medium">{averageTime} seconds</span>
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-primary" />
+                      <span>Average Time per Question:</span>
+                    </div>
+                    <span className="font-medium">{formatTime(averageTime)}</span>
                   </div>
                   <div className="flex items-center justify-between px-4 py-2 bg-muted rounded-md">
-                    <span>Completion Time:</span>
-                    <span className="font-medium">{totalTime} seconds</span>
+                    <div className="flex items-center gap-2">
+                      <Timer className="h-4 w-4 text-primary" />
+                      <span>Completion Time:</span>
+                    </div>
+                    <span className="font-medium">{formatTime(totalTime)}</span>
                   </div>
                 </div>
               </CardContent>
@@ -347,7 +409,8 @@ export function QuizAnalytics({
           
           <TabsContent value="questions">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex items-center flex-row gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
                 <CardTitle>Question Breakdown</CardTitle>
               </CardHeader>
               <CardContent>
@@ -378,7 +441,7 @@ export function QuizAnalytics({
                               return (
                                 <div className="bg-background p-2 border rounded shadow-md">
                                   <p className="font-medium">{payload[0].payload.name}</p>
-                                  <p className={payload[0].payload.status === "Correct" ? "text-success" : "text-error"}>
+                                  <p className={payload[0].payload.status === "Correct" ? "text-success" : "text-destructive"}>
                                     {payload[0].payload.status}
                                   </p>
                                   <p>Time: {payload[0].payload.time}s</p>
@@ -400,12 +463,21 @@ export function QuizAnalytics({
                     
                     {incorrectQuestions.length > 0 && (
                       <div className="space-y-4">
-                        <h3 className="font-medium text-lg">Questions to Review:</h3>
+                        <h3 className="font-medium text-lg flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 text-destructive" />
+                          Questions to Review:
+                        </h3>
                         {incorrectQuestions.map((q, index) => (
-                          <div key={index} className="p-4 border rounded-md bg-error/5">
-                            <p className="font-medium text-error mb-2">Question {questions.findIndex(question => question.id === q.id) + 1}:</p>
+                          <div key={index} className="p-4 border rounded-md bg-destructive/5">
+                            <p className="font-medium text-destructive mb-2 flex items-center gap-2">
+                              <BookOpen className="h-4 w-4" />
+                              Question {questions.findIndex(question => question.id === q.id) + 1}:
+                            </p>
                             <p className="mb-2">{q.question}</p>
-                            <p className="text-sm font-medium">Correct Answer: {q.options[q.correctAnswer]}</p>
+                            <p className="text-sm font-medium flex items-center gap-2">
+                              <CheckCircle className="h-4 w-4 text-success" />
+                              Correct Answer: {q.options[q.correctAnswer]}
+                            </p>
                             {q.explanation && (
                               <p className="mt-2 text-sm text-muted-foreground">{q.explanation}</p>
                             )}
@@ -431,42 +503,82 @@ export function QuizAnalytics({
           
           <TabsContent value="improvement">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex items-center flex-row gap-2">
+                <BrainCircuit className="h-5 w-5 text-primary" />
                 <CardTitle>Improvement Plan</CardTitle>
               </CardHeader>
               <CardContent>
                 {isPremium ? (
                   <div className="space-y-6">
                     <div>
-                      <h3 className="font-medium text-lg mb-2">Strengths</h3>
+                      <h3 className="font-medium text-lg mb-2 flex items-center gap-2">
+                        <Award className="h-4 w-4 text-primary" />
+                        Strengths
+                      </h3>
                       <ul className="list-disc list-inside space-y-1 pl-4">
-                        <li>You performed well on {correctAnswers} out of {totalQuestions} questions</li>
-                        {score > 50 && <li>Your overall understanding of the topics is good</li>}
-                        {score > 75 && <li>You have excellent knowledge in this subject area</li>}
+                        <li className="flex gap-2 items-start">
+                          <CheckCircle className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+                          <span>You performed well on {correctAnswers} out of {totalQuestions} questions</span>
+                        </li>
+                        {score > 50 && <li className="flex gap-2 items-start">
+                          <CheckCircle className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+                          <span>Your overall understanding of the topics is good</span>
+                        </li>}
+                        {score > 75 && <li className="flex gap-2 items-start">
+                          <CheckCircle className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+                          <span>You have excellent knowledge in this subject area</span>
+                        </li>}
                         {timePerQuestion && timePerQuestion.filter(t => t < averageTime).length > (questions.length / 2) && 
-                          <li>You answer questions efficiently, with good time management</li>
+                          <li className="flex gap-2 items-start">
+                            <CheckCircle className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+                            <span>You answer questions efficiently, with good time management</span>
+                          </li>
                         }
                       </ul>
                     </div>
                     
                     <div>
-                      <h3 className="font-medium text-lg mb-2">Areas for Improvement</h3>
+                      <h3 className="font-medium text-lg mb-2 flex items-center gap-2">
+                        <Target className="h-4 w-4 text-primary" />
+                        Areas for Improvement
+                      </h3>
                       <ul className="list-disc list-inside space-y-1 pl-4">
-                        {incorrectAnswers > 0 && <li>Focus on the {incorrectAnswers} questions you missed</li>}
-                        {score < 75 && <li>Review the explanations for incorrect answers carefully</li>}
-                        {score < 50 && <li>Consider revisiting the fundamental concepts of this topic</li>}
-                        {averageTime > 20 && <li>Work on improving your speed while maintaining accuracy</li>}
+                        {incorrectAnswers > 0 && <li className="flex gap-2 items-start">
+                          <ArrowUp className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                          <span>Focus on the {incorrectAnswers} questions you missed</span>
+                        </li>}
+                        {score < 75 && <li className="flex gap-2 items-start">
+                          <ArrowUp className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                          <span>Review the explanations for incorrect answers carefully</span>
+                        </li>}
+                        {score < 50 && <li className="flex gap-2 items-start">
+                          <ArrowUp className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                          <span>Consider revisiting the fundamental concepts of this topic</span>
+                        </li>}
+                        {averageTime > 20 && <li className="flex gap-2 items-start">
+                          <ArrowUp className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                          <span>Work on improving your speed while maintaining accuracy</span>
+                        </li>}
                         {getWeakTopics().length > 0 && (
-                          <li>Pay special attention to topics related to: {getWeakTopics().join(', ')}</li>
+                          <li className="flex gap-2 items-start">
+                            <ArrowUp className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                            <span>Pay special attention to topics related to: {getWeakTopics().join(', ')}</span>
+                          </li>
                         )}
                       </ul>
                     </div>
                     
                     <div>
-                      <h3 className="font-medium text-lg mb-2">Personalized Suggestions</h3>
+                      <h3 className="font-medium text-lg mb-2 flex items-center gap-2">
+                        <Lightbulb className="h-4 w-4 text-primary" />
+                        Personalized Suggestions
+                      </h3>
                       <ul className="list-disc list-inside space-y-1 pl-4">
                         {suggestions.map((suggestion, index) => (
-                          <li key={index}>{suggestion}</li>
+                          <li key={index} className="flex gap-2 items-start">
+                            <Gauge className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                            <span>{suggestion}</span>
+                          </li>
                         ))}
                       </ul>
                     </div>

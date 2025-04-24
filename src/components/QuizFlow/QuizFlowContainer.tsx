@@ -57,8 +57,11 @@ const QuizFlowContainer = ({
 
   // Set question start time initially
   useEffect(() => {
-    setQuestionStartTime(new Date());
-  }, [currentQuestionIndex]);
+    if (appState === AppState.QUIZ) {
+      setQuestionStartTime(new Date());
+      console.log("Setting question start time for question", currentQuestionIndex);
+    }
+  }, [currentQuestionIndex, appState]);
 
   useEffect(() => {
     setAppState(initialAppState);
@@ -79,7 +82,9 @@ const QuizFlowContainer = ({
         console.error("Error restoring quiz state:", error);
       }
     }
+    // Always set start time when quiz begins
     setStartTime(new Date());
+    console.log("Quiz started at:", new Date().toISOString());
   }, [initialAppState]);
 
   useEffect(() => {
@@ -109,18 +114,21 @@ const QuizFlowContainer = ({
     if (questionStartTime) {
       const now = new Date();
       const timeSpent = Math.round((now.getTime() - questionStartTime.getTime()) / 1000);
+      console.log(`Time spent on question ${currentQuestionIndex + 1}: ${timeSpent} seconds`);
       setTimePerQuestion(prev => [...prev, timeSpent]);
     }
 
     const newUserAnswers = [...userAnswers, selectedOption];
     setUserAnswers(newUserAnswers);
+    console.log(`User selected option ${selectedOption} for question ${currentQuestionIndex + 1}`);
 
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
-      // Set start time for next question
-      setQuestionStartTime(new Date());
+      // Set start time for next question will happen in the useEffect
     } else {
-      setEndTime(new Date());
+      const finishTime = new Date();
+      setEndTime(finishTime);
+      console.log("Quiz finished at:", finishTime.toISOString());
       setAppState(AppState.RESULTS);
       localStorage.removeItem("quizInProgress");
     }
@@ -160,8 +168,15 @@ const QuizFlowContainer = ({
           ? JSON.parse(existingHistoryString)
           : [];
 
-        // Calculate total time
-        const totalTime = timePerQuestion.reduce((sum, time) => sum + time, 0);
+        // Calculate total time accurately
+        let totalTime = 0;
+        if (startTime && endTime) {
+          totalTime = Math.round((endTime.getTime() - startTime.getTime()) / 1000);
+        } else {
+          totalTime = timePerQuestion.reduce((sum, time) => sum + time, 0);
+        }
+
+        console.log("Total quiz time:", totalTime, "seconds");
 
         const newQuizEntry: QuizHistory = {
           id: uuidv4(),
@@ -185,7 +200,7 @@ const QuizFlowContainer = ({
         });
       }
     }
-  }, [appState, questions, userAnswers, quizTitle, toast, timePerQuestion]);
+  }, [appState, questions, userAnswers, quizTitle, toast, timePerQuestion, startTime, endTime]);
 
   const pageVariants = {
     initial: { opacity: 0, x: 50 },
@@ -204,12 +219,16 @@ const QuizFlowContainer = ({
     return null;
   }
 
-  // Calculate the average time per question and total time
+  // Calculate the average time per question and total time accurately
+  const totalTime = startTime && endTime 
+    ? Math.round((endTime.getTime() - startTime.getTime()) / 1000)
+    : timePerQuestion.reduce((sum, time) => sum + time, 0);
+  
   const avgTimePerQuestion = timePerQuestion.length > 0 
     ? Math.round(timePerQuestion.reduce((sum, time) => sum + time, 0) / timePerQuestion.length) 
-    : 0;
+    : Math.round(totalTime / questions.length);
 
-  const totalTime = timePerQuestion.reduce((sum, time) => sum + time, 0);
+  console.log("Average time per question:", avgTimePerQuestion, "seconds");
 
   switch (appState) {
     case AppState.QUIZ:

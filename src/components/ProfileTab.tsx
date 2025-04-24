@@ -5,6 +5,7 @@ import { AvatarSection } from "./profile/AvatarSection";
 import { ProfileForm } from "./profile/ProfileForm";
 import { DeleteAccountSection } from "./profile/DeleteAccountSection";
 import { useProfile } from "@/hooks/useProfile";
+import { LogoutButton } from "./profile/LogoutButton";
 
 export function ProfileTab() {
   const { profile, loading } = useProfile();
@@ -27,6 +28,7 @@ export function ProfileTab() {
         <CardContent className="space-y-6">
           <AvatarSection profile={profile} />
           <ProfileForm profile={profile} />
+          <LogoutButton />
           <DeleteAccountSection profile={profile} />
         </CardContent>
       </Card>

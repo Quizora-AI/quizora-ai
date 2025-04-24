@@ -39,11 +39,16 @@ const QuizTaking = ({
     }
   }, [currentQuestionNumber, totalQuestions]);
 
-  // Pass the question directly to the QuizQuestion component
+  // Create a wrapper for onNext to prevent any state issues
+  const handleNextQuestion = (selectedOption: number) => {
+    console.log("Moving to next question with selected option:", selectedOption);
+    onNext(selectedOption);
+  };
+
   return (
     <QuizQuestion
       question={question}
-      onNext={onNext}
+      onNext={handleNextQuestion}
       currentQuestionNumber={currentQuestionNumber}
       totalQuestions={totalQuestions}
     />

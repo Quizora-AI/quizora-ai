@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { CheckCircle, XCircle, Timer } from "lucide-react";
+import { CheckCircle, XCircle, Timer, BookOpen, HelpCircle, Info } from "lucide-react";
 import { Question } from "./FileUpload";
 import { Progress } from "@/components/ui/progress";
 import { motion, AnimatePresence } from "framer-motion";
@@ -36,14 +36,16 @@ export function QuizQuestion({
   const instanceId = useRef(`q-${question.id}-${Math.random().toString(36).substring(2, 9)}`);
 
   useEffect(() => {
-    // Reset timer when question changes
+    // Reset state when question changes - FIX for auto-selection bug
     setTimeLeft(defaultTimePerQuestion);
     setIsTimerRunning(true);
-    setSelectedOption(null);
+    setSelectedOption(null); // Reset selection when question changes
     setIsAnswered(false);
     setAnimateOptions(true);
     setShowFeedback(false);
     setConfirmAnswer(false);
+    
+    console.log("Question changed, reset selection state");
   }, [question.id, defaultTimePerQuestion]);
 
   useEffect(() => {
@@ -117,7 +119,7 @@ export function QuizQuestion({
   const isCorrect = selectedOption === question.correctAnswer;
   const progress = ((currentQuestionNumber) / totalQuestions) * 100;
   
-  // Format explanation for better readability
+  // Format explanation for better readability with icons
   const formatExplanation = (explanation: string) => {
     if (!explanation) return "No explanation available.";
     
@@ -129,7 +131,7 @@ export function QuizQuestion({
       return explanation;
     }
     
-    // If not, add some structure to the explanation
+    // If not, add some structure to the explanation with icons
     let formattedExplanation = explanation;
     
     if (!hasCorrectReference) {
@@ -230,12 +232,13 @@ export function QuizQuestion({
         <Card className="quiz-container shadow-md animate-slide-up">
           <CardHeader>
             <motion.div
-              className="text-lg font-medium mb-4"
+              className="text-lg font-medium mb-4 flex items-start gap-2"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
             >
-              {question.question}
+              <BookOpen className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
+              <span>{question.question}</span>
             </motion.div>
           </CardHeader>
           <CardContent>
@@ -297,7 +300,10 @@ export function QuizQuestion({
                 animate={{ opacity: 1, height: "auto" }}
                 transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.3 }}
               >
-                <p className="font-medium mb-1">Explanation:</p>
+                <p className="font-medium mb-1 flex items-center gap-2">
+                  <Info className="h-4 w-4 text-primary" />
+                  <span>Explanation:</span>
+                </p>
                 <p className="text-sm">{formatExplanation(question.explanation)}</p>
               </motion.div>
             )}
@@ -310,7 +316,8 @@ export function QuizQuestion({
                 initial="hidden"
                 animate="visible"
               >
-                <div className="flex items-center">
+                <div className="flex items-center gap-2">
+                  <HelpCircle className="h-4 w-4 text-primary" />
                   <span className="font-medium">Confirm your answer?</span>
                 </div>
                 <motion.div

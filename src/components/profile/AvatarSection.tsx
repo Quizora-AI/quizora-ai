@@ -1,6 +1,7 @@
 
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Profile } from "@/hooks/useProfile";
+import { getRandomAvatar } from "@/utils/avatarUtils";
 
 interface AvatarSectionProps {
   profile: Profile | null;
@@ -31,4 +32,3 @@ export function AvatarSection({ profile }: AvatarSectionProps) {
     </div>
   );
 }
-
