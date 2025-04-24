@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { CheckCircle, XCircle, Timer, BookOpen, HelpCircle, Info } from "lucide-react";
+import { CheckCircle, XCircle, Timer, BookOpen, HelpCircle, Info, AlertTriangle } from "lucide-react";
 import { Question } from "./FileUpload";
 import { Progress } from "@/components/ui/progress";
 import { motion, AnimatePresence } from "framer-motion";
@@ -28,24 +28,24 @@ export function QuizQuestion({
   const [isTimerRunning, setIsTimerRunning] = useState(true);
   const [animateOptions, setAnimateOptions] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
-  const [confirmAnswer, setConfirmAnswer] = useState(false);
   const optionLabels = ["A", "B", "C", "D"];
   const timerProgressRef = useRef<HTMLDivElement>(null);
 
   // Generate a unique ID for this question instance to prevent state sharing
-  const instanceId = useRef(`q-${question.id}-${Math.random().toString(36).substring(2, 9)}`);
+  const questionInstanceId = useRef(`q-${question.id}-${Math.random().toString(36).substring(2, 9)}`);
 
+  // Reset state when question changes - IMPORTANT fix for auto-selection bug
   useEffect(() => {
-    // Reset state when question changes - FIX for auto-selection bug
+    console.log("Question changed, resetting state with ID:", questionInstanceId.current);
     setTimeLeft(defaultTimePerQuestion);
     setIsTimerRunning(true);
-    setSelectedOption(null); // Reset selection when question changes
+    setSelectedOption(null); 
     setIsAnswered(false);
     setAnimateOptions(true);
     setShowFeedback(false);
-    setConfirmAnswer(false);
     
-    console.log("Question changed, reset selection state");
+    // Force a reset of the question instance ID to ensure fresh state
+    questionInstanceId.current = `q-${question.id}-${Math.random().toString(36).substring(2, 9)}`;
   }, [question.id, defaultTimePerQuestion]);
 
   useEffect(() => {
@@ -70,22 +70,16 @@ export function QuizQuestion({
     return () => clearTimeout(timer);
   }, [timeLeft, isTimerRunning, defaultTimePerQuestion]);
 
+  // Directly handle option selection without confirmation step
   const handleOptionSelect = (optionIndex: number) => {
     if (isAnswered) return;
     
+    console.log(`User selected option ${optionIndex} for question ${currentQuestionNumber}`);
     setSelectedOption(optionIndex);
-    
-    // Don't mark as answered yet - wait for confirm button
-    setConfirmAnswer(true);
-    setIsTimerRunning(false);
-  };
-
-  const handleConfirmAnswer = () => {
-    if (selectedOption === null || isAnswered) return;
-    
     setIsAnswered(true);
+    setIsTimerRunning(false);
     
-    // Show feedback after confirming
+    // Show feedback immediately after selecting
     setTimeout(() => {
       setShowFeedback(true);
     }, 300);
@@ -119,7 +113,7 @@ export function QuizQuestion({
   const isCorrect = selectedOption === question.correctAnswer;
   const progress = ((currentQuestionNumber) / totalQuestions) * 100;
   
-  // Format explanation for better readability with icons
+  // Enhanced explanation formatting with vector icons
   const formatExplanation = (explanation: string) => {
     if (!explanation) return "No explanation available.";
     
@@ -127,20 +121,31 @@ export function QuizQuestion({
     const hasCorrectReference = /\bcorrect\b/i.test(explanation);
     const hasIncorrectReference = /\bincorrect\b/i.test(explanation);
     
-    if (hasCorrectReference && hasIncorrectReference) {
-      return explanation;
+    let formattedExplanation = '';
+    
+    // Always show the correct answer with icon
+    formattedExplanation += `<div class="flex items-center gap-2 text-success mb-2">
+      <CheckCircle className="h-4 w-4" />
+      <span><strong>Correct Answer:</strong> ${optionLabels[question.correctAnswer]}: ${question.options[question.correctAnswer]}</span>
+    </div>`;
+    
+    // If user selected wrong answer, provide explanation
+    if (selectedOption !== null && selectedOption !== question.correctAnswer) {
+      formattedExplanation += `<div class="flex items-center gap-2 text-destructive mb-2">
+        <XCircle className="h-4 w-4" />
+        <span><strong>Your Answer:</strong> ${optionLabels[selectedOption]}: ${question.options[selectedOption]}</span>
+      </div>
+      <div class="flex items-start gap-2 mt-2">
+        <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5" />
+        <span><strong>Why this might be confusing:</strong> Options that contain partial truths or similar wording to the correct answer can be misleading.</span>
+      </div>`;
     }
     
-    // If not, add some structure to the explanation with icons
-    let formattedExplanation = explanation;
-    
-    if (!hasCorrectReference) {
-      formattedExplanation = `The correct answer is ${optionLabels[question.correctAnswer]}: ${question.options[question.correctAnswer]}. ${formattedExplanation}`;
-    }
-    
-    if (selectedOption !== null && selectedOption !== question.correctAnswer && !hasIncorrectReference) {
-      formattedExplanation += ` You selected ${optionLabels[selectedOption]}, which is incorrect.`;
-    }
+    // Add the actual explanation with icon
+    formattedExplanation += `<div class="flex items-start gap-2 mt-3">
+      <Info className="h-4 w-4 text-primary mt-0.5" />
+      <span><strong>Explanation:</strong> ${explanation}</span>
+    </div>`;
     
     return formattedExplanation;
   };
@@ -194,7 +199,7 @@ export function QuizQuestion({
   return (
     <AnimatePresence mode="wait">
       <motion.div 
-        key={instanceId.current}
+        key={questionInstanceId.current}
         className="w-full max-w-4xl mx-auto"
         variants={containerVariants}
         initial="hidden"
@@ -245,7 +250,7 @@ export function QuizQuestion({
             <div className="space-y-2">
               {question.options.map((option, index) => (
                 <motion.button
-                  key={`${instanceId.current}-option-${index}`}
+                  key={`${questionInstanceId.current}-option-${index}`}
                   className={`w-full text-left p-4 rounded-lg flex items-start border-2 transition-all ${
                     isAnswered && index === question.correctAnswer
                       ? "border-success bg-success/5"
@@ -300,43 +305,11 @@ export function QuizQuestion({
                 animate={{ opacity: 1, height: "auto" }}
                 transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.3 }}
               >
-                <p className="font-medium mb-1 flex items-center gap-2">
-                  <Info className="h-4 w-4 text-primary" />
-                  <span>Explanation:</span>
-                </p>
-                <p className="text-sm">{formatExplanation(question.explanation)}</p>
+                <div dangerouslySetInnerHTML={{ __html: formatExplanation(question.explanation) }} />
               </motion.div>
             )}
           </CardContent>
           <CardFooter className="flex justify-end">
-            {confirmAnswer && !isAnswered && (
-              <motion.div 
-                className="w-full flex justify-between items-center"
-                variants={resultVariants}
-                initial="hidden"
-                animate="visible"
-              >
-                <div className="flex items-center gap-2">
-                  <HelpCircle className="h-4 w-4 text-primary" />
-                  <span className="font-medium">Confirm your answer?</span>
-                </div>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Button onClick={handleConfirmAnswer} className="relative overflow-hidden">
-                    <motion.span
-                      initial={{ x: 20, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      transition={{ delay: 0.2 }}
-                    >
-                      Confirm
-                    </motion.span>
-                  </Button>
-                </motion.div>
-              </motion.div>
-            )}
-            
             {isAnswered && (
               <motion.div 
                 className="w-full flex justify-between items-center"

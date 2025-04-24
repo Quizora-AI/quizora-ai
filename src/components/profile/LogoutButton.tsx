@@ -18,6 +18,9 @@ export function LogoutButton() {
         description: "You have been signed out of your account",
       });
       
+      // Clear any stored quiz data to prevent issues after logout
+      localStorage.removeItem("quizInProgress");
+      
       navigate("/auth");
     } catch (error) {
       console.error("Error logging out:", error);
