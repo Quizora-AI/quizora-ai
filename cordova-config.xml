@@ -12,6 +12,7 @@
     <preference name="SplashScreenDelay" value="0" />
     
     <platform name="android">
+        <!-- Explicitly add billing permission to manifest -->
         <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest">
             <manifest xmlns:android="http://schemas.android.com/apk/res/android">
                 <uses-permission android:name="com.android.vending.BILLING" />
@@ -19,16 +20,16 @@
             </manifest>
         </edit-config>
         
-        <!-- Declare billing library version -->
-        <framework src="com.android.billingclient:billing:5.1.0" />
+        <!-- Update to latest billing library version -->
+        <framework src="com.android.billingclient:billing:7.1.1" />
         
-        <!-- Add Google Play Billing version meta-data -->
+        <!-- Add Play Billing metadata -->
         <config-file target="AndroidManifest.xml" parent="/manifest/application">
-            <meta-data android:name="com.google.android.play.billingclient.version" android:value="5.1.0" />
+            <meta-data android:name="com.google.android.play.billingclient.version" android:value="7.1.1" />
         </config-file>
     </platform>
     
-    <!-- Configure purchase plugin -->
+    <!-- Configure purchase plugin with latest version -->
     <plugin name="cordova-plugin-purchase" spec="^13.10.0">
         <variable name="BILLING_KEY" value="YOUR_GOOGLE_PLAY_BILLING_KEY" />
     </plugin>
@@ -37,9 +38,23 @@
     <product id="monthly_subscription" type="subscription">
         <title>Monthly Premium</title>
         <description>Monthly Premium Subscription</description>
+        <!-- Add Google Play specific fields -->
+        <android-manifest>
+            <subscription>
+                <duration>P1M</duration>
+                <billingPeriod>P1M</billingPeriod>
+            </subscription>
+        </android-manifest>
     </product>
     <product id="yearly_subscription" type="subscription">
         <title>Annual Premium</title>
         <description>Annual Premium Subscription</description>
+        <!-- Add Google Play specific fields -->
+        <android-manifest>
+            <subscription>
+                <duration>P1Y</duration>
+                <billingPeriod>P1Y</billingPeriod>
+            </subscription>
+        </android-manifest>
     </product>
 </widget>

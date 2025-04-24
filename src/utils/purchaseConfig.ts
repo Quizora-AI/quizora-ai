@@ -20,12 +20,16 @@ export const SUBSCRIPTION_PRICES = {
   [SUBSCRIPTION_PRODUCTS.MONTHLY]: {
     amount: 2.49,
     currency: 'USD',
-    formattedPrice: '$2.49'
+    formattedPrice: '$2.49',
+    billingPeriod: 'P1M',
+    duration: 'P1M'
   },
   [SUBSCRIPTION_PRODUCTS.YEARLY]: {
     amount: 15.00,
     currency: 'USD',
-    formattedPrice: '$15.00'
+    formattedPrice: '$15.00',
+    billingPeriod: 'P1Y',
+    duration: 'P1Y'
   },
 };
 
@@ -36,3 +40,11 @@ export function getSubscriptionTierFromProductId(productId: string): Subscriptio
   if (productId.includes('yearly')) return 'yearly';
   return 'monthly';
 }
+
+// Google Play specific subscription configurations
+export const SUBSCRIPTION_CONFIG = {
+  TRIAL_PERIOD: 'P7D', // 7-day free trial
+  GRACE_PERIOD: 'P3D', // 3-day grace period
+  PRORATION_MODE: 1, // IMMEDIATE_WITH_TIME_PRORATION
+  REPLACEMENT_MODE: 1, // WITH_TIME_PRORATION
+};
