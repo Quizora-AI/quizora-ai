@@ -1,21 +1,11 @@
 
 interface CordovaPlugins {
-  store: {
-    PAID_SUBSCRIPTION: string;
-    register: (product: { id: string; type: string }) => void;
-    refresh: () => void;
-    order: (productId: string) => void;
-    when: (productId: string) => {
-      approved: (callback: (product: any) => void) => void;
-      verified: (callback: (product: any) => void) => void;
-      cancelled: (callback: (product: any) => void) => void;
-      error: (callback: (err: any, product: any) => void) => void;
-    };
-    error: (callback: (err: any) => void) => void;
-    // Add additional store properties
-    ready: (callback: () => void) => void;
-    products: Record<string, any>;
-    validator: string | ((url: string, callback: (url: string) => void) => void);
+  PlayBilling: {
+    initialize: (subscriptionIds: string[], successCallback: (result: any) => void, errorCallback: (error: string) => void) => void;
+    queryProducts: (successCallback: (products: any[]) => void, errorCallback: (error: string) => void) => void;
+    purchase: (productId: string, successCallback: (result: any) => void, errorCallback: (error: string) => void) => void;
+    restorePurchases: (successCallback: (purchases: any[]) => void, errorCallback: (error: string) => void) => void;
+    connect: (successCallback: () => void, errorCallback: (error: string) => void) => void;
   };
   
   admob: {
@@ -35,15 +25,28 @@ interface CordovaPlugins {
   };
 }
 
-interface CordovaWindow extends Window {
+interface Window {
   cordova: {
     plugins: CordovaPlugins;
   };
-}
-
-// Extend the global Window interface
-declare global {
-  interface Window extends CordovaWindow {}
+  store: {
+    PAID_SUBSCRIPTION: string;
+    register: (product: { id: string; type: string }) => void;
+    refresh: () => void;
+    order: (productId: string) => void;
+    when: (productId: string) => {
+      approved: (callback: (product: any) => void) => any;
+      verified: (callback: (product: any) => void) => any;
+      cancelled: (callback: (product: any) => void) => any;
+      error: (callback: (err: any, product: any) => void) => any;
+      updated: (callback: (product: any) => void) => any;
+      owned: (callback: (product: any) => void) => any;
+    };
+    error: (callback: (err: any) => void) => void;
+    ready: (callback: () => void) => void;
+    products: Record<string, any>;
+    initialize: () => void;
+  };
 }
 
 export {};

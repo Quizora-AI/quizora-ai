@@ -30,6 +30,23 @@ export function useBilling(): BillingHook {
     } else {
       console.log('Native billing not available, running in web mode');
       setIsReady(true);
+      // Load mock products for web testing
+      setProducts([
+        {
+          productId: SUBSCRIPTION_PRODUCTS.MONTHLY,
+          title: 'Monthly Premium',
+          description: 'Monthly Premium Subscription',
+          formattedPrice: '$2.49',
+          billingPeriod: 'P1M'
+        },
+        {
+          productId: SUBSCRIPTION_PRODUCTS.YEARLY,
+          title: 'Annual Premium',
+          description: 'Annual Premium Subscription',
+          formattedPrice: '$15.00',
+          billingPeriod: 'P1Y'
+        }
+      ]);
     }
   }, [hasNativeBilling]);
   
@@ -38,10 +55,18 @@ export function useBilling(): BillingHook {
       setIsLoading(true);
       const PlayBilling = (window as any).cordova.plugins.PlayBilling;
       
-      // Connect to billing service
-      PlayBilling.connect(
+      // Initialize the billing system with our subscription IDs
+      const subscriptionIds = [
+        SUBSCRIPTION_PRODUCTS.MONTHLY,
+        SUBSCRIPTION_PRODUCTS.YEARLY
+      ];
+      
+      console.log('Initializing Play Billing with subscriptions:', subscriptionIds);
+      
+      PlayBilling.initialize(
+        subscriptionIds,
         () => {
-          console.log('Connected to Play Billing');
+          console.log('PlayBilling initialized successfully');
           setIsReady(true);
           
           // Query available products
@@ -59,7 +84,7 @@ export function useBilling(): BillingHook {
           );
         },
         (error: string) => {
-          console.error('Error connecting to Play Billing:', error);
+          console.error('Error initializing PlayBilling:', error);
           setError('Failed to initialize billing service');
           setIsLoading(false);
         }

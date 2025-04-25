@@ -29,6 +29,8 @@
         <source-file src="src/android/PlayBillingPlugin.kt" target-dir="src/com/quizora/ai/billing" />
     </platform>
     
+    <dependency id="cordova-plugin-purchase" version="11.0.0" />
+    
     <js-module src="www/play-billing.js" name="PlayBilling">
         <clobbers target="PlayBilling" />
     </js-module>

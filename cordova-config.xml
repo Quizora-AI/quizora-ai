@@ -27,35 +27,13 @@
         <config-file target="AndroidManifest.xml" parent="/manifest/application">
             <meta-data android:name="com.google.android.play.billingclient.version" android:value="7.1.1" />
         </config-file>
-        
-        <!-- Include our custom plugin -->
-        <source-file src="src/android/PlayBillingPlugin.kt" target-dir="app/src/main/java/com/quizora/ai/billing" />
     </platform>
     
-    <!-- Use our custom plugin instead of the standard one -->
-    <plugin name="cordova-plugin-play-billing" src="src/android" />
+    <!-- Plugin dependencies -->
+    <plugin name="cordova-plugin-purchase" spec="11.0.0">
+        <variable name="BILLING_KEY" value="YOUR_PLAY_CONSOLE_PUBLIC_KEY" />
+    </plugin>
     
     <!-- Define subscription products -->
-    <product id="monthly_subscription" type="subscription">
-        <title>Monthly Premium</title>
-        <description>Monthly Premium Subscription</description>
-        <!-- Add Google Play specific fields -->
-        <android-manifest>
-            <subscription>
-                <duration>P1M</duration>
-                <billingPeriod>P1M</billingPeriod>
-            </subscription>
-        </android-manifest>
-    </product>
-    <product id="yearly_subscription" type="subscription">
-        <title>Annual Premium</title>
-        <description>Annual Premium Subscription</description>
-        <!-- Add Google Play specific fields -->
-        <android-manifest>
-            <subscription>
-                <duration>P1Y</duration>
-                <billingPeriod>P1Y</billingPeriod>
-            </subscription>
-        </android-manifest>
-    </product>
+    <plugin name="cordova-plugin-play-billing" src="src/android" />
 </widget>
