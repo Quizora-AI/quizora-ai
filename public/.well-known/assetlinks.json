@@ -1,0 +1,17 @@
+
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.quizora.ai",
+      "sha256_cert_fingerprints": [
+        "51:C8:50:2A:67:86:64:2F:0A:CD:A4:40:D1:2D:71:C7:31:92:31:43:28:3C:59:DD:3A:E8:33:3D:E7:37:BD:ED",
+        "4A:AA:4F:D6:79:7A:87:1C:84:E4:CC:27:FA:FE:99:92:39:0E:EA:9A:13:41:47:09:5C:90:C2:32:5E:0E:5B:4F"
+      ]
+    }
+  }
+]

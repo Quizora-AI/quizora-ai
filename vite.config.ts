@@ -1,10 +1,8 @@
-
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
@@ -20,9 +18,7 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // Add base configuration for Cordova
   base: './',
-  // Add build options for proper Cordova integration
   build: {
     outDir: 'dist',
     assetsInlineLimit: 0,
@@ -33,9 +29,10 @@ export default defineConfig(({ mode }) => ({
         chunkFileNames: 'assets/[name].js',
         assetFileNames: 'assets/[name].[ext]'
       }
-    }
+    },
+    copyPublicDir: true
   },
-  // Define global variables for Cordova plugins
+  publicDir: 'public',
   define: {
     'process.env.CORDOVA_ENVIRONMENT': JSON.stringify(true)
   }
