@@ -1,0 +1,2 @@
+
+This file confirms that the .well-known directory is accessible.

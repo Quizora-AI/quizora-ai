@@ -1,7 +1,15 @@
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+import fs from 'fs';
+
+// Ensure .well-known directory exists
+const wellKnownDir = path.resolve(__dirname, 'public/.well-known');
+if (!fs.existsSync(wellKnownDir)) {
+  fs.mkdirSync(wellKnownDir, { recursive: true });
+}
 
 export default defineConfig(({ mode }) => ({
   server: {
