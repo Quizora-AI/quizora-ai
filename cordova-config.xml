@@ -31,7 +31,7 @@
     
     <!-- Plugin dependencies -->
     <plugin name="cordova-plugin-purchase" spec="11.0.0">
-        <variable name="BILLING_KEY" value="YOUR_PLAY_CONSOLE_PUBLIC_KEY" />
+        <variable name="BILLING_KEY" value="MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtVSw2Yq9Mjz35yTkPb+d3rWqnUCnTtDXA6iaa9EhHcrSa2JaK23peJ1hk0Bma+msCABmPfK7nCkAzG4VOA6lBrk+0mjiIatYOfwieKW/e0CBKBVBVZmjvaHRnGHhUWUrudmJ5HWv0ssl+u5ZXlC+L7adaV+u4raVsZYVZT5M2NLLtqObv+dVSikrXhqN2WYMRdC396GqPtVi+QxBolQyiEeScLrNsV08CVVIcWZV6mHaPXkvegkZJOAYG8av6mw0T9N6BII/t3KTSuvuT2NK8t9xN7IDuw6hD+zZt2sfjAqfT+JLeWQjVfUtVNjlGoZTWYxVOlg4NzGBwUjDULTMiwIDAQAB" />
     </plugin>
     
     <!-- Define subscription products -->
