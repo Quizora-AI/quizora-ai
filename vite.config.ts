@@ -1,4 +1,3 @@
-
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -35,7 +34,13 @@ export default defineConfig(({ mode }) => ({
       output: {
         entryFileNames: 'assets/[name].js',
         chunkFileNames: 'assets/[name].js',
-        assetFileNames: 'assets/[name].[ext]'
+        assetFileNames: (assetInfo) => {
+          // Keep .well-known files in their original location
+          if (assetInfo.name && assetInfo.name.includes('.well-known')) {
+            return assetInfo.name;
+          }
+          return 'assets/[name].[ext]';
+        }
       }
     },
     copyPublicDir: true
