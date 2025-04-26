@@ -11,6 +11,22 @@ const STORAGE_KEYS = {
   USER_SETTINGS: 'userSettings'
 } as const;
 
+// Event listener to track synchronized state between tabs/windows
+const setupStorageSyncListener = () => {
+  window.addEventListener('storage', (event) => {
+    // Only process events for our storage keys
+    const isOurKey = Object.values(STORAGE_KEYS).includes(event.key as any);
+    if (isOurKey) {
+      console.log(`Storage event: ${event.key} changed in another tab/window`);
+    }
+  });
+};
+
+// Check if we're in a browser environment and set up the listener
+if (typeof window !== 'undefined') {
+  setupStorageSyncListener();
+}
+
 // Quiz related functions
 export const saveQuizToHistory = (quiz: any) => {
   try {
@@ -24,10 +40,20 @@ export const saveQuizToHistory = (quiz: any) => {
     if (existingQuizIndex >= 0) {
       // Update the existing quiz entry
       updatedHistory = [...history];
-      updatedHistory[existingQuizIndex] = quiz;
+      updatedHistory[existingQuizIndex] = {
+        ...quiz,
+        updated_at: new Date().toISOString()
+      };
     } else {
       // Add as a new entry
-      updatedHistory = [quiz, ...history];
+      updatedHistory = [
+        {
+          ...quiz,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }, 
+        ...history
+      ];
     }
     
     localStorage.setItem(STORAGE_KEYS.QUIZ_HISTORY, JSON.stringify(updatedHistory));
@@ -108,15 +134,20 @@ export const saveFlashcardsToHistory = (flashcardSet: {
       updatedHistory = [
         {
           ...flashcardSet,
-          created_at: new Date().toISOString(),
+          created_at: flashcardSet.created_at || new Date().toISOString(),
           updated_at: new Date().toISOString()
         }, 
         ...history
       ];
     }
     
-    localStorage.setItem(STORAGE_KEYS.FLASHCARDS_HISTORY, JSON.stringify(updatedHistory));
-    console.log("Updated flashcard history:", updatedHistory);
+    // Remove any exact duplicates (same ID and content)
+    const uniqueHistory = updatedHistory.filter((set: any, index: number, self: any[]) => 
+      index === self.findIndex((s) => s.id === set.id)
+    );
+    
+    localStorage.setItem(STORAGE_KEYS.FLASHCARDS_HISTORY, JSON.stringify(uniqueHistory));
+    console.log("Updated flashcard history:", uniqueHistory);
     return true;
   } catch (error) {
     console.error('Error saving flashcards to history:', error);
@@ -127,7 +158,21 @@ export const saveFlashcardsToHistory = (flashcardSet: {
 export const getFlashcardsHistory = () => {
   try {
     const history = localStorage.getItem(STORAGE_KEYS.FLASHCARDS_HISTORY);
-    return history ? JSON.parse(history) : [];
+    if (!history) return [];
+    
+    // Parse and deduplicate by ID
+    const parsedHistory = JSON.parse(history);
+    const uniqueIds = new Set();
+    const uniqueHistory = [];
+    
+    for (const item of parsedHistory) {
+      if (!uniqueIds.has(item.id)) {
+        uniqueIds.add(item.id);
+        uniqueHistory.push(item);
+      }
+    }
+    
+    return uniqueHistory;
   } catch (error) {
     console.error('Error getting flashcards history:', error);
     return [];

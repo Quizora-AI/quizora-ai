@@ -57,18 +57,25 @@ async function handleQuizGeneration(requestData, apiKey) {
     throw new Error("Prompt text is required for quiz generation");
   }
   
-  // Build the system prompt with enhanced educational context
-  const systemPrompt = `You are an expert educator and subject matter expert in ${subject || 'general knowledge'} 
-  with years of experience creating educational content and assessments.
+  // Enhanced system prompt with better education expertise and difficulty considerations
+  const systemPrompt = `You are an elite professor and educational assessment expert specializing in creating high-quality ${subject || 'general knowledge'} questions.
   
-  Create a high-quality quiz about ${subject || 'general knowledge'}${topic ? ` focusing on ${topic}` : ''} with difficulty level ${difficulty || 'medium'}.
+  Your expertise is in designing questions that accurately assess student knowledge at different difficulty levels:
+  
+  - EASY: Direct recall questions testing fundamental concepts, suitable for beginners
+  - MEDIUM: Application questions requiring connections between concepts, suitable for intermediate students
+  - HARD: Analysis questions requiring critical thinking, synthesis of multiple concepts, and advanced problem-solving, suitable for the most competitive exams
   
   For each question:
-  1. Create a clear, concise question that tests understanding rather than mere recall
+  1. Create a clear, precisely worded question appropriate for the requested difficulty level
   2. Provide 4 answer options labeled A, B, C, D with only one correct answer
-  3. Make wrong answers plausible and represent common misconceptions students have
-  4. Write a detailed explanation (2-3 sentences) for why the correct answer is right
-  5. For each incorrect option, explain why it's wrong and what specific misconception it represents
+  3. For EASY questions: wrong answers should be clearly distinguishable
+  4. For MEDIUM questions: wrong answers should represent common misunderstandings
+  5. For HARD questions: wrong answers should be very plausible and require deep understanding to eliminate
+  6. Write a detailed explanation in bullet-point format covering:
+     • Why the correct answer is right (with reference to specific concepts)
+     • Why each incorrect option is wrong (with specific errors identified)
+     • Common misconceptions that might lead students to select each wrong option
   
   Format your response as a JSON object with this structure:
   {
@@ -77,7 +84,8 @@ async function handleQuizGeneration(requestData, apiKey) {
         "question": "Question text here",
         "options": ["Option A", "Option B", "Option C", "Option D"],
         "correctAnswer": 0, // index of correct answer (0-3)
-        "explanation": "Detailed explanation of the correct answer and why other options are incorrect"
+        "explanation": "Detailed explanation of the correct answer and why other options are incorrect",
+        "difficulty": "${difficulty || 'medium'}" // explicit difficulty level
       },
       // more questions...
     ]
@@ -102,13 +110,18 @@ async function handleQuizGeneration(requestData, apiKey) {
             role: "user",
             content: `${promptText}
             
-Generate ${numQuestions || 10} multiple-choice questions on this topic. For each question:
-- Make sure the question is clear and tests understanding
+Generate ${numQuestions || 10} multiple-choice questions on this topic with difficulty level: ${difficulty || 'medium'}. 
+
+For each question:
+- The question should be clear and test understanding at the appropriate difficulty level
 - Provide 4 options (A, B, C, D) with exactly one correct answer
 - The incorrect options should represent common misconceptions students have
-- Include a detailed explanation that teaches the concept, explains why the correct answer is right, and clarifies specifically why each wrong answer is incorrect and what misconception it represents
+- Include a detailed explanation in bullet-point format that:
+  • Explains why the correct answer is right
+  • Explains why each wrong answer is incorrect
+  • Identifies the specific misconception each wrong answer represents
 
-IMPORTANT: Format your response as a valid JSON object with the structure shown in the system prompt.`
+IMPORTANT: Format your response as a valid JSON object with the structure shown in the system prompt. Each question MUST include a 'difficulty' property.`
           }
         ],
         temperature: 0.7,
@@ -133,7 +146,7 @@ IMPORTANT: Format your response as a valid JSON object with the structure shown 
     console.log("API response content:", content);
     
     // Process the response to extract questions
-    const questions = extractQuestionsFromAI(content, numQuestions);
+    const questions = extractQuestionsFromAI(content, numQuestions, difficulty);
     console.log(`Extracted ${questions.length} questions from the API response.`);
     
     return new Response(JSON.stringify({ questions }), {
@@ -145,7 +158,7 @@ IMPORTANT: Format your response as a valid JSON object with the structure shown 
   }
 }
 
-function extractQuestionsFromAI(content, numQuestions = 10) {
+function extractQuestionsFromAI(content, numQuestions = 10, defaultDifficulty = 'medium') {
   try {
     // Try to find a JSON block in the response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -153,7 +166,11 @@ function extractQuestionsFromAI(content, numQuestions = 10) {
       try {
         const parsedJson = JSON.parse(jsonMatch[0]);
         if (parsedJson.questions && Array.isArray(parsedJson.questions)) {
-          return parsedJson.questions;
+          // Ensure each question has a difficulty property
+          return parsedJson.questions.map(q => ({
+            ...q,
+            difficulty: q.difficulty || defaultDifficulty
+          }));
         }
       } catch (parseError) {
         console.error("Error parsing JSON from API response:", parseError);
@@ -161,7 +178,7 @@ function extractQuestionsFromAI(content, numQuestions = 10) {
     }
     
     // If JSON parsing failed, try structured text parsing
-    return parseStructuredQuizContent(content, numQuestions);
+    return parseStructuredQuizContent(content, numQuestions, defaultDifficulty);
   } catch (error) {
     console.error("Error extracting questions:", error);
     // Throw the error to be handled by the caller
@@ -169,7 +186,7 @@ function extractQuestionsFromAI(content, numQuestions = 10) {
   }
 }
 
-function parseStructuredQuizContent(content, numQuestions) {
+function parseStructuredQuizContent(content, numQuestions, defaultDifficulty) {
   const questions = [];
   const lines = content.split('\n');
   
@@ -178,11 +195,20 @@ function parseStructuredQuizContent(content, numQuestions) {
   let correctAnswer = null;
   let explanation = '';
   let collectingExplanation = false;
+  let difficulty = defaultDifficulty;
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     
     if (!line) continue;
+    
+    // Check for difficulty markers
+    if (/difficulty:\s*(easy|medium|hard)/i.test(line)) {
+      const diffMatch = line.match(/difficulty:\s*(easy|medium|hard)/i);
+      if (diffMatch && diffMatch[1]) {
+        difficulty = diffMatch[1].toLowerCase();
+      }
+    }
     
     // Look for question patterns like "1.", "Question 1:", etc.
     if (/^(\d+[\.\)]|Question\s+\d+:)/i.test(line) && !collectingExplanation) {
@@ -192,7 +218,8 @@ function parseStructuredQuizContent(content, numQuestions) {
           question: currentQuestion,
           options,
           correctAnswer: correctAnswer !== null ? correctAnswer : 0,
-          explanation: explanation || "No explanation provided."
+          explanation: explanation || "No explanation provided.",
+          difficulty
         });
         
         if (questions.length >= numQuestions) break;
@@ -204,6 +231,7 @@ function parseStructuredQuizContent(content, numQuestions) {
       correctAnswer = null;
       explanation = '';
       collectingExplanation = false;
+      difficulty = defaultDifficulty; // Reset difficulty for new question
     }
     // Look for options like "A.", "B)", "1.", "2)", etc.
     else if (/^[A-D][\.\)]|^\d+[\.\)]/.test(line) && currentQuestion && !collectingExplanation) {
@@ -247,7 +275,8 @@ function parseStructuredQuizContent(content, numQuestions) {
       question: currentQuestion,
       options,
       correctAnswer: correctAnswer !== null ? correctAnswer : 0,
-      explanation: explanation || "No explanation provided."
+      explanation: explanation || "No explanation provided.",
+      difficulty
     });
   }
   
@@ -264,12 +293,31 @@ async function handleFlashcardGeneration(requestData, apiKey) {
     throw new Error("Subject is required for flashcard generation");
   }
   
-  // Build the system prompt
-  const systemPrompt = `You are an expert educator specialized in creating flashcards. Create ${questionCount} flashcards about ${subject}${topic ? ` focusing on ${topic}` : ''}${course ? ` for the course ${course}` : ''}.`;
+  // Build the system prompt with enhanced educational focus
+  const systemPrompt = `You are an expert educator with a PhD in ${subject || 'education'} and years of experience creating highly effective educational materials. 
+  
+  Create ${questionCount} high-quality flashcards about ${subject}${topic ? ` focusing on ${topic}` : ''}${course ? ` for the course ${course}` : ''}.
+  
+  Each flashcard should:
+  1. Have a clear, focused question that tests one specific concept
+  2. Provide a comprehensive but concise answer that fully addresses the question
+  3. Include key terminology, dates, formulas, or definitions as appropriate
+  4. Be designed at an appropriate difficulty level for college/university students
+  5. Focus on concepts that commonly appear in exams
+  
+  Your flashcards should prioritize quality over quantity, ensuring each card contributes meaningfully to the student's understanding.`;
   
   // Build the user prompt
-  const userPrompt = `Generate ${questionCount} flashcards for studying ${subject}${topic ? ` on the topic of ${topic}` : ''}. 
-  Each flashcard should have a question on the front and the answer on the back. 
+  const userPrompt = `Generate ${questionCount} high-quality, exam-oriented flashcards for studying ${subject}${topic ? ` on the topic of ${topic}` : ''}. 
+  Each flashcard should have a question on the front that tests a specific concept likely to appear in exams, and a comprehensive answer on the back.
+  
+  For each flashcard:
+  - Make the question clear and specific
+  - Ensure the answer is complete but concise
+  - Include relevant facts, examples, or explanations
+  - Focus on concepts that often appear in exams
+  - Cover the most important aspects of ${topic || subject} that students need to know
+  
   Return the data in this exact JSON format: 
   {
     "questions": [

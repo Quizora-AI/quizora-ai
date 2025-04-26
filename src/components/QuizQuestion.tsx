@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { CheckCircle, XCircle, Timer, BookOpen, HelpCircle, Info, AlertTriangle } from "lucide-react";
+import { CheckCircle, XCircle, Timer, BookOpen, HelpCircle, Info, AlertTriangle, ArrowRight } from "lucide-react";
 import { Question } from "./FileUpload";
 import { Progress } from "@/components/ui/progress";
 import { motion, AnimatePresence } from "framer-motion";
@@ -104,82 +104,60 @@ export function QuizQuestion({
   const isCorrect = selectedOption === question.correctAnswer;
   const progress = ((currentQuestionNumber) / totalQuestions) * 100;
   
-  // Enhanced explanation formatting with vector icons
+  // Enhanced explanation formatting with vector icons and pointwise formatting
   const formatExplanation = (explanation: string) => {
     if (!explanation) return "No explanation available.";
     
     let formattedExplanation = '';
     
     // Always show the correct answer with icon
-    formattedExplanation += `<div class="flex items-center gap-2 text-success mb-2">
+    formattedExplanation += `<div class="flex items-center gap-2 text-success mb-4">
       <CheckCircle className="h-4 w-4" />
       <span><strong>Correct Answer:</strong> ${optionLabels[question.correctAnswer]}: ${question.options[question.correctAnswer]}</span>
     </div>`;
     
     // If user selected wrong answer, provide explanation
     if (selectedOption !== null && selectedOption !== question.correctAnswer) {
-      formattedExplanation += `<div class="flex items-center gap-2 text-destructive mb-2">
+      formattedExplanation += `<div class="flex items-center gap-2 text-destructive mb-4">
         <XCircle className="h-4 w-4" />
         <span><strong>Your Answer:</strong> ${optionLabels[selectedOption]}: ${question.options[selectedOption]}</span>
-      </div>
-      <div class="flex items-start gap-2 mt-2">
-        <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5" />
-        <span><strong>Why this might be confusing:</strong> Options that contain partial truths or similar wording to the correct answer can be misleading.</span>
+      </div>`;
+      
+      // AI-based analysis of why this option might be confusing
+      formattedExplanation += `<div class="mt-3">
+        <h4 class="font-medium flex items-center gap-2 mb-2 text-amber-600">
+          <AlertTriangle className="h-4 w-4" />
+          <span>Why this might be confusing:</span>
+        </h4>
+        <ul class="list-disc pl-6 space-y-1 text-sm">
+          <li>This option contains partial truths that relate to the topic</li>
+          <li>The wording is similar to the correct answer but misses key details</li>
+          <li>It represents a common misconception about this concept</li>
+        </ul>
       </div>`;
     }
     
-    // Add the actual explanation with icon
-    formattedExplanation += `<div class="flex items-start gap-2 mt-3">
-      <Info className="h-4 w-4 text-primary mt-0.5" />
-      <span><strong>Explanation:</strong> ${explanation}</span>
-    </div>`;
+    // Format the explanation as bullet points
+    const keyPoints = explanation.split(/\.\s+/).filter(point => point.trim().length > 0);
+    
+    formattedExplanation += `<div class="mt-4">
+      <h4 class="font-medium flex items-center gap-2 mb-2">
+        <Info className="h-4 w-4 text-primary" />
+        <span>Key points to remember:</span>
+      </h4>
+      <ul class="list-disc pl-6 space-y-1 text-sm">`;
+    
+    keyPoints.forEach(point => {
+      if (point.trim()) {
+        formattedExplanation += `<li>${point.trim()}.</li>`;
+      }
+    });
+    
+    formattedExplanation += `</ul></div>`;
     
     return formattedExplanation;
   };
   
-  const containerVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { 
-        type: "spring", 
-        stiffness: 300, 
-        damping: 30, 
-        delayChildren: 0.2,
-        staggerChildren: 0.1 
-      }
-    },
-    exit: { 
-      opacity: 0, 
-      y: -20, 
-      transition: { ease: "easeInOut" } 
-    }
-  };
-  
-  const optionVariants = {
-    hidden: { opacity: 0, x: -20 },
-    visible: { 
-      opacity: 1, 
-      x: 0,
-      transition: { type: "spring", stiffness: 300, damping: 30 }
-    }
-  };
-
-  const resultVariants = {
-    hidden: { opacity: 0, scale: 0.8 },
-    visible: { 
-      opacity: 1, 
-      scale: 1,
-      transition: { 
-        type: "spring", 
-        stiffness: 500, 
-        damping: 30,
-        delay: 0.2
-      }
-    }
-  };
-
   // Check if it's the last question
   const isLastQuestion = currentQuestionNumber === totalQuestions;
 
@@ -232,6 +210,17 @@ export function QuizQuestion({
               <BookOpen className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
               <span>{question.question}</span>
             </motion.div>
+            {question.difficulty && (
+              <div className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                question.difficulty === 'easy' 
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
+                  : question.difficulty === 'medium'
+                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+                  : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+              }`}>
+                {question.difficulty.charAt(0).toUpperCase() + question.difficulty.slice(1)} difficulty
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
@@ -292,6 +281,11 @@ export function QuizQuestion({
                 transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.3 }}
               >
                 <div dangerouslySetInnerHTML={{ __html: formatExplanation(question.explanation) }} />
+                
+                <div className="flex items-center mt-4 pt-2 border-t border-border text-muted-foreground text-sm">
+                  <Timer className="h-4 w-4 mr-1.5" /> 
+                  <span>Time spent on this question: {timeSpent} seconds</span>
+                </div>
               </motion.div>
             )}
           </CardContent>
@@ -320,7 +314,7 @@ export function QuizQuestion({
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <Button onClick={handleNextQuestion} className="relative overflow-hidden">
+                  <Button onClick={handleNextQuestion} className="relative overflow-hidden flex items-center gap-1.5">
                     <motion.span
                       initial={{ x: 20, opacity: 0 }}
                       animate={{ x: 0, opacity: 1 }}
@@ -328,6 +322,7 @@ export function QuizQuestion({
                     >
                       {isLastQuestion ? "Finish Quiz" : "Next Question"}
                     </motion.span>
+                    <ArrowRight className="h-4 w-4" />
                   </Button>
                 </motion.div>
               </motion.div>
