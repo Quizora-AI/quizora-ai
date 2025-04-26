@@ -185,6 +185,9 @@ const QuizFlowContainer = ({
         const totalTime = timePerQuestion.reduce((sum, time) => sum + (time || 0), 0);
         console.log("Calculated total time from individual question times:", totalTime, "seconds");
 
+        const startTimeStr = startTime ? startTime.toISOString() : new Date().toISOString();
+        const endTimeStr = endTime ? endTime.toISOString() : new Date().toISOString();
+
         const newQuizEntry: QuizHistory = {
           id: uuidv4(),
           date: new Date().toISOString(),
@@ -237,6 +240,10 @@ const QuizFlowContainer = ({
   console.log("Average time per question:", avgTimePerQuestion, "seconds");
   console.log("Total quiz time:", totalTime, "seconds");
   console.log("Time per question array:", timePerQuestion);
+
+  // Format timestamps for display
+  const startTimeStr = startTime ? startTime.toISOString() : '';
+  const endTimeStr = endTime ? endTime.toISOString() : '';
 
   switch (appState) {
     case AppState.QUIZ:
@@ -293,6 +300,8 @@ const QuizFlowContainer = ({
             timePerQuestion={timePerQuestion}
             averageTime={avgTimePerQuestion}
             totalTime={totalTime}
+            startTime={startTimeStr}
+            endTime={endTimeStr}
           />
         </motion.div>
       );

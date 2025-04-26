@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Question } from "./FileUpload";
@@ -55,6 +55,12 @@ interface QuizAnalyticsProps {
   endTime?: string;
 }
 
+interface TopicPerformanceData {
+  topic: string;
+  score: number;
+  questionsCount: number;
+}
+
 export function QuizAnalytics({ 
   questions, 
   correctAnswers, 
@@ -70,6 +76,7 @@ export function QuizAnalytics({
   const totalQuestions = questions.length;
   const score = Math.round((correctAnswers / totalQuestions) * 100);
   const navigate = useNavigate();
+  const [topicPerformance, setTopicPerformance] = useState<TopicPerformanceData[]>([]);
   
   const [isPremium, setIsPremium] = useState(() => {
     try {
@@ -83,6 +90,59 @@ export function QuizAnalytics({
       return false;
     }
   });
+
+  useEffect(() => {
+    try {
+      const quizHistory = localStorage.getItem("quizHistory");
+      if (quizHistory) {
+        const history = JSON.parse(quizHistory);
+        
+        const topicMap = new Map<string, {total: number, correct: number, count: number}>();
+        
+        const recentQuizzes = history.slice(0, 5);
+        
+        recentQuizzes.forEach((quiz: any) => {
+          let topic = "General";
+          
+          if (quiz.title && quiz.title.includes(" - ")) {
+            topic = quiz.title.split(" - ")[1];
+          } else if (quiz.questions && quiz.questions.length > 0 && quiz.questions[0].topic) {
+            topic = quiz.questions[0].topic;
+          }
+          
+          const correctCount = quiz.score ? Math.round((quiz.score / 100) * quiz.questionsCount) : 0;
+          const score = quiz.score || 0;
+          
+          if (topicMap.has(topic)) {
+            const existing = topicMap.get(topic)!;
+            topicMap.set(topic, {
+              total: existing.total + score,
+              correct: existing.correct + correctCount,
+              count: existing.count + 1
+            });
+          } else {
+            topicMap.set(topic, {
+              total: score,
+              correct: correctCount,
+              count: 1
+            });
+          }
+        });
+        
+        const topicData: TopicPerformanceData[] = Array.from(topicMap.entries()).map(
+          ([topic, data]) => ({
+            topic,
+            score: Math.round(data.total / data.count),
+            questionsCount: data.count
+          })
+        );
+        
+        setTopicPerformance(topicData);
+      }
+    } catch (error) {
+      console.error("Error loading quiz history for topic performance:", error);
+    }
+  }, []);
 
   const formatTime = (seconds: number): string => {
     if (!seconds || isNaN(seconds)) return "0 sec";
@@ -105,6 +165,22 @@ export function QuizAnalytics({
       avg: averageTime
     };
   });
+
+  const currentQuizTopics = questions.reduce((topics: string[], q) => {
+    if (q.topic && !topics.includes(q.topic)) {
+      topics.push(q.topic);
+    }
+    return topics;
+  }, []);
+
+  const fallbackTopics = currentQuizTopics.length > 0 ? 
+    currentQuizTopics : 
+    questions.reduce((subjects: string[], q) => {
+      if (q.subject && !subjects.includes(q.subject)) {
+        subjects.push(q.subject);
+      }
+      return subjects;
+    }, []);
 
   const allQuestions = questions.map((question, index) => ({
     question,
@@ -267,6 +343,26 @@ export function QuizAnalytics({
                     <span className="font-medium">{formatTime(totalTime)}</span>
                   </div>
                 </div>
+
+                {topicPerformance.length > 0 && (
+                  <div className="mt-8">
+                    <h3 className="font-medium text-lg mb-3 flex items-center gap-2">
+                      <BarChart2 className="h-4 w-4 text-primary" />
+                      Topic Performance
+                    </h3>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={topicPerformance}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="topic" />
+                          <YAxis domain={[0, 100]} label={{ value: 'Score (%)', angle: -90, position: 'insideLeft' }} />
+                          <Tooltip formatter={(value) => [`${value}%`, 'Score']} />
+                          <Bar name="Average Score" dataKey="score" fill="#8884d8" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -332,13 +428,23 @@ export function QuizAnalytics({
                               <span className="font-medium flex items-center gap-1">
                                 <Info className="h-3.5 w-3.5" />
                                 Explanation:
-                              </span> 
-                              <p className="mt-1">{item.question.explanation}</p>
+                              </span>
+                              {item.question.explanation.split('\n').map((point, i) => (
+                                <div key={i} className="mt-1 flex gap-2">
+                                  <span>•</span>
+                                  <span>{point.trim()}</span>
+                                </div>
+                              ))}
                               
-                              {!item.isCorrect && (
+                              {!item.isCorrect && item.question.misconception && (
                                 <div className="mt-2 text-destructive/80">
                                   <span className="font-medium">Why you might have chosen this answer:</span>
-                                  <p className="mt-0.5">This option might seem plausible because it relates to the topic, but it misses key aspects of the correct solution.</p>
+                                  {item.question.misconception.split('\n').map((point, i) => (
+                                    <div key={i} className="mt-1 flex gap-2">
+                                      <span>•</span>
+                                      <span>{point.trim()}</span>
+                                    </div>
+                                  ))}
                                 </div>
                               )}
                             </div>
@@ -406,7 +512,7 @@ export function QuizAnalytics({
                         <Target className="h-4 w-4 text-primary" />
                         Areas for Improvement
                       </h3>
-                      <ul className="list-disc space-y-3 pl-4">
+                      <ul className="space-y-3">
                         {incorrectAnswers > 0 && (
                           <li className="flex gap-2 items-start">
                             <ArrowUp className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
@@ -419,6 +525,12 @@ export function QuizAnalytics({
                             <span>Focus on understanding the core concepts better</span>
                           </li>
                         )}
+                        {fallbackTopics.map((topic, index) => (
+                          <li key={index} className="flex gap-2 items-start">
+                            <ArrowUp className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                            <span>Study more about <strong>{topic}</strong></span>
+                          </li>
+                        ))}
                       </ul>
                     </div>
                     
@@ -445,7 +557,9 @@ export function QuizAnalytics({
                           <div>
                             <h4 className="font-medium">Performance Trend</h4>
                             <p className="text-muted-foreground text-sm">
-                              Not enough data yet to establish a performance trend. Take more quizzes for insights.
+                              {topicPerformance.length > 1 
+                                ? "Your performance varies across topics. Focus on those with lower scores."
+                                : "Not enough data yet to establish a performance trend. Take more quizzes for insights."}
                             </p>
                           </div>
                         </div>
@@ -455,7 +569,9 @@ export function QuizAnalytics({
                           <div>
                             <h4 className="font-medium">Study Strategy</h4>
                             <p className="text-muted-foreground text-sm">
-                              Create flashcards for concepts you consistently miss, focusing on key terminology.
+                              {fallbackTopics.length > 0 
+                                ? `Create flashcards focusing on ${fallbackTopics.join(', ')} concepts to strengthen your understanding.`
+                                : "Create flashcards for concepts you consistently miss, focusing on key terminology."}
                             </p>
                           </div>
                         </div>
@@ -489,7 +605,7 @@ export function QuizAnalytics({
                         <Calendar className="h-4 w-4 text-primary" />
                         Study Schedule
                       </h3>
-                      <div className="space-y-3 pl-4">
+                      <div className="space-y-3">
                         <div className="flex gap-2 items-start">
                           <Info className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                           <span><strong>Today:</strong> Review questions from this quiz</span>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Question } from "@/components/FileUpload";
@@ -30,13 +29,19 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
 
   useEffect(() => {
     const savedQuizState = localStorage.getItem("quizInProgress");
+    
     if (savedQuizState && location.pathname === '/quiz') {
       try {
         const parsedState = JSON.parse(savedQuizState);
-        if (parsedState.questions && parsedState.questions.length > 0) {
+        if (parsedState.questions && 
+            parsedState.questions.length > 0 && 
+            parsedState.currentIndex !== undefined &&
+            parsedState.currentIndex < parsedState.questions.length) {
           setQuestions(parsedState.questions);
           if (parsedState.title) setQuizTitle(parsedState.title);
           setShowQuizResumeDialog(true);
+        } else {
+          localStorage.removeItem("quizInProgress");
         }
       } catch (error) {
         console.error("Error loading saved quiz:", error);
