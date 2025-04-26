@@ -20,6 +20,9 @@ export interface Question {
   explanation?: string;
   timeLimit?: number;
   difficulty?: string;
+  topic?: string;
+  subject?: string;
+  misconception?: string;
 }
 
 export function FileUpload({ onFileProcessed }: FileUploadProps) {
