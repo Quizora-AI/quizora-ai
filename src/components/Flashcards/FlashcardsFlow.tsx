@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -9,9 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Flashcard } from "@/types";
 import { FlashcardSet } from "@/components/Flashcards/FlashcardSet";
 import { generateFlashcards } from "@/integrations/openai";
-import { BannerAd } from "@/components/GoogleAds";
+import { BannerAd, useInterstitialAd } from "@/components/GoogleAds";
 import { shouldShowFlashcardCompletionAd } from '@/utils/adUtils';
-import { useInterstitialAd } from '../GoogleAds';
 
 interface FlashcardsFlowProps {
   onBackToCreate: () => void;
@@ -25,6 +25,12 @@ export function FlashcardsFlow({ onBackToCreate }: FlashcardsFlowProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { showInterstitial } = useInterstitialAd({
+    adUnitId: "ca-app-pub-8270549953677995/9564071776",
+    onAdDismissed: () => {
+      console.log("Ad dismissed by user");
+    }
+  });
 
   useEffect(() => {
     const savedFlashcards = localStorage.getItem("currentFlashcardSet");
@@ -60,23 +66,11 @@ export function FlashcardsFlow({ onBackToCreate }: FlashcardsFlowProps) {
       localStorage.setItem("currentFlashcardSet", JSON.stringify({ topic, flashcards: generatedCards }));
       setIsLoading(false);
       
-      const handleFlashcardsComplete = async () => {
-        if (shouldShowFlashcardCompletionAd()) {
-          const { showInterstitial } = useInterstitialAd({
-            adUnitId: "ca-app-pub-8270549953677995/9564071776",
-            onAdDismissed: () => {
-              // Continue with flashcard completion logic
-              setIsComplete(true);
-            }
-          });
-          showInterstitial();
-        } else {
-          setIsComplete(true);
-        }
-      };
+      if (shouldShowFlashcardCompletionAd()) {
+        showInterstitial();
+      }
       
-      await handleFlashcardsComplete();
-      
+      setIsComplete(true);
     } catch (error: any) {
       console.error("Error generating flashcards:", error);
       setErrorMessage(error.message || "Failed to generate flashcards. Please try again.");
