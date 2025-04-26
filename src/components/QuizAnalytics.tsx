@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -94,18 +95,21 @@ export function QuizAnalytics({
   ];
   
   const timingData = questions.map((_, index) => {
+    // Use the actual time spent on each question, or 0 if not available
     const timeSpent = timePerQuestion[index] || 0;
+    
     return {
       name: `Q${index + 1}`,
       time: timeSpent,
-      avg: averageTime || 0
+      avg: averageTime
     };
   });
 
   const allQuestions = questions.map((question, index) => ({
     question,
     isCorrect: userAnswers[index] === question.correctAnswer,
-    userAnswer: userAnswers[index]
+    userAnswer: userAnswers[index],
+    timeSpent: timePerQuestion[index] || 0
   }));
 
   const handleCreateNewQuiz = () => {
@@ -185,14 +189,14 @@ export function QuizAnalytics({
             <div className="grid grid-cols-2 gap-4 mt-4">
               <div className="bg-muted/50 p-3 rounded-lg flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Timer className="h-4 w-4 text-primary" />
+                  <Clock className="h-4 w-4 text-primary" />
                   <span className="text-sm">Total Time:</span>
                 </div>
                 <span className="font-medium">{formatTime(totalTime)}</span>
               </div>
               <div className="bg-muted/50 p-3 rounded-lg flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-primary" />
+                  <Timer className="h-4 w-4 text-primary" />
                   <span className="text-sm">Avg. Time Per Question:</span>
                 </div>
                 <span className="font-medium">{formatTime(averageTime)}</span>
@@ -249,14 +253,14 @@ export function QuizAnalytics({
                 <div className="mt-4 space-y-2">
                   <div className="flex items-center justify-between px-4 py-2 bg-muted rounded-md">
                     <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-primary" />
+                      <Timer className="h-4 w-4 text-primary" />
                       <span>Average Time per Question:</span>
                     </div>
                     <span className="font-medium">{formatTime(averageTime)}</span>
                   </div>
                   <div className="flex items-center justify-between px-4 py-2 bg-muted rounded-md">
                     <div className="flex items-center gap-2">
-                      <Timer className="h-4 w-4 text-primary" />
+                      <Clock className="h-4 w-4 text-primary" />
                       <span>Completion Time:</span>
                     </div>
                     <span className="font-medium">{formatTime(totalTime)}</span>
@@ -339,7 +343,7 @@ export function QuizAnalytics({
                             </div>
                           )}
                           <div className="mt-2 text-xs text-muted-foreground">
-                            Time taken: {formatTime(timePerQuestion[index] || 0)}
+                            Time taken: {formatTime(item.timeSpent)}
                           </div>
                         </div>
                       ))}
@@ -519,3 +523,23 @@ export function QuizAnalytics({
     </motion.div>
   );
 }
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { 
+    opacity: 1,
+    transition: { 
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: { 
+    y: 0, 
+    opacity: 1,
+    transition: { type: "spring", stiffness: 100 }
+  }
+};

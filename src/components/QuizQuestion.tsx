@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -26,8 +27,10 @@ export function QuizQuestion({
   const [timeLeft, setTimeLeft] = useState(defaultTimePerQuestion);
   const [isTimerRunning, setIsTimerRunning] = useState(true);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [timeSpent, setTimeSpent] = useState(0);
   const optionLabels = ["A", "B", "C", "D"];
   const timerProgressRef = useRef<HTMLDivElement>(null);
+  const questionStartTime = useRef<Date>(new Date());
 
   // Key generator for the question
   const questionKey = `question-${question.id}-${currentQuestionNumber}`;
@@ -40,6 +43,8 @@ export function QuizQuestion({
     setSelectedOption(null); 
     setIsAnswered(false);
     setShowFeedback(false);
+    setTimeSpent(0);
+    questionStartTime.current = new Date();
   }, [questionKey, defaultTimePerQuestion, currentQuestionNumber]);
 
   useEffect(() => {
@@ -49,11 +54,18 @@ export function QuizQuestion({
       setIsTimerRunning(false);
       setIsAnswered(true);
       setShowFeedback(true);
+      
+      // Calculate time spent when time runs out
+      const spent = Math.round((new Date().getTime() - questionStartTime.current.getTime()) / 1000);
+      setTimeSpent(spent);
       return;
     }
     
     const timer = setTimeout(() => {
       setTimeLeft(timeLeft - 1);
+      // Update time spent on each tick
+      const spent = Math.round((new Date().getTime() - questionStartTime.current.getTime()) / 1000);
+      setTimeSpent(spent);
     }, 1000);
     
     if (timerProgressRef.current) {
@@ -73,6 +85,11 @@ export function QuizQuestion({
     setIsAnswered(true);
     setIsTimerRunning(false);
     setShowFeedback(true);
+    
+    // Calculate exact time spent when answering
+    const spent = Math.round((new Date().getTime() - questionStartTime.current.getTime()) / 1000);
+    setTimeSpent(spent);
+    console.log(`Time spent on question ${currentQuestionNumber}: ${spent} seconds`);
   };
 
   const handleNextQuestion = () => {
@@ -321,3 +338,47 @@ export function QuizQuestion({
     </AnimatePresence>
   );
 }
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { 
+      type: "spring", 
+      stiffness: 300, 
+      damping: 30, 
+      delayChildren: 0.2,
+      staggerChildren: 0.1 
+    }
+  },
+  exit: { 
+    opacity: 0, 
+    y: -20, 
+    transition: { ease: "easeInOut" } 
+  }
+};
+
+const optionVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: { 
+    opacity: 1, 
+    x: 0,
+    transition: { type: "spring", stiffness: 300, damping: 30 }
+  }
+};
+
+const resultVariants = {
+  hidden: { opacity: 0, scale: 0.8 },
+  visible: { 
+    opacity: 1, 
+    scale: 1,
+    transition: { 
+      type: "spring", 
+      stiffness: 500, 
+      damping: 30,
+      delay: 0.2
+    }
+  }
+};

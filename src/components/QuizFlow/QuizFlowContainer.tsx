@@ -121,24 +121,18 @@ const QuizFlowContainer = ({
       count + (answer === questions[idx].correctAnswer ? 1 : 0), 0
     );
 
-  const handleNextQuestion = (selectedOption: number) => {
-    // Record the user's answer
+  const handleNextQuestion = (selectedOption: number, timeSpent: number) => {
+    // Record the user's answer and the time spent
     const newUserAnswers = [...userAnswers, selectedOption];
     setUserAnswers(newUserAnswers);
-    console.log(`User selected option ${selectedOption} for question ${currentQuestionIndex + 1}`);
-
-    // Get updated timing information from localStorage
-    try {
-      const quizInProgress = localStorage.getItem("quizInProgress");
-      if (quizInProgress) {
-        const parsedQuiz = JSON.parse(quizInProgress);
-        if (parsedQuiz && parsedQuiz.timings) {
-          setTimePerQuestion(parsedQuiz.timings);
-        }
-      }
-    } catch (error) {
-      console.error("Error updating timings:", error);
-    }
+    
+    // Update the time spent on this question
+    const newTimePerQuestion = [...timePerQuestion];
+    newTimePerQuestion[currentQuestionIndex] = timeSpent;
+    setTimePerQuestion(newTimePerQuestion);
+    
+    console.log(`User selected option ${selectedOption} for question ${currentQuestionIndex + 1} in ${timeSpent} seconds`);
+    console.log("Updated time per question:", newTimePerQuestion);
 
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
@@ -146,12 +140,6 @@ const QuizFlowContainer = ({
       // Quiz is complete, record end time
       const finishTime = new Date();
       setEndTime(finishTime);
-      
-      // Calculate and log accurate total time
-      if (startTime) {
-        const totalTimeInSeconds = Math.round((finishTime.getTime() - startTime.getTime()) / 1000);
-        console.log("Quiz finished. Total time:", totalTimeInSeconds, "seconds");
-      }
       
       setAppState(AppState.RESULTS);
       localStorage.removeItem("quizInProgress");
@@ -193,16 +181,9 @@ const QuizFlowContainer = ({
           ? JSON.parse(existingHistoryString)
           : [];
 
-        // Calculate total time accurately
-        let totalTime = 0;
-        if (startTime && endTime) {
-          totalTime = Math.round((endTime.getTime() - startTime.getTime()) / 1000);
-        } else if (timePerQuestion.length > 0) {
-          totalTime = timePerQuestion.reduce((sum, time) => sum + (time || 0), 0);
-        }
-
-        console.log("Saving quiz history with total time:", totalTime, "seconds");
-        console.log("Time per question array:", timePerQuestion);
+        // Calculate total time from the timePerQuestion array
+        const totalTime = timePerQuestion.reduce((sum, time) => sum + (time || 0), 0);
+        console.log("Calculated total time from individual question times:", totalTime, "seconds");
 
         const newQuizEntry: QuizHistory = {
           id: uuidv4(),
@@ -246,13 +227,12 @@ const QuizFlowContainer = ({
   }
 
   // Calculate the average time per question and total time accurately
-  const totalTime = startTime && endTime 
-    ? Math.round((endTime.getTime() - startTime.getTime()) / 1000)
-    : timePerQuestion.reduce((sum, time) => sum + (time || 0), 0);
+  const totalTime = timePerQuestion.reduce((sum, time) => sum + (time || 0), 0);
   
-  const avgTimePerQuestion = timePerQuestion.length > 0 
-    ? Math.round(timePerQuestion.reduce((sum, time) => sum + (time || 0), 0) / timePerQuestion.length) 
-    : Math.round(totalTime / questions.length);
+  const filteredTimes = timePerQuestion.filter(time => time !== undefined && time > 0);
+  const avgTimePerQuestion = filteredTimes.length > 0 
+    ? Math.round(filteredTimes.reduce((sum, time) => sum + time, 0) / filteredTimes.length) 
+    : 0;
 
   console.log("Average time per question:", avgTimePerQuestion, "seconds");
   console.log("Total quiz time:", totalTime, "seconds");
