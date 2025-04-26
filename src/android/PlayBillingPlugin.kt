@@ -3,6 +3,7 @@ package com.quizora.ai.billing
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import com.android.billingclient.api.*
 import org.apache.cordova.CallbackContext

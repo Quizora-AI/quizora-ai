@@ -1,4 +1,3 @@
-
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
         id="cordova-plugin-play-billing"
@@ -24,14 +23,16 @@
             <uses-permission android:name="com.android.vending.BILLING" />
         </config-file>
         
-        <!-- Add billing key as metadata -->
+        <!-- Add billing activity to manifest -->
         <config-file target="AndroidManifest.xml" parent="/manifest/application">
+            <activity android:name="com.quizora.ai.billing.BillingActivity" />
             <meta-data android:name="com.google.android.play.billingclient.version" android:value="7.1.1" />
         </config-file>
         
         <framework src="com.android.billingclient:billing:7.1.1" />
         
         <source-file src="src/android/PlayBillingPlugin.kt" target-dir="src/com/quizora/ai/billing" />
+        <source-file src="src/android/BillingActivity.kt" target-dir="src/com/quizora/ai/billing" />
         
         <preference name="BILLING_KEY" default="MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtVSw2Yq9Mjz35yTkPb+d3rWqnUCnTtDXA6iaa9EhHcrSa2JaK23peJ1hk0Bma+msCABmPfK7nCkAzG4VOA6lBrk+0mjiIatYOfwieKW/e0CBKBVBVZmjvaHRnGHhUWUrudmJ5HWv0ssl+u5ZXlC+L7adaV+u4raVsZYVZT5M2NLLtqObv+dVSikrXhqN2WYMRdC396GqPtVi+QxBolQyiEeScLrNsV08CVVIcWZV6mHaPXkvegkZJOAYG8av6mw0T9N6BII/t3KTSuvuT2NK8t9xN7IDuw6hD+zZt2sfjAqfT+JLeWQjVfUtVNjlGoZTWYxVOlg4NzGBwUjDULTMiwIDAQAB" />
     </platform>
