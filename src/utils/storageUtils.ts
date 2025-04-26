@@ -16,7 +16,20 @@ export const saveQuizToHistory = (quiz: any) => {
   try {
     const existingHistory = localStorage.getItem(STORAGE_KEYS.QUIZ_HISTORY);
     const history = existingHistory ? JSON.parse(existingHistory) : [];
-    const updatedHistory = [quiz, ...history];
+    
+    // Check if this quiz already exists (by id)
+    const existingQuizIndex = history.findIndex((item: any) => item.id === quiz.id);
+    
+    let updatedHistory;
+    if (existingQuizIndex >= 0) {
+      // Update the existing quiz entry
+      updatedHistory = [...history];
+      updatedHistory[existingQuizIndex] = quiz;
+    } else {
+      // Add as a new entry
+      updatedHistory = [quiz, ...history];
+    }
+    
     localStorage.setItem(STORAGE_KEYS.QUIZ_HISTORY, JSON.stringify(updatedHistory));
     return true;
   } catch (error) {
@@ -71,12 +84,39 @@ export const saveFlashcardsToHistory = (flashcardSet: {
   title: string;
   cards: Flashcard[];
   created_at: string;
+  subject?: string;
+  course?: string;
+  topic?: string;
 }) => {
   try {
     const existingHistory = localStorage.getItem(STORAGE_KEYS.FLASHCARDS_HISTORY);
     const history = existingHistory ? JSON.parse(existingHistory) : [];
-    const updatedHistory = [flashcardSet, ...history];
+    
+    // Check if a set with this ID already exists
+    const existingSetIndex = history.findIndex((set: any) => set.id === flashcardSet.id);
+    
+    let updatedHistory;
+    if (existingSetIndex >= 0) {
+      // Update existing entry instead of creating a duplicate
+      updatedHistory = [...history];
+      updatedHistory[existingSetIndex] = {
+        ...flashcardSet,
+        updated_at: new Date().toISOString()
+      };
+    } else {
+      // Add as new entry
+      updatedHistory = [
+        {
+          ...flashcardSet,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }, 
+        ...history
+      ];
+    }
+    
     localStorage.setItem(STORAGE_KEYS.FLASHCARDS_HISTORY, JSON.stringify(updatedHistory));
+    console.log("Updated flashcard history:", updatedHistory);
     return true;
   } catch (error) {
     console.error('Error saving flashcards to history:', error);
@@ -99,9 +139,15 @@ export const saveCurrentFlashcardSet = (set: {
   title: string;
   cards: Flashcard[];
   mode: string;
+  subject?: string;
+  course?: string;
+  topic?: string;
 }) => {
   try {
-    localStorage.setItem(STORAGE_KEYS.CURRENT_FLASHCARD_SET, JSON.stringify(set));
+    localStorage.setItem(STORAGE_KEYS.CURRENT_FLASHCARD_SET, JSON.stringify({
+      ...set,
+      lastUpdated: new Date().toISOString()
+    }));
     return true;
   } catch (error) {
     console.error('Error saving current flashcard set:', error);
@@ -128,4 +174,23 @@ export const clearData = (key: keyof typeof STORAGE_KEYS) => {
     console.error(`Error clearing ${key}:`, error);
     return false;
   }
+};
+
+// Utility to ensure persistence by syncing with localStorage
+export const syncDataWithStorage = () => {
+  const keys = Object.values(STORAGE_KEYS);
+  const data: Record<string, any> = {};
+  
+  keys.forEach(key => {
+    try {
+      const item = localStorage.getItem(key);
+      if (item) {
+        data[key] = JSON.parse(item);
+      }
+    } catch (error) {
+      console.error(`Error syncing ${key} with storage:`, error);
+    }
+  });
+  
+  return data;
 };

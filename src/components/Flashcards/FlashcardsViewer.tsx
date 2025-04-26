@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowDown, ArrowUp, BookOpen } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface FlashcardsViewerProps {
   flashcards: Flashcard[];
@@ -117,19 +119,21 @@ export function FlashcardsViewer({
               className="absolute inset-0"
             >
               <Card 
-                className={`h-full w-full flex items-center justify-center p-4 cursor-pointer ${
-                  flipped ? "bg-muted/50" : "bg-card"
+                className={`h-full w-full flex items-center justify-center p-4 cursor-pointer shadow-lg border-2 ${
+                  flipped 
+                    ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border-blue-200 dark:border-blue-800" 
+                    : "bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/40 dark:to-purple-950/40 border-violet-200 dark:border-violet-800"
                 }`}
                 onClick={handleFlip}
               >
                 <CardContent className="flex flex-col items-center justify-center w-full h-full p-6">
                   <div className="absolute top-2 right-2">
-                    <Badge variant={flipped ? "outline" : "default"}>
+                    <Badge variant={flipped ? "outline" : "default"} className={flipped ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 hover:bg-blue-200" : ""}>
                       {flipped ? "Answer" : "Question"}
                     </Badge>
                   </div>
 
-                  <p className="text-center text-lg">
+                  <p className="text-center text-lg font-medium">
                     {flipped ? cards[currentIndex].back : cards[currentIndex].front}
                   </p>
                   
@@ -174,45 +178,53 @@ export function FlashcardsViewer({
           </Button>
         </div>
 
-        <div className="flex justify-between">
-          <Button 
-            onClick={handlePrev} 
-            disabled={currentIndex === 0}
-            variant="outline"
-            size="sm"
-          >
-            <ArrowDown className="h-4 w-4 mr-1" />
-            Previous
-          </Button>
-          <div className="flex items-center space-x-1">
-            {cards.map((card, idx) => (
-              <button
-                key={idx}
-                onClick={() => {
-                  setFlipped(false);
-                  setCurrentIndex(idx);
-                }}
-                className={`h-2 w-2 rounded-full ${
-                  idx === currentIndex
-                    ? "bg-primary"
-                    : card.status === 'known'
-                    ? "bg-green-500"
-                    : card.status === 'learning'
-                    ? "bg-blue-500"
-                    : "bg-muted"
-                }`}
-              />
-            ))}
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-between">
+            <Button 
+              onClick={handlePrev} 
+              disabled={currentIndex === 0}
+              variant="outline"
+              size="sm"
+            >
+              <ArrowDown className="h-4 w-4 mr-1" />
+              Previous
+            </Button>
+            
+            <Button 
+              onClick={handleNext} 
+              disabled={currentIndex === cards.length - 1}
+              variant="outline"
+              size="sm"
+            >
+              Next
+              <ArrowUp className="h-4 w-4 ml-1" />
+            </Button>
           </div>
-          <Button 
-            onClick={handleNext} 
-            disabled={currentIndex === cards.length - 1}
-            variant="outline"
-            size="sm"
-          >
-            Next
-            <ArrowUp className="h-4 w-4 ml-1" />
-          </Button>
+          
+          {/* Scrollable dots navigation for many cards */}
+          <ScrollArea className="w-full h-[30px] py-2">
+            <div className="flex items-center justify-center gap-1 min-w-full px-2">
+              {cards.map((card, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    setFlipped(false);
+                    setCurrentIndex(idx);
+                  }}
+                  aria-label={`Go to card ${idx + 1}`}
+                  className={`h-2 w-2 rounded-full transition-all ${
+                    idx === currentIndex
+                      ? "w-4 bg-primary"
+                      : card.status === 'known'
+                      ? "bg-green-500"
+                      : card.status === 'learning'
+                      ? "bg-blue-500"
+                      : "bg-muted"
+                  }`}
+                />
+              ))}
+            </div>
+          </ScrollArea>
         </div>
       </div>
     </div>

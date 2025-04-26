@@ -4,10 +4,12 @@ import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, BookPlus, ArrowRight } from "lucide-react";
+import { BookOpen, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Flashcard } from "./FlashcardsGenerator";
 import { useToast } from "@/components/ui/use-toast";
+import { format } from "date-fns";
+import { getFlashcardsHistory } from "@/utils/storageUtils";
 
 interface FlashcardsSetHistory {
   id: string;
@@ -17,6 +19,7 @@ interface FlashcardsSetHistory {
   topic?: string;
   cards: Flashcard[];
   created_at: string | Date;
+  updated_at?: string | Date;
 }
 
 export function FlashcardsHistory() {
@@ -25,18 +28,38 @@ export function FlashcardsHistory() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Load flashcards history
-    const savedFlashcards = localStorage.getItem("flashcardsHistory");
-    if (savedFlashcards) {
-      try {
-        const parsedSets = JSON.parse(savedFlashcards);
-        console.log("Loaded flashcard sets:", parsedSets);
-        setFlashcardSets(parsedSets);
-      } catch (error) {
-        console.error("Error loading flashcard history:", error);
-      }
-    }
+    // Load flashcards history using the utility function
+    loadFlashcardsHistory();
+    
+    // Add event listener to refresh data when localStorage changes
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
+  
+  const handleStorageChange = (e: StorageEvent) => {
+    if (e.key === 'flashcardsHistory') {
+      loadFlashcardsHistory();
+    }
+  };
+  
+  const loadFlashcardsHistory = () => {
+    const history = getFlashcardsHistory();
+    
+    if (history && history.length > 0) {
+      // Ensure we don't have duplicate entries by ID
+      const uniqueSets = Array.from(
+        new Map(history.map((set: FlashcardsSetHistory) => [set.id, set])).values()
+      ) as FlashcardsSetHistory[];
+      
+      console.log("Loaded flashcard sets:", uniqueSets);
+      setFlashcardSets(uniqueSets);
+    } else {
+      setFlashcardSets([]);
+    }
+  };
 
   const calculateProgress = (cards: Flashcard[]) => {
     if (!cards || !cards.length) return 0;
@@ -46,11 +69,7 @@ export function FlashcardsHistory() {
 
   const formatDate = (dateString: string | Date) => {
     const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    }).format(date);
+    return format(date, 'MMM d, yyyy');
   };
 
   const handleReviewFlashcards = (setId: string) => {
@@ -63,6 +82,9 @@ export function FlashcardsHistory() {
         id: selectedSet.id,
         title: selectedSet.title,
         cards: selectedSet.cards,
+        subject: selectedSet.subject,
+        course: selectedSet.course,
+        topic: selectedSet.topic,
         mode: "review" // Add a mode flag to indicate we're reviewing existing cards
       }));
       
@@ -103,7 +125,7 @@ export function FlashcardsHistory() {
     <>
       {flashcardSets.length === 0 ? (
         <div className="text-center py-12">
-          <BookPlus className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h2 className="text-xl font-bold mb-2">No flashcards yet</h2>
           <p className="text-muted-foreground mb-6">
             Create flashcards to study and track your progress
@@ -119,7 +141,7 @@ export function FlashcardsHistory() {
         >
           {flashcardSets.map((set) => (
             <motion.div key={set.id} variants={itemVariants}>
-              <Card className="overflow-hidden border border-primary/10 shadow-md hover:shadow-lg transition-all duration-200 bg-card/80 backdrop-blur-sm">
+              <Card className="overflow-hidden border border-primary/10 shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-r from-card/80 to-card/90 backdrop-blur-sm hover:border-primary/30">
                 <CardContent className="p-5">
                   <div className="flex flex-col space-y-4">
                     <div>
@@ -132,6 +154,12 @@ export function FlashcardsHistory() {
                           <>
                             <span className="inline-block w-1 h-1 rounded-full bg-muted-foreground"></span>
                             <span>{set.course}</span>
+                          </>
+                        )}
+                        {set.updated_at && set.updated_at !== set.created_at && (
+                          <>
+                            <span className="inline-block w-1 h-1 rounded-full bg-muted-foreground"></span>
+                            <span className="text-xs">Updated: {formatDate(set.updated_at)}</span>
                           </>
                         )}
                       </div>
@@ -153,7 +181,7 @@ export function FlashcardsHistory() {
                         variant="default"
                         size="sm"
                         onClick={() => handleReviewFlashcards(set.id)}
-                        className="gap-1 px-4"
+                        className="gap-1 px-4 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600"
                       >
                         Review <ArrowRight className="h-3.5 w-3.5 ml-1" />
                       </Button>

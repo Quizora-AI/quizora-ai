@@ -18,14 +18,17 @@ const QuizTaking = ({
   totalQuestions,
 }: QuizTakingProps) => {
   const { toast } = useToast();
-  const [startTime] = useState<Date>(() => new Date());
+  const [startTime, setStartTime] = useState<Date>(new Date());
   
+  // Reset the timer whenever the question changes
   useEffect(() => {
-    console.log(`Started timer for question ${currentQuestionNumber} at ${startTime.toISOString()}`);
-  }, [currentQuestionNumber, startTime]);
+    setStartTime(new Date());
+    console.log(`Started timer for question ${currentQuestionNumber} at ${new Date().toISOString()}`);
+  }, [currentQuestionNumber, question]);
 
   const handleNextQuestion = (selectedOption: number) => {
-    const timeSpent = Math.round((new Date().getTime() - startTime.getTime()) / 1000);
+    const endTime = new Date();
+    const timeSpent = Math.round((endTime.getTime() - startTime.getTime()) / 1000);
     console.log(`Question ${currentQuestionNumber} took ${timeSpent} seconds to answer`);
     
     // Pass both the selected option and time spent to the parent component
