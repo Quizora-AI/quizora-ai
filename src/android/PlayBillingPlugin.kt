@@ -1,4 +1,3 @@
-
 package com.quizora.ai.billing
 
 import android.app.Activity
@@ -177,35 +176,19 @@ class PlayBillingPlugin : CordovaPlugin(), PurchasesUpdatedListener {
             return
         }
 
-        val productDetails = productDetailsMap[productId]
-        if (productDetails == null) {
-            Log.e(TAG, "Product details not found for: $productId")
-            purchaseCallbackContext?.error("Product details not found: $productId")
-            return
-        }
+        val intent = Intent(cordova.activity, BillingActivity::class.java)
+        cordova.startActivityForResult(this, intent, PURCHASE_REQUEST_CODE)
+    }
 
-        val offerToken = productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken
-        if (offerToken == null) {
-            Log.e(TAG, "No offer token found for: $productId")
-            purchaseCallbackContext?.error("No offer token found")
-            return
-        }
-
-        val productDetailsParamsList = listOf(
-            BillingFlowParams.ProductDetailsParams.newBuilder()
-                .setProductDetails(productDetails)
-                .setOfferToken(offerToken)
-                .build()
-        )
-
-        val flowParams = BillingFlowParams.newBuilder()
-            .setProductDetailsParamsList(productDetailsParamsList)
-            .build()
-
-        val responseCode = billingClient.launchBillingFlow(cordova.activity, flowParams).responseCode
-        if (responseCode != BillingClient.BillingResponseCode.OK) {
-            Log.e(TAG, "Failed to launch purchase flow: $responseCode")
-            purchaseCallbackContext?.error("Failed to launch purchase flow: $responseCode")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode == PURCHASE_REQUEST_CODE) {
+            if (resultCode == Activity.RESULT_OK) {
+                // Purchase was successful
+                queryProductDetails() // Refresh products
+                purchaseCallbackContext?.success("Purchase completed successfully")
+            } else {
+                purchaseCallbackContext?.error("Purchase was cancelled or failed")
+            }
         }
     }
 
@@ -301,5 +284,9 @@ class PlayBillingPlugin : CordovaPlugin(), PurchasesUpdatedListener {
             billingClient.endConnection()
             isServiceConnected.set(false)
         }
+    }
+
+    companion object {
+        private const val PURCHASE_REQUEST_CODE = 1001
     }
 }

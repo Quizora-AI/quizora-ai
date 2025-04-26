@@ -21,12 +21,16 @@
         
         <config-file target="AndroidManifest.xml" parent="/manifest">
             <uses-permission android:name="com.android.vending.BILLING" />
+            <uses-permission android:name="android.permission.INTERNET" />
         </config-file>
         
-        <!-- Add billing activity to manifest -->
         <config-file target="AndroidManifest.xml" parent="/manifest/application">
-            <activity android:name="com.quizora.ai.billing.BillingActivity" />
-            <meta-data android:name="com.google.android.play.billingclient.version" android:value="7.1.1" />
+            <activity 
+                android:name="com.quizora.ai.billing.BillingActivity"
+                android:exported="false" />
+            <meta-data 
+                android:name="com.google.android.play.billingclient.version" 
+                android:value="7.1.1" />
         </config-file>
         
         <framework src="com.android.billingclient:billing:7.1.1" />
