@@ -1,6 +1,6 @@
 
-import { QuizAnalytics } from "../QuizAnalytics";
-import { Question } from "../FileUpload";
+import { QuizAnalytics } from "./QuizAnalytics";
+import { Question } from "./FileUpload";
 
 interface QuizFlowAnalyticsProps {
   questions: Question[];

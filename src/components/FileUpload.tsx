@@ -18,7 +18,8 @@ export interface Question {
   options: string[];
   correctAnswer: number;
   explanation?: string;
-  timeLimit?: number; // Added timeLimit property
+  timeLimit?: number;
+  difficulty?: string;
 }
 
 export function FileUpload({ onFileProcessed }: FileUploadProps) {
@@ -48,7 +49,6 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
     const selectedFile = event.target.files?.[0];
     if (!selectedFile) return;
 
-    // AIMLAPI only supports image formats
     if (!selectedFile.type.startsWith('image/')) {
       toast({
         title: "Unsupported file type",
@@ -58,7 +58,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       return;
     }
 
-    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+    const MAX_FILE_SIZE = 20 * 1024 * 1024;
     if (selectedFile.size > MAX_FILE_SIZE) {
       toast({
         title: "File too large",
@@ -68,8 +68,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       return;
     }
 
-    // Smaller file size recommendation for better processing
-    const RECOMMENDED_SIZE = 2 * 1024 * 1024; // 2MB
+    const RECOMMENDED_SIZE = 2 * 1024 * 1024;
     if (selectedFile.size > RECOMMENDED_SIZE) {
       toast({
         title: "Large file detected",
@@ -84,7 +83,6 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
     setWasTruncated(false);
     setRetryCount(0);
 
-    // Create preview for image files
     if (selectedFile.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = () => {
@@ -103,7 +101,6 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
     const droppedFile = event.dataTransfer.files?.[0];
     if (!droppedFile) return;
 
-    // AIMLAPI only supports image formats
     if (!droppedFile.type.startsWith('image/')) {
       toast({
         title: "Unsupported file type",
@@ -113,7 +110,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       return;
     }
 
-    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+    const MAX_FILE_SIZE = 20 * 1024 * 1024;
     if (droppedFile.size > MAX_FILE_SIZE) {
       toast({
         title: "File too large",
@@ -123,8 +120,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       return;
     }
 
-    // Smaller file size recommendation for better processing
-    const RECOMMENDED_SIZE = 2 * 1024 * 1024; // 2MB
+    const RECOMMENDED_SIZE = 2 * 1024 * 1024;
     if (droppedFile.size > RECOMMENDED_SIZE) {
       toast({
         title: "Large file detected",
@@ -139,7 +135,6 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
     setWasTruncated(false);
     setRetryCount(0);
 
-    // Create preview for image files
     if (droppedFile.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = () => {
@@ -199,9 +194,7 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
 
       console.log(`Sending ${file.name} (${file.type}, ${(file.size/1024/1024).toFixed(2)}MB) for processing`);
       
-      // Set a shorter timeout for API limitations
-      const timeoutMs = 60000; // 60 seconds timeout
-      
+      const timeoutMs = 60000;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
       
@@ -267,7 +260,6 @@ export function FileUpload({ onFileProcessed }: FileUploadProps) {
       setErrorMessage(errorMessage);
       setRetryCount(prev => prev + 1);
       
-      // Improved error handling for specific errors
       if (errorMessage.includes('Unsupported file type') || errorMessage.includes('Invalid MIME type')) {
         setApiErrorDetails('Currently only image files (JPEG, PNG) are supported. Please convert your PDF or document to images before uploading.');
       } else if (errorMessage.includes('Maximum call stack size exceeded') || errorMessage.includes('too large')) {

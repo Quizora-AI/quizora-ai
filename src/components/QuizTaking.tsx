@@ -1,6 +1,6 @@
 
-import { Question } from "../FileUpload";
-import { QuizQuestion } from "../QuizQuestion";
+import { Question } from "./FileUpload";
+import { QuizQuestion } from "./QuizQuestion";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
