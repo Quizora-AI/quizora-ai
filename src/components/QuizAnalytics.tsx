@@ -61,6 +61,12 @@ interface TopicPerformanceData {
   questionsCount: number;
 }
 
+interface SubjectPerformance {
+  subject: string;
+  score: number;
+  count: number;
+}
+
 export function QuizAnalytics({ 
   questions, 
   correctAnswers, 
@@ -143,6 +149,51 @@ export function QuizAnalytics({
       console.error("Error loading quiz history for topic performance:", error);
     }
   }, []);
+
+  const analyzeSubjectPerformance = () => {
+    try {
+      const quizHistory = localStorage.getItem("quizHistory");
+      if (!quizHistory) return [];
+      
+      const history = JSON.parse(quizHistory);
+      const subjectMap = new Map<string, {total: number; count: number}>();
+      
+      const recentQuizzes = history.slice(0, 5);
+      
+      recentQuizzes.forEach((quiz: any) => {
+        if (quiz.questions && quiz.questions.length > 0) {
+          quiz.questions.forEach((question: Question) => {
+            if (question.subject) {
+              if (!subjectMap.has(question.subject)) {
+                subjectMap.set(question.subject, { total: 0, count: 0 });
+              }
+              
+              const data = subjectMap.get(question.subject)!;
+              data.total += quiz.score || 0;
+              data.count += 1;
+            }
+          });
+        }
+      });
+      
+      const subjectPerformance: SubjectPerformance[] = Array.from(subjectMap.entries())
+        .map(([subject, data]) => ({
+          subject,
+          score: Math.round(data.total / data.count),
+          count: data.count
+        }))
+        .sort((a, b) => b.score - a.score);
+        
+      return subjectPerformance;
+    } catch (error) {
+      console.error("Error analyzing subject performance:", error);
+      return [];
+    }
+  };
+
+  const subjectPerformance = analyzeSubjectPerformance();
+  const strengths = subjectPerformance.filter(subject => subject.score >= 70);
+  const weaknesses = subjectPerformance.filter(subject => subject.score < 70);
 
   const formatTime = (seconds: number): string => {
     if (!seconds || isNaN(seconds)) return "0 sec";
@@ -486,22 +537,19 @@ export function QuizAnalytics({
                         Strengths
                       </h3>
                       <ul className="list-disc space-y-3 pl-4">
-                        {correctAnswers > 0 && (
+                        {strengths.length > 0 ? (
+                          strengths.map((subject, index) => (
+                            <li key={index} className="flex gap-2 items-start">
+                              <CircleCheck className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+                              <span>
+                                Strong performance in <strong>{subject.subject}</strong> with {subject.score}% average score
+                              </span>
+                            </li>
+                          ))
+                        ) : (
                           <li className="flex gap-2 items-start">
-                            <CircleCheck className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
-                            <span>You answered {correctAnswers} out of {totalQuestions} questions correctly</span>
-                          </li>
-                        )}
-                        {score > 50 && (
-                          <li className="flex gap-2 items-start">
-                            <CircleCheck className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
-                            <span>You have a solid understanding of the material</span>
-                          </li>
-                        )}
-                        {score > 70 && (
-                          <li className="flex gap-2 items-start">
-                            <CircleCheck className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
-                            <span>Your knowledge level is excellent</span>
+                            <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                            <span>Complete more quizzes to identify your strengths</span>
                           </li>
                         )}
                       </ul>
@@ -513,24 +561,21 @@ export function QuizAnalytics({
                         Areas for Improvement
                       </h3>
                       <ul className="space-y-3">
-                        {incorrectAnswers > 0 && (
+                        {weaknesses.length > 0 ? (
+                          weaknesses.map((subject, index) => (
+                            <li key={index} className="flex gap-2 items-start">
+                              <ArrowUp className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                              <span>
+                                Focus on improving <strong>{subject.subject}</strong> (current score: {subject.score}%)
+                              </span>
+                            </li>
+                          ))
+                        ) : (
                           <li className="flex gap-2 items-start">
-                            <ArrowUp className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                            <span>Review the {incorrectAnswers} questions you missed</span>
+                            <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                            <span>Complete more quizzes to identify areas for improvement</span>
                           </li>
                         )}
-                        {score < 70 && (
-                          <li className="flex gap-2 items-start">
-                            <ArrowUp className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                            <span>Focus on understanding the core concepts better</span>
-                          </li>
-                        )}
-                        {fallbackTopics.map((topic, index) => (
-                          <li key={index} className="flex gap-2 items-start">
-                            <ArrowUp className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                            <span>Study more about <strong>{topic}</strong></span>
-                          </li>
-                        ))}
                       </ul>
                     </div>
                     
