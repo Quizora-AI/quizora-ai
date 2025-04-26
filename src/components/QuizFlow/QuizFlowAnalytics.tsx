@@ -10,6 +10,8 @@ interface QuizFlowAnalyticsProps {
   timePerQuestion?: number[];
   averageTime?: number;
   totalTime?: number;
+  startTime?: string;
+  endTime?: string;
 }
 
 const QuizFlowAnalytics = ({
@@ -20,6 +22,8 @@ const QuizFlowAnalytics = ({
   timePerQuestion,
   averageTime,
   totalTime,
+  startTime,
+  endTime,
 }: QuizFlowAnalyticsProps) => {
   return (
     <QuizAnalytics
@@ -30,6 +34,8 @@ const QuizFlowAnalytics = ({
       timePerQuestion={timePerQuestion}
       averageTime={averageTime}
       totalTime={totalTime}
+      startTime={startTime}
+      endTime={endTime}
     />
   );
 };

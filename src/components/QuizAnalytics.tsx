@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -52,6 +51,8 @@ interface QuizAnalyticsProps {
   timePerQuestion?: number[];
   averageTime?: number;
   totalTime?: number;
+  startTime?: string;
+  endTime?: string;
 }
 
 export function QuizAnalytics({ 
@@ -61,7 +62,9 @@ export function QuizAnalytics({
   userAnswers,
   timePerQuestion = [],
   averageTime = 0,
-  totalTime = 0
+  totalTime = 0,
+  startTime,
+  endTime
 }: QuizAnalyticsProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const totalQuestions = questions.length;
@@ -95,9 +98,7 @@ export function QuizAnalytics({
   ];
   
   const timingData = questions.map((_, index) => {
-    // Use the actual time spent on each question, or 0 if not available
     const timeSpent = timePerQuestion[index] || 0;
-    
     return {
       name: `Q${index + 1}`,
       time: timeSpent,
@@ -524,7 +525,6 @@ export function QuizAnalytics({
   );
 }
 
-// Animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: { 
