@@ -8,6 +8,7 @@ import QuizFlowResults from "./QuizFlowResults";
 import QuizFlowAnalytics from "./QuizFlowAnalytics";
 import { Question } from "../FileUpload";
 import { shouldShowQuizCompletionAd } from '@/utils/adUtils';
+import { useInterstitialAd } from "@/components/GoogleAds";
 
 export enum AppState {
   QUIZ,

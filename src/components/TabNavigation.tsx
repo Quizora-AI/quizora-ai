@@ -6,6 +6,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+import { BannerAd } from "@/components/GoogleAds";
 
 interface TabNavigationProps {
   onQuizGenerated: (questions: Question[]) => void;
