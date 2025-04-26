@@ -1,143 +1,81 @@
-
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { Flashcard } from "@/types";
-import { FlashcardSet } from "@/components/Flashcards/FlashcardSet";
-import { generateFlashcards } from "@/integrations/openai";
-import { BannerAd, useInterstitialAd } from "@/components/GoogleAds";
-import { shouldShowFlashcardCompletionAd } from '@/utils/adUtils';
+import { useState, useEffect } from "react";
+import { FlashcardsGenerator, Flashcard } from "./FlashcardsGenerator";
+import { FlashcardsViewer } from "./FlashcardsViewer";
+import { useSearchParams } from "react-router-dom";
+import { getCurrentFlashcardSet, saveCurrentFlashcardSet, saveFlashcardsToHistory } from "@/utils/storageUtils";
 
 interface FlashcardsFlowProps {
   onBackToCreate: () => void;
 }
 
 export function FlashcardsFlow({ onBackToCreate }: FlashcardsFlowProps) {
-  const [topic, setTopic] = useState('');
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isComplete, setIsComplete] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const { showInterstitial } = useInterstitialAd({
-    adUnitId: "ca-app-pub-8270549953677995/9564071776",
-    onAdDismissed: () => {
-      console.log("Ad dismissed by user");
-    }
-  });
-
+  const [title, setTitle] = useState<string>("Flashcards");
+  const [flowState, setFlowState] = useState<"generate" | "review">("generate");
+  const [flashcardSetId, setFlashcardSetId] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  
   useEffect(() => {
-    const savedFlashcards = localStorage.getItem("currentFlashcardSet");
-    if (savedFlashcards) {
-      try {
-        const { topic: savedTopic, flashcards: savedCards } = JSON.parse(savedFlashcards);
-        setTopic(savedTopic);
-        setFlashcards(savedCards);
-        setIsComplete(true);
-      } catch (error) {
-        console.error("Error loading saved flashcards:", error);
-        localStorage.removeItem("currentFlashcardSet");
+    const mode = searchParams.get("mode");
+    
+    if (mode === "review") {
+      const currentSet = getCurrentFlashcardSet();
+      if (currentSet) {
+        console.log("Loading existing flashcards for review:", currentSet);
+        setFlashcards(currentSet.cards);
+        setTitle(currentSet.title || "Flashcard Review");
+        setFlashcardSetId(currentSet.id || null);
+        setFlowState("review");
+      } else {
+        console.log("No flashcards found for review, showing generator");
+        setFlowState("generate");
       }
+    } else {
+      localStorage.removeItem("currentFlashcardSet");
+      setFlowState("generate");
     }
-  }, []);
+  }, [searchParams]);
 
-  const handleGenerateFlashcards = async () => {
-    if (!topic.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a topic to generate flashcards.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    setErrorMessage(null);
-
-    try {
-      const generatedCards = await generateFlashcards(topic);
-      setFlashcards(generatedCards);
-      localStorage.setItem("currentFlashcardSet", JSON.stringify({ topic, flashcards: generatedCards }));
-      setIsLoading(false);
-      
-      if (shouldShowFlashcardCompletionAd()) {
-        showInterstitial();
-      }
-      
-      setIsComplete(true);
-    } catch (error: any) {
-      console.error("Error generating flashcards:", error);
-      setErrorMessage(error.message || "Failed to generate flashcards. Please try again.");
-      setIsLoading(false);
-      toast({
-        title: "Error",
-        description: errorMessage || "Failed to generate flashcards. Please try again.",
-        variant: "destructive",
-      });
-    }
+  const handleFlashcardsGenerated = (newFlashcards: Flashcard[], setMeta?: { title?: string; id?: string }) => {
+    setFlashcards(newFlashcards);
+    if (setMeta?.title) setTitle(setMeta.title);
+    if (setMeta?.id) setFlashcardSetId(setMeta.id);
+    setFlowState("review");
+    
+    saveCurrentFlashcardSet({
+      id: setMeta?.id || crypto.randomUUID(),
+      title: setMeta?.title || title,
+      cards: newFlashcards,
+      mode: "review"
+    });
   };
 
-  const handleClearFlashcards = () => {
-    setFlashcards([]);
-    setIsComplete(false);
-    localStorage.removeItem("currentFlashcardSet");
+  const handleSaveProgress = (updatedFlashcards: Flashcard[]) => {
+    setFlashcards(updatedFlashcards);
+    
+    if (flashcardSetId) {
+      saveFlashcardsToHistory({
+        id: flashcardSetId,
+        title,
+        cards: updatedFlashcards,
+        created_at: new Date().toISOString()
+      });
+      console.log("Updated flashcards history with progress:", flashcardSetId);
+    }
   };
 
   return (
-    <div className="container mx-auto mt-8">
-      <Card className="shadow-lg border-0">
-        <CardHeader className="pb-2 bg-transparent">
-          <CardTitle className="text-2xl font-bold">Flashcard Generator</CardTitle>
-          <CardDescription>Enter a topic and generate a set of flashcards.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4">
-            <Label htmlFor="topic">Topic</Label>
-            <Input
-              id="topic"
-              placeholder="Enter topic e.g. 'Cell Biology'"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              disabled={isLoading}
-            />
-          </div>
-          {errorMessage && (
-            <div className="rounded-md border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {errorMessage}
-            </div>
-          )}
-        </CardContent>
-        <CardFooter className="flex justify-between items-center bg-transparent">
-          <Button variant="outline" onClick={onBackToCreate}>Back to Quiz</Button>
-          <Button onClick={handleGenerateFlashcards} disabled={isLoading}>
-            {isLoading ? "Generating..." : "Generate Flashcards"}
-          </Button>
-        </CardFooter>
-      </Card>
-
-      {isComplete && flashcards.length > 0 && (
-        <div className="mt-12">
-          <h2 className="text-2xl font-bold mb-4">Flashcard Set: {topic}</h2>
-          <FlashcardSet flashcards={flashcards} />
-          <div className="flex justify-center mt-4">
-            <Button variant="destructive" onClick={handleClearFlashcards}>Clear Flashcards</Button>
-          </div>
-        </div>
-      )}
-      
-      <div className="mt-6">
-        <BannerAd 
-          adUnitId="ca-app-pub-8270549953677995/2218567244" 
-          size="BANNER"
-          className="max-w-md mx-auto"
+    <>
+      {flowState === "generate" ? (
+        <FlashcardsGenerator onFlashcardsGenerated={handleFlashcardsGenerated} />
+      ) : (
+        <FlashcardsViewer
+          flashcards={flashcards}
+          title={title}
+          onBackToCreate={onBackToCreate}
+          onSaveProgress={handleSaveProgress}
         />
-      </div>
-    </div>
+      )}
+    </>
   );
 }

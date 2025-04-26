@@ -259,9 +259,10 @@ export default function LandingPage() {
         </motion.div>
       </div>
       
-      <div className="fixed bottom-0 left-0 right-0 flex justify-center w-full bg-background/95 backdrop-blur-sm border-t border-border/30 py-2">
+      <div className="mt-8 w-full flex justify-center">
         <BannerAd 
-          adUnitId="ca-app-pub-8270549953677995/2218567244"
+          adUnitId="ca-app-pub-8270549953677995/2218567244" 
+          position="bottom" 
           size="BANNER"
           className="max-w-md mx-auto"
         />

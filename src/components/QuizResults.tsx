@@ -28,11 +28,13 @@ export function QuizResults({
   const { showInterstitial, adError } = useInterstitialAd({ 
     adUnitId: "ca-app-pub-8270549953677995/9564071776",
     onAdDismissed: () => {
+      // Wait for ad to dismiss before showing results
       console.log("Interstitial ad dismissed");
     }
   });
   
   useEffect(() => {
+    // Try to show interstitial ad when results page loads
     const shouldShowAd = trackQuizCompletion();
     if (shouldShowAd) {
       console.log("Attempting to show interstitial ad at quiz completion");
@@ -74,6 +76,7 @@ export function QuizResults({
     onNewFile();
   };
 
+  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
@@ -109,7 +112,12 @@ export function QuizResults({
   };
   
   return (
-    <motion.div className="w-full max-w-3xl mx-auto mt-8">
+    <motion.div
+      className="w-full max-w-3xl mx-auto mt-8"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
       <Card className="shadow-lg border-t-4 border-primary">
         <CardHeader>
           <motion.div variants={itemVariants}>
@@ -171,12 +179,15 @@ export function QuizResults({
             </motion.div>
           </motion.div>
           
-          <div className="border-t border-border/30 mt-6 pt-4">
+          <div className="w-full mt-6">
             <BannerAd 
-              adUnitId="ca-app-pub-8270549953677995/2218567244"
+              adUnitId="ca-app-pub-8270549953677995/2218567244" 
               size="BANNER"
               className="max-w-md mx-auto"
             />
+            {adError && (
+              <div className="text-xs text-red-500 text-center mt-1">{adError}</div>
+            )}
           </div>
         </CardContent>
         

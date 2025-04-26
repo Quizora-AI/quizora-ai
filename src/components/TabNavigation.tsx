@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Question } from "@/components/FileUpload";
@@ -6,7 +7,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
-import { BannerAd } from "@/components/GoogleAds";
 
 interface TabNavigationProps {
   onQuizGenerated: (questions: Question[]) => void;
@@ -21,6 +21,7 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
   const [isChangingTab, setIsChangingTab] = useState(false);
   
   useEffect(() => {
+    // Determine active tab from URL path
     const path = location.pathname;
     
     if (path === '/history') setActiveTab('history');
@@ -28,6 +29,7 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
     else if (path === '/settings') setActiveTab('settings');
     else setActiveTab('generate');
 
+    // Check premium status from local storage
     const userSettings = localStorage.getItem("userSettings");
     if (userSettings) {
       try {
@@ -70,14 +72,19 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
 
   return (
     <TooltipProvider>
-      <motion.div className="w-full">
+      <motion.div 
+        className="w-full"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
+      >
         <Tabs 
           defaultValue="generate" 
           className="w-full"
           value={activeTab}
           onValueChange={handleTabChange}
         >
-          <TabsList className="fixed bottom-16 left-1/2 -translate-x-1/2 z-50 grid grid-cols-4 max-w-md w-[90%] shadow-md bg-background">
+          <TabsList className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 grid grid-cols-4 max-w-md w-[90%] shadow-md bg-background">
             <TabsTrigger value="generate" className="flex items-center" disabled={isChangingTab}>
               <BrainCircuit className={tabIconStyle} />
               <span className="hidden sm:inline">Quiz</span>
@@ -96,14 +103,6 @@ export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        
-        <div className="fixed bottom-0 left-0 right-0 flex justify-center w-full bg-background/95 backdrop-blur-sm border-t border-border/30 py-2 z-40">
-          <BannerAd 
-            adUnitId="ca-app-pub-8270549953677995/2218567244"
-            size="BANNER"
-            className="max-w-md mx-auto"
-          />
-        </div>
       </motion.div>
     </TooltipProvider>
   );
