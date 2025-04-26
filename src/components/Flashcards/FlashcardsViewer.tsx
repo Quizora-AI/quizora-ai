@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,13 +14,15 @@ interface FlashcardsViewerProps {
   title?: string;
   onBackToCreate: () => void;
   onSaveProgress: (updatedFlashcards: Flashcard[]) => void;
+  onComplete?: () => void;
 }
 
 export function FlashcardsViewer({ 
   flashcards, 
   title = "Flashcards", 
   onBackToCreate,
-  onSaveProgress
+  onSaveProgress,
+  onComplete
 }: FlashcardsViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -66,6 +67,10 @@ export function FlashcardsViewer({
         title: "Progress Updated",
         description: `Card marked as ${status}.`,
       });
+      
+      if (onComplete && currentIndex === cards.length - 1) {
+        onComplete();
+      }
     }
   };
 
