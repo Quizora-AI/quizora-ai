@@ -5,6 +5,7 @@ import { CircleCheck, CircleX, RotateCw, BarChart3, PlusCircle } from "lucide-re
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { BannerAd, useInterstitialAd, useAdFrequencyTracker } from "./GoogleAds";
+import { shouldShowQuizCompletionAd } from "@/utils/adUtils";
 
 interface QuizResultsProps {
   totalQuestions: number;
@@ -35,7 +36,7 @@ export function QuizResults({
   
   useEffect(() => {
     // Try to show interstitial ad when results page loads
-    const shouldShowAd = trackQuizCompletion();
+    const shouldShowAd = shouldShowQuizCompletionAd();
     if (shouldShowAd) {
       console.log("Attempting to show interstitial ad at quiz completion");
       showInterstitial();

@@ -3,6 +3,8 @@ import { FlashcardsGenerator, Flashcard } from "./FlashcardsGenerator";
 import { FlashcardsViewer } from "./FlashcardsViewer";
 import { useSearchParams } from "react-router-dom";
 import { getCurrentFlashcardSet, saveCurrentFlashcardSet, saveFlashcardsToHistory } from "@/utils/storageUtils";
+import { shouldShowFlashcardCompletionAd } from "@/utils/adUtils";
+import { useInterstitialAd } from "@/components/GoogleAds";
 
 interface FlashcardsFlowProps {
   onBackToCreate: () => void;
@@ -64,6 +66,23 @@ export function FlashcardsFlow({ onBackToCreate }: FlashcardsFlowProps) {
     }
   };
 
+  const [isComplete, setIsComplete] = useState(false);
+
+  const handleFlashcardsComplete = async () => {
+    if (shouldShowFlashcardCompletionAd()) {
+      const { showInterstitial } = useInterstitialAd({
+        adUnitId: "ca-app-pub-8270549953677995/9564071776",
+        onAdDismissed: () => {
+          // Continue with flashcard completion logic
+          setIsComplete(true);
+        }
+      });
+      showInterstitial();
+    } else {
+      setIsComplete(true);
+    }
+  };
+
   return (
     <>
       {flowState === "generate" ? (
@@ -74,6 +93,7 @@ export function FlashcardsFlow({ onBackToCreate }: FlashcardsFlowProps) {
           title={title}
           onBackToCreate={onBackToCreate}
           onSaveProgress={handleSaveProgress}
+          onComplete={handleFlashcardsComplete}
         />
       )}
     </>
