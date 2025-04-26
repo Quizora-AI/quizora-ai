@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { motion } from "framer-motion";
@@ -8,6 +7,7 @@ import QuizTaking from "./QuizTaking";
 import QuizFlowResults from "./QuizFlowResults";
 import QuizFlowAnalytics from "./QuizFlowAnalytics";
 import { Question } from "../FileUpload";
+import { shouldShowQuizCompletionAd } from '@/utils/adUtils';
 
 export enum AppState {
   QUIZ,
@@ -54,7 +54,6 @@ const QuizFlowContainer = ({
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Initialize the quiz
   useEffect(() => {
     setAppState(initialAppState);
     const savedQuizState = localStorage.getItem("quizInProgress");
@@ -75,7 +74,6 @@ const QuizFlowContainer = ({
           setTimePerQuestion(parsedState.timings);
         }
         
-        // Restore the quiz start time if available, otherwise set a new one
         if (parsedState.startTime) {
           setStartTime(new Date(parsedState.startTime));
         } else {
@@ -88,13 +86,11 @@ const QuizFlowContainer = ({
         setStartTime(new Date()); // Set a new start time if restoration fails
       }
     } else {
-      // Always set start time when starting a new quiz
       setStartTime(new Date());
       console.log("New quiz started at:", new Date().toISOString());
     }
   }, [initialAppState]);
 
-  // Save quiz state when changes happen
   useEffect(() => {
     if (appState === AppState.QUIZ && questions.length > 0 && currentQuestionIndex >= 0) {
       const quizState = {
@@ -111,7 +107,6 @@ const QuizFlowContainer = ({
     }
     
     if (appState !== AppState.QUIZ) {
-      // Remove in-progress state when quiz is complete or in analytics mode
       localStorage.removeItem("quizInProgress");
     }
   }, [appState, currentQuestionIndex, questions, quizTitle, userAnswers, timePerQuestion, startTime]);
@@ -122,12 +117,10 @@ const QuizFlowContainer = ({
     );
 
   const handleNextQuestion = (selectedOption: number) => {
-    // Record the user's answer
     const newUserAnswers = [...userAnswers, selectedOption];
     setUserAnswers(newUserAnswers);
     console.log(`User selected option ${selectedOption} for question ${currentQuestionIndex + 1}`);
 
-    // Get updated timing information from localStorage
     try {
       const quizInProgress = localStorage.getItem("quizInProgress");
       if (quizInProgress) {
@@ -143,11 +136,9 @@ const QuizFlowContainer = ({
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
-      // Quiz is complete, record end time
       const finishTime = new Date();
       setEndTime(finishTime);
       
-      // Calculate and log accurate total time
       if (startTime) {
         const totalTimeInSeconds = Math.round((finishTime.getTime() - startTime.getTime()) / 1000);
         console.log("Quiz finished. Total time:", totalTimeInSeconds, "seconds");
@@ -177,10 +168,23 @@ const QuizFlowContainer = ({
 
   const handleNewQuiz = () => {
     localStorage.removeItem("quizInProgress");
-    navigate('/quiz'); // Navigate correctly to quiz generation page
+    navigate('/quiz');
   };
 
-  // Save quiz results to history when quiz is completed
+  const handleQuizComplete = async () => {
+    if (shouldShowQuizCompletionAd()) {
+      const { showInterstitial } = useInterstitialAd({
+        adUnitId: "ca-app-pub-8270549953677995/9564071776",
+        onAdDismissed: () => {
+          setAppState(AppState.RESULTS);
+        }
+      });
+      showInterstitial();
+    } else {
+      setAppState(AppState.RESULTS);
+    }
+  };
+
   useEffect(() => {
     if (appState === AppState.RESULTS && questions.length && userAnswers.length) {
       const autoSave = localStorage.getItem("autoSave") !== "false";
@@ -193,7 +197,6 @@ const QuizFlowContainer = ({
           ? JSON.parse(existingHistoryString)
           : [];
 
-        // Calculate total time accurately
         let totalTime = 0;
         if (startTime && endTime) {
           totalTime = Math.round((endTime.getTime() - startTime.getTime()) / 1000);
@@ -245,7 +248,6 @@ const QuizFlowContainer = ({
     return null;
   }
 
-  // Calculate the average time per question and total time accurately
   const totalTime = startTime && endTime 
     ? Math.round((endTime.getTime() - startTime.getTime()) / 1000)
     : timePerQuestion.reduce((sum, time) => sum + (time || 0), 0);
