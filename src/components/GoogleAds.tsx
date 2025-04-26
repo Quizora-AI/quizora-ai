@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 
 interface BannerAdProps {
@@ -8,7 +7,7 @@ interface BannerAdProps {
   className?: string;
 }
 
-export function BannerAd({ adUnitId, size = 'BANNER', position = 'bottom', className = '' }: BannerAdProps) {
+export function BannerAd({ adUnitId = "ca-app-pub-8270549953677995/2218567244", size = 'BANNER', position = 'bottom', className = '' }: BannerAdProps) {
   const adContainerRef = useRef<HTMLDivElement>(null);
   const [adLoaded, setAdLoaded] = useState(false);
   const [adError, setAdError] = useState<string | null>(null);
@@ -253,19 +252,18 @@ export function initializeAdMob() {
     try {
       const admob = (window as any).cordova.plugins.admob;
       
-      // Initialize with global options
+      // Initialize with production options
       const options = {
         bannerAtTop: false,
         overlap: false,
         offsetTopBar: false,
-        isTesting: false, // Set to true for testing
+        isTesting: false, // Set to false for real ads
         autoShowBanner: false,
         autoShowInterstitial: false
       };
       
       console.log("Setting AdMob global options:", JSON.stringify(options));
-      console.log("Publisher ID: pub-8270549953677995 - Verify app-ads.txt is in place");
-      console.log("Domain for verification: medquiz-pro-extract.lovable.app");
+      console.log("Publisher ID: pub-8270549953677995");
       admob.setOptions(options);
       
       // Listen for global AdMob events
@@ -279,10 +277,8 @@ export function initializeAdMob() {
       
       document.addEventListener('admob.service.events.INIT_FAILED', (evt: any) => {
         console.error('AdMob initialization failed:', evt);
-        console.error('Verify app-ads.txt is correctly set up on medquiz-pro-extract.lovable.app domain');
       });
       
-      console.log('AdMob initialized with options');
     } catch (error) {
       console.error('Error initializing AdMob:', error);
     }

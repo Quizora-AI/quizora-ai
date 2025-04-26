@@ -12,20 +12,22 @@
     <preference name="SplashScreenDelay" value="0" />
     
     <platform name="android">
-        <!-- Explicitly add billing permission to manifest -->
         <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest">
             <manifest xmlns:android="http://schemas.android.com/apk/res/android">
                 <uses-permission android:name="com.android.vending.BILLING" />
                 <uses-permission android:name="android.permission.INTERNET" />
+                <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
             </manifest>
         </edit-config>
         
-        <!-- Update to latest billing library version -->
-        <framework src="com.android.billingclient:billing:7.1.1" />
+        <!-- Update to latest AdMob SDK version -->
+        <framework src="com.google.android.gms:play-services-ads:24.2.0" />
         
-        <!-- Add Play Billing metadata -->
+        <!-- Add AdMob Application ID -->
         <config-file target="AndroidManifest.xml" parent="/manifest/application">
-            <meta-data android:name="com.google.android.play.billingclient.version" android:value="7.1.1" />
+            <meta-data 
+                android:name="com.google.android.gms.ads.APPLICATION_ID" 
+                android:value="ca-app-pub-8270549953677995~3236753992" />
         </config-file>
     </platform>
     
