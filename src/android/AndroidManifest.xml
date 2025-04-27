@@ -3,7 +3,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.quizora.ai">
 
-    <!-- Permissions -->
+    <!-- Essential Permissions -->
     <uses-permission android:name="com.android.vending.BILLING" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
@@ -37,7 +37,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Billing Activity - in the app's main package -->
+        <!-- Billing Activity -->
         <activity 
             android:name=".billing.BillingActivity"
             android:exported="false" />

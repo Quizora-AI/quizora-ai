@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 import { Toaster as ToastUIToaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
@@ -75,12 +74,7 @@ const ToastCleaner = () => {
 };
 
 function resetAppData() {
-  localStorage.removeItem("quizHistory");
-  localStorage.removeItem("flashcardsHistory");
-  localStorage.removeItem("quizInProgress");
-  localStorage.removeItem("currentFlashcardSet");
-  localStorage.removeItem("quizToRetake");
-  
+  localStorage.clear();
   console.log("App data has been reset. Fresh start!");
 }
 
@@ -93,27 +87,25 @@ function App() {
         console.log("Cordova detected, setting up event listeners");
         document.addEventListener('deviceready', onDeviceReady, false);
       } else {
-        console.log("Running in browser environment, skipping native plugins initialization");
+        console.log("Running in browser environment");
       }
     };
     
     const onDeviceReady = () => {
       console.log("Device is ready, initializing plugins");
       
-      // Initialize AdMob with proper initialization
       if ((window as any).MobileAds) {
         console.log("Initializing AdMob SDK");
         (window as any).MobileAds.initialize()
           .then(() => {
             console.log("AdMob SDK initialized successfully");
-            initializeAdMob(); // This will set up the actual ad units
+            initializeAdMob();
           })
           .catch((error: any) => {
             console.error("Error initializing AdMob SDK:", error);
           });
       }
       
-      // Initialize Play Billing immediately
       if ((window as any).cordova?.plugins?.PlayBilling) {
         console.log("Initializing Play Billing");
         (window as any).cordova.plugins.PlayBilling.connect(
@@ -121,17 +113,6 @@ function App() {
           (error: string) => console.error("Error connecting to Play Billing:", error)
         );
       }
-      
-      document.addEventListener('pause', onPause, false);
-      document.addEventListener('resume', onResume, false);
-    };
-    
-    const onPause = () => {
-      console.log("App paused");
-    };
-    
-    const onResume = () => {
-      console.log("App resumed");
     };
     
     initializePlugins();
@@ -139,22 +120,13 @@ function App() {
     return () => {
       if ('cordova' in window) {
         document.removeEventListener('deviceready', onDeviceReady);
-        document.removeEventListener('pause', onPause);
-        document.removeEventListener('resume', onResume);
       }
     };
   }, []);
 
-  const [initialLoad, setInitialLoad] = React.useState(true);
-
   React.useEffect(() => {
-    if (initialLoad) {
-      resetAppData();
-      setInitialLoad(false);
-    }
-    
-    localStorage.removeItem("hasVisitedBefore");
-  }, [initialLoad]);
+    resetAppData();
+  }, []);
 
   return (
     <React.StrictMode>

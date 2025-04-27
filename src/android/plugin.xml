@@ -5,7 +5,7 @@
         version="1.0.0">
     
     <name>Google Play Billing</name>
-    <description>Cordova plugin for Google Play Billing</description>
+    <description>Plugin for Google Play Billing</description>
     <license>MIT</license>
     
     <engines>
