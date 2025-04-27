@@ -20,9 +20,34 @@ const reactNodeContainsText = (node: React.ReactNode, text: string): boolean => 
   return false;
 };
 
+// Helper function to check if user has premium status
+function checkIfUserIsPremium(): boolean {
+  try {
+    const userSettings = localStorage.getItem("userSettings");
+    if (userSettings) {
+      const settings = JSON.parse(userSettings);
+      return settings.isPremium === true;
+    }
+  } catch (error) {
+    console.error("Error checking premium status:", error);
+  }
+  return false;
+}
+
 // Re-export with extended functionality
 export function useToast() {
   const internal = useInternalToast();
+  
+  if (!internal) {
+    console.warn("Toast context not available");
+    // Return a stub implementation if toast is not available
+    return {
+      toast: () => null,
+      toasts: [],
+      dismiss: () => {},
+      dismissAll: () => {}
+    };
+  }
   
   return {
     ...internal,
@@ -44,23 +69,8 @@ export function useToast() {
       }
       
       return internal.toast(props);
-    },
-    dismissAll: internal.dismissAll
-  };
-}
-
-// Helper function to check if user has premium status
-function checkIfUserIsPremium(): boolean {
-  try {
-    const userSettings = localStorage.getItem("userSettings");
-    if (userSettings) {
-      const settings = JSON.parse(userSettings);
-      return settings.isPremium === true;
     }
-  } catch (error) {
-    console.error("Error checking premium status:", error);
-  }
-  return false;
+  };
 }
 
 export const toast = (props: ToastParams) => {

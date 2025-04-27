@@ -1,9 +1,10 @@
+
 import * as React from 'react';
 import { Toaster as ToastUIToaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
+import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import LandingPage from "./pages/LandingPage";
@@ -58,22 +59,7 @@ const AuthRoute = ({ element }) => {
   );
 };
 
-const ToastCleaner = () => {
-  const { dismissAll } = useToast();
-  
-  React.useEffect(() => {
-    dismissAll();
-    
-    const interval = setInterval(() => {
-      dismissAll();
-    }, 10000);
-    
-    return () => clearInterval(interval);
-  }, [dismissAll]);
-  
-  return null;
-};
-
+// Moved ToastCleaner inside the app render to ensure it has proper context
 function resetAppData() {
   localStorage.clear();
   console.log("App data has been reset. Fresh start!");
@@ -167,27 +153,28 @@ function App() {
 
   return (
     <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <ToastCleaner />
-          <ToastUIToaster />
-          <SonnerToaster />
-          <Routes>
-            <Route path="/" element={<Navigate to="/landing" />} />
-            <Route path="/landing" element={<LandingPage />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/quiz" element={<AuthRoute element={<Index initialTab="generate" />} />} />
-            <Route path="/flashcards" element={<AuthRoute element={<Index initialTab="flashcards" />} />} />
-            <Route path="/history" element={<AuthRoute element={<Index initialTab="history" />} />} />
-            <Route path="/history/:quizId" element={<AuthRoute element={<QuizReview />} />} />
-            <Route path="/settings" element={<AuthRoute element={<Index initialTab="settings" />} />} />
-            <Route path="/legal" element={<Index initialTab="generate" />} />
-            <Route path="/tokens" element={<AuthRoute element={<TokensPage />} />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </QueryClientProvider>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <ToastUIToaster />
+            <SonnerToaster />
+            <Routes>
+              <Route path="/" element={<Navigate to="/landing" />} />
+              <Route path="/landing" element={<LandingPage />} />
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/quiz" element={<AuthRoute element={<Index initialTab="generate" />} />} />
+              <Route path="/flashcards" element={<AuthRoute element={<Index initialTab="flashcards" />} />} />
+              <Route path="/history" element={<AuthRoute element={<Index initialTab="history" />} />} />
+              <Route path="/history/:quizId" element={<AuthRoute element={<QuizReview />} />} />
+              <Route path="/settings" element={<AuthRoute element={<Index initialTab="settings" />} />} />
+              <Route path="/legal" element={<Index initialTab="generate" />} />
+              <Route path="/tokens" element={<AuthRoute element={<TokensPage />} />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </QueryClientProvider>
+      </ThemeProvider>
     </React.StrictMode>
   );
 }

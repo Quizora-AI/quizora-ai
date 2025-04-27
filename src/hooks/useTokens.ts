@@ -1,3 +1,4 @@
+
 import { create } from "zustand";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -43,15 +44,20 @@ export const useTokenStore = create<TokenState>()((set, get) => ({
 
       await get().refreshTokenBalance();
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error updating token balance:', error);
-      set({ 
-        error: error instanceof Error 
-          ? error.message 
-          : typeof error === 'string' 
-            ? error 
-            : 'An unknown error occurred' 
-      });
+      
+      // Properly type the error message
+      let errorMessage: string;
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else {
+        errorMessage = 'An unknown error occurred';
+      }
+      
+      set({ error: errorMessage });
       return false;
     } finally {
       set({ loading: false });
@@ -91,9 +97,9 @@ export const useTokenStore = create<TokenState>()((set, get) => ({
       }
       
       return success;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error claiming daily reward:', error);
-      set({ error: error.message });
+      set({ error: error instanceof Error ? error.message : String(error) });
       return false;
     } finally {
       set({ loading: false });
@@ -128,9 +134,9 @@ export const useTokenStore = create<TokenState>()((set, get) => ({
       }
       
       return success;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error marking app as rated:', error);
-      set({ error: error.message });
+      set({ error: error instanceof Error ? error.message : String(error) });
       return false;
     } finally {
       set({ loading: false });
@@ -155,9 +161,9 @@ export const useTokenStore = create<TokenState>()((set, get) => ({
         lastDailyReward: profile.last_daily_reward ? new Date(profile.last_daily_reward) : null,
         hasRatedApp: profile.has_rated_app
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error refreshing token balance:', error);
-      set({ error: error.message });
+      set({ error: error instanceof Error ? error.message : String(error) });
     }
   }
 }));
