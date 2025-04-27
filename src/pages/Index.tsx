@@ -147,7 +147,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.2 }}
           key="quiz-flow"
-          className="pt-[92px]"
+          className="pt-[107px]"
         >
           <div className="flex items-center mb-4">
             <Button 
