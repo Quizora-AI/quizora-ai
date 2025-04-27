@@ -1,400 +1,148 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { 
-  BrainCircuit, 
-  Book, 
-  ArrowRight, 
-  Sparkles, 
-  ChevronRight,
-  Lightbulb
-} from 'lucide-react';
-import { BannerAd } from "@/components/GoogleAds";
-import { supabase } from '@/integrations/supabase/client';
 
-const quotes = [
-  "Knowledge is power.",
-  "The only limit to our realization of tomorrow is our doubts of today.",
-  "Learning is a treasure that will follow its owner everywhere.",
-  "Education is not the filling of a pail, but the lighting of a fire.",
-  "The beautiful thing about learning is that no one can take it away from you.",
-  "Live as if you were to die tomorrow. Learn as if you were to live forever.",
-  "The more that you read, the more things you will know. The more that you learn, the more places you'll go.",
-  "An investment in knowledge pays the best interest.",
-  "The capacity to learn is a gift; the ability to learn is a skill; the willingness to learn is a choice."
-];
+import * as React from "react";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "../App"; // Import the auth context
 
-export default function LandingPage() {
+const LandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const [quote, setQuote] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0);
-  const [session, setSession] = useState<any>(null);
-
+  const { user, loading } = useAuth(); // Use the auth context
+  
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    const randomIndex = Math.floor(Math.random() * quotes.length);
-    setCurrentQuoteIndex(randomIndex);
-    setQuote(quotes[randomIndex]);
-    
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
-    
-    const quoteInterval = setInterval(() => {
-      setCurrentQuoteIndex(prevIndex => (prevIndex + 1) % quotes.length);
-    }, 8000);
-    
-    return () => {
-      clearTimeout(timer);
-      clearInterval(quoteInterval);
-    };
-  }, []);
-
-  useEffect(() => {
-    setQuote(quotes[currentQuoteIndex]);
-  }, [currentQuoteIndex]);
-
-  const handleActionClick = (path: string) => {
-    if (session) {
-      navigate(path);
-    } else {
-      navigate('/auth');
+    // Redirect to quiz if already logged in
+    if (!loading && user) {
+      console.log("User is already logged in, redirecting to quiz");
+      navigate("/quiz");
     }
-  };
+  }, [user, loading, navigate]);
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-gradient-to-b from-background to-background/80">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="flex flex-col items-center"
-        >
-          <div className="relative">
-            <motion.div
-              animate={{ 
-                rotate: [0, 360],
-              }}
-              transition={{ 
-                duration: 2,
-                repeat: Infinity,
-                ease: "linear"
-              }}
-              className="w-16 h-16 rounded-full border-4 border-t-primary border-r-primary/30 border-b-primary/60 border-l-primary/10"
-            />
-            <BrainCircuit className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-primary" />
-          </div>
-          <motion.h1
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.8 }}
-            className="mt-6 text-2xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent"
-          >
-            Quizora AI
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8, duration: 0.8 }}
-            className="mt-2 text-sm text-muted-foreground"
-          >
-            Loading your personalized experience...
-          </motion.p>
-        </motion.div>
+      <div className="h-screen w-full flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
-
+  
   return (
-    <div className="container px-4 py-8 mx-auto">
-      <div className="relative h-screen flex items-center justify-center px-4">
-        <div className="absolute inset-0 overflow-hidden">
-          <motion.div 
-            className="absolute top-[10%] left-[5%] w-64 h-64 rounded-full bg-primary/5"
-            animate={{ 
-              scale: [1, 1.2, 1],
-              x: [0, -10, 0], 
-              y: [0, 10, 0],
-            }}
-            transition={{ 
-              duration: 15,
-              repeat: Infinity,
-              repeatType: "reverse" 
-            }}
-          />
-          <motion.div 
-            className="absolute bottom-[20%] right-[15%] w-80 h-80 rounded-full bg-purple-500/5"
-            animate={{ 
-              scale: [1, 1.1, 1],
-              x: [0, 20, 0], 
-              y: [0, -15, 0],
-            }}
-            transition={{ 
-              duration: 18,
-              repeat: Infinity,
-              repeatType: "reverse" 
-            }}
-          />
-          <motion.div 
-            className="absolute top-[40%] right-[25%] w-40 h-40 rounded-full bg-indigo-500/5"
-            animate={{ 
-              scale: [1, 1.3, 1],
-              x: [0, -15, 0], 
-              y: [0, -20, 0],
-            }}
-            transition={{ 
-              duration: 12,
-              repeat: Infinity,
-              repeatType: "reverse" 
-            }}
-          />
+    <div className="min-h-screen bg-gradient-to-b from-primary/5 to-primary/10 flex flex-col">
+      <header className="w-full p-4 flex justify-between items-center">
+        <div className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
+          Quizora
         </div>
-
+      </header>
+      
+      <main className="flex-1 flex flex-col items-center justify-center p-6 text-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="flex flex-col items-center justify-center text-center relative z-10 max-w-3xl"
+          transition={{ duration: 0.5 }}
+          className="max-w-3xl"
         >
-          <div className="flex items-center mb-6">
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ 
-                duration: 0.5,
-                type: "spring",
-                stiffness: 200
-              }}
-              className="bg-primary/10 p-4 rounded-full"
-            >
-              <BrainCircuit className="h-10 w-10 text-primary" />
-            </motion.div>
-          </div>
-          
-          <motion.h1 
-            className="text-5xl md:text-7xl font-bold tracking-tighter mb-4 bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.8 }}
-          >
-            Quizora AI
-          </motion.h1>
-          
-          <div className="h-12 my-4 overflow-hidden">
-            <AnimatePresence mode="wait">
-              <motion.p 
-                key={quote}
-                className="text-muted-foreground max-w-md mx-auto italic text-lg"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.5 }}
-              >
-                "{quote}"
-              </motion.p>
-            </AnimatePresence>
-          </div>
-          
-          <motion.p 
-            className="text-xl text-foreground/80 max-w-xl mx-auto mb-8"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6, duration: 0.8 }}
-          >
-            Your AI-powered learning companion
-          </motion.p>
-          
-          <motion.div
-            className="flex flex-col sm:flex-row gap-4 mb-16"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8, duration: 0.8 }}
-          >
-            <Button 
-              size="lg" 
-              onClick={() => handleActionClick('/quiz')}
-              className="gap-2 bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700 group"
-            >
-              <Sparkles className="h-4 w-4" />
-              Start Learning
-              <ChevronRight className="h-4 w-4 ml-2 transform group-hover:translate-x-1 transition-transform" />
-            </Button>
-            <Button 
-              variant="outline" 
-              size="lg" 
-              onClick={() => handleActionClick('/flashcards')}
-              className="group border border-primary/20 hover:border-primary/40"
-            >
-              <Book className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
-              Create Flashcards
-            </Button>
-          </motion.div>
+          <h1 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
+            Master Any Subject with AI-Powered Quizzes
+          </h1>
+          <p className="text-xl mb-8 text-muted-foreground">
+            Upload your notes, generate flashcards, and test your knowledge with our intelligent quiz platform
+          </p>
         </motion.div>
-
-        <motion.div 
-          className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
-          animate={{ 
-            y: [0, 10, 0],
-          }}
-          transition={{
-            duration: 1.5,
-            repeat: Infinity,
-          }}
-        >
-          <ArrowRight className="h-6 w-6 rotate-90 text-muted-foreground" />
-        </motion.div>
-      </div>
-      
-      <div className="mt-8 w-full flex justify-center">
-        <BannerAd 
-          adUnitId="ca-app-pub-8270549953677995/2218567244" 
-          position="bottom" 
-          size="BANNER"
-          className="max-w-md mx-auto"
-        />
-      </div>
-      
-      <div className="container px-4 py-20 mx-auto">
-        <motion.h2 
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-3xl md:text-4xl font-bold text-center mb-16 bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent"
-        >
-          Supercharge Your Learning
-        </motion.h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          <FeatureCard 
-            title="AI-Generated Quizzes" 
-            description="Custom quizzes tailored to your needs, created instantly by AI"
-            delay={0.2}
-            icon="quiz"
-          />
-          <FeatureCard 
-            title="Smart Flashcards" 
-            description="Create and study flashcards with spaced repetition"
-            delay={0.4}
-            icon="flashcards"
-          />
-          <FeatureCard 
-            title="Detailed Analytics" 
-            description="Track your progress and identify areas for improvement"
-            delay={0.6}
-            icon="analytics"
-          />
+        <div className="flex flex-col sm:flex-row gap-4 mt-4">
+          <Button
+            size="lg"
+            onClick={() => navigate("/auth")}
+            className="px-8"
+          >
+            Get Started
+          </Button>
         </div>
-      </div>
-      
-      <motion.div
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 1 }}
-        className="container mx-auto px-4 py-20"
-      >
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/80 to-purple-600/80 p-8 md:p-12">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-purple-600/10">
-            <motion.div 
-              className="absolute inset-0 opacity-20"
-              animate={{
-                background: [
-                  "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%)",
-                  "radial-gradient(circle at 80% 30%, rgba(255,255,255,0.1) 0%, transparent 50%)",
-                  "radial-gradient(circle at 40% 70%, rgba(255,255,255,0.1) 0%, transparent 50%)",
-                  "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%)",
-                ]
-              }}
-              transition={{ duration: 15, repeat: Infinity }}
-            />
-          </div>
-          
-          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="max-w-lg">
-              <motion.div
-                initial={{ x: -20, opacity: 0 }}
-                whileInView={{ x: 0, opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-              >
-                <div className="flex items-center gap-2 mb-4">
-                  <Lightbulb className="h-6 w-6 text-white" />
-                  <h4 className="text-white font-medium">Get Started Now</h4>
-                </div>
-                <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">
-                  Ready to transform your learning experience?
-                </h3>
-                <p className="text-white/80">
-                  Join thousands of students using AI to learn faster and more effectively.
-                </p>
-              </motion.div>
+        
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.6 }}
+          className="mt-16 w-full max-w-3xl"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-card border rounded-xl shadow-sm p-6">
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="w-6 h-6 text-primary"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium mb-2">Upload Notes</h3>
+              <p className="text-sm text-muted-foreground">
+                Upload your study materials and let our AI transform them into comprehensive quizzes
+              </p>
             </div>
             
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              whileInView={{ scale: 1, opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-            >
-              <Button 
-                size="lg" 
-                onClick={() => handleActionClick('/quiz')}
-                className="bg-white text-primary hover:bg-white/90 group"
-              >
-                Start Now
-                <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </motion.div>
+            <div className="bg-card border rounded-xl shadow-sm p-6">
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="w-6 h-6 text-primary"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.5 20.25h-15a1.5 1.5 0 01-1.5-1.5v-15a1.5 1.5 0 011.5-1.5h15a1.5 1.5 0 011.5 1.5v15a1.5 1.5 0 01-1.5 1.5z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium mb-2">Generate Flashcards</h3>
+              <p className="text-sm text-muted-foreground">
+                Create interactive flashcards automatically to strengthen your memory and recall
+              </p>
+            </div>
+            
+            <div className="bg-card border rounded-xl shadow-sm p-6">
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="w-6 h-6 text-primary"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21a48.309 48.309 0 01-8.135-.687c-1.718-.293-2.3-2.379-1.067-3.61L5 14.5"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium mb-2">Track Progress</h3>
+              <p className="text-sm text-muted-foreground">
+                Monitor your learning journey with detailed insights and performance analytics
+              </p>
+            </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      </main>
+      
+      <footer className="w-full p-6 text-center text-sm text-muted-foreground">
+        <p>© {new Date().getFullYear()} Quizora. All rights reserved.</p>
+      </footer>
     </div>
   );
-}
+};
 
-interface FeatureCardProps {
-  title: string;
-  description: string;
-  delay: number;
-  icon: 'quiz' | 'flashcards' | 'analytics';
-}
-
-function FeatureCard({ title, description, delay, icon }: FeatureCardProps) {
-  const icons = {
-    quiz: <BrainCircuit className="h-6 w-6 text-primary" />,
-    flashcards: <Book className="h-6 w-6 text-primary" />,
-    analytics: <Sparkles className="h-6 w-6 text-primary" />,
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ delay, duration: 0.8 }}
-      whileHover={{ y: -4, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" }}
-      className="bg-card/50 backdrop-blur-sm border border-primary/10 rounded-lg p-6 shadow-lg transition-all duration-300"
-    >
-      <div className="bg-primary/10 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
-        {icons[icon]}
-      </div>
-      <h3 className="text-lg font-medium mb-2">{title}</h3>
-      <p className="text-muted-foreground text-sm">{description}</p>
-    </motion.div>
-  );
-}
+export default LandingPage;

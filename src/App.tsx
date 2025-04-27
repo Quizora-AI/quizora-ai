@@ -10,7 +10,7 @@ import LandingPage from "./pages/LandingPage";
 import QuizReview from "./pages/QuizReview";
 import AuthPage from "./pages/AuthPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { initializeAdMob } from "./components/GoogleAds";
 import { supabase } from "./integrations/supabase/client";
 import { clearAllData } from "./utils/storageUtils";
@@ -30,24 +30,51 @@ const queryClient = new QueryClient({
   },
 });
 
-const AuthRoute = ({ element }) => {
-  const [session, setSession] = React.useState(null);
-  const [loading, setLoading] = React.useState(true);
-  const navigate = useNavigate();
+const AuthContext = React.createContext<{
+  session: any;
+  user: any;
+  loading: boolean;
+}>({
+  session: null,
+  user: null,
+  loading: true,
+});
+
+export const useAuth = () => React.useContext(AuthContext);
+
+const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [session, setSession] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log("Auth state changed:", _event, session?.user?.email);
       setSession(session);
+      setUser(session?.user || null);
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Got existing session:", session?.user?.email);
       setSession(session);
+      setUser(session?.user || null);
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  return (
+    <AuthContext.Provider value={{ session, user, loading }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+const AuthRoute = ({ element }: { element: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -57,26 +84,19 @@ const AuthRoute = ({ element }) => {
     );
   }
 
-  return session ? element : <Navigate to="/auth" replace />;
+  return user ? element : <Navigate to="/auth" replace />;
 };
 
 const ProtectedAuthPage = () => {
-  const [session, setSession] = React.useState(null);
-  const [loading, setLoading] = React.useState(true);
-
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+    if (!loading && user) {
+      console.log("User already logged in, redirecting to quiz");
+      navigate('/quiz', { replace: true });
+    }
+  }, [user, loading, navigate]);
 
   if (loading) {
     return (
@@ -86,7 +106,7 @@ const ProtectedAuthPage = () => {
     );
   }
 
-  return session ? <Navigate to="/quiz" replace /> : <AuthPage />;
+  return !user ? <AuthPage /> : null;
 };
 
 const ToastCleaner = () => {
@@ -194,24 +214,26 @@ function App() {
   return (
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <ToastCleaner />
-          <ToastUIToaster />
-          <SonnerToaster />
-          <Routes>
-            <Route path="/" element={<Navigate to="/landing" />} />
-            <Route path="/landing" element={<LandingPage />} />
-            <Route path="/auth" element={<ProtectedAuthPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/quiz" element={<AuthRoute element={<Index initialTab="generate" />} />} />
-            <Route path="/flashcards" element={<AuthRoute element={<Index initialTab="flashcards" />} />} />
-            <Route path="/history" element={<AuthRoute element={<Index initialTab="history" />} />} />
-            <Route path="/history/:quizId" element={<AuthRoute element={<QuizReview />} />} />
-            <Route path="/settings" element={<AuthRoute element={<Index initialTab="settings" />} />} />
-            <Route path="/legal" element={<Index initialTab="generate" />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <AuthProvider>
+          <BrowserRouter>
+            <ToastCleaner />
+            <ToastUIToaster />
+            <SonnerToaster />
+            <Routes>
+              <Route path="/" element={<Navigate to="/landing" />} />
+              <Route path="/landing" element={<LandingPage />} />
+              <Route path="/auth" element={<ProtectedAuthPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/quiz" element={<AuthRoute element={<Index initialTab="generate" />} />} />
+              <Route path="/flashcards" element={<AuthRoute element={<Index initialTab="flashcards" />} />} />
+              <Route path="/history" element={<AuthRoute element={<Index initialTab="history" />} />} />
+              <Route path="/history/:quizId" element={<AuthRoute element={<QuizReview />} />} />
+              <Route path="/settings" element={<AuthRoute element={<Index initialTab="settings" />} />} />
+              <Route path="/legal" element={<Index initialTab="generate" />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
       </QueryClientProvider>
     </React.StrictMode>
   );
