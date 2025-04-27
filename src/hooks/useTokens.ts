@@ -43,9 +43,15 @@ export const useTokenStore = create<TokenState>()((set, get) => ({
 
       await get().refreshTokenBalance();
       return true;
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error updating token balance:', error);
-      set({ error: error instanceof Error ? error.message : String(error) });
+      set({ 
+        error: error instanceof Error 
+          ? error.message 
+          : typeof error === 'string' 
+            ? error 
+            : 'An unknown error occurred' 
+      });
       return false;
     } finally {
       set({ loading: false });
