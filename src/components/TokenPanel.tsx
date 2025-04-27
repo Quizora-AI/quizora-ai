@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -11,8 +10,8 @@ import { useTokens } from "@/hooks/useTokens";
 import { Coins, Gift, Award, Share2, Star, RefreshCw, CheckCircle, Copy } from "lucide-react";
 import { BannerAd, useInterstitialAd } from "./GoogleAds";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 
-// Social sharing options
 interface ShareOption {
   name: string;
   icon: string;
@@ -128,7 +127,6 @@ export function TokenPanel() {
     checkUserStatus();
   }, [checkTokenBalance]);
 
-  // If premium, don't show this component
   if (isPremium) {
     return null;
   }
@@ -155,7 +153,6 @@ export function TokenPanel() {
   const handleWatchAd = async () => {
     setIsAdLoading(true);
     
-    // Check if we're on mobile with Cordova
     if (typeof window !== 'undefined' && 'cordova' in window && 
         'plugins' in (window as any).cordova && 
         'admob' in (window as any).cordova.plugins) {
@@ -164,14 +161,13 @@ export function TokenPanel() {
         const shown = await showInterstitial();
         if (shown) {
           setTimeout(async () => {
-            // Add token only after ad is completed
             await addTokens(1, "Watched a rewarded ad");
             setIsAdLoading(false);
             toast({
               title: "Ad Completed",
               description: "You've earned 1 token for watching an ad.",
             });
-          }, 3000); // Wait for ad to complete
+          }, 3000);
         } else {
           setIsAdLoading(false);
           toast({
@@ -190,7 +186,6 @@ export function TokenPanel() {
         });
       }
     } else {
-      // Web fallback for testing
       setTimeout(async () => {
         await addTokens(1, "Watched a rewarded ad (simulated)");
         setIsAdLoading(false);
@@ -213,14 +208,11 @@ export function TokenPanel() {
     
     setIsLoadingRating(true);
     
-    // Open Play Store URL
     const playStoreUrl = "https://play.google.com/store/apps/details?id=com.quizora.ai";
     
     if (typeof window !== 'undefined') {
-      // Open in new tab/window
       window.open(playStoreUrl, '_blank');
       
-      // Mark as rated and award tokens
       const result = await markAppRated();
       setIsLoadingRating(false);
       
