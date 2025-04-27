@@ -22,8 +22,11 @@ export function useProfile() {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        console.log("No user found in useProfile");
-        setLoading(false);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "User not found. Please log in again."
+        });
         return;
       }
 
@@ -36,8 +39,6 @@ export function useProfile() {
       if (error) {
         console.error('Error fetching profile:', error);
         if (error.code === 'PGRST116') {
-          // Profile doesn't exist, create one
-          console.log("Creating new profile for user:", user.id);
           const randomAvatar = getRandomAvatar();
           const newProfile = {
             id: user.id,
@@ -65,9 +66,12 @@ export function useProfile() {
         });
       }
     } catch (error) {
-      console.error('Error in useProfile:', error);
-      // Don't show error toast here as it can be disruptive
-      // Just log to console for debugging
+      console.error('Error fetching profile:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load profile. Please try again."
+      });
     } finally {
       setLoading(false);
     }
@@ -75,23 +79,6 @@ export function useProfile() {
 
   useEffect(() => {
     fetchProfile();
-    
-    // Listen for auth state changes to update profile
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        console.log("Auth state changed in useProfile:", event);
-        // Use setTimeout to prevent potential deadlock with other auth listeners
-        setTimeout(() => {
-          fetchProfile();
-        }, 0);
-      } else if (event === 'SIGNED_OUT') {
-        setProfile(null);
-      }
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
   }, []);
 
   return {

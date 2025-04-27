@@ -8,8 +8,7 @@ const STORAGE_KEYS = {
   QUIZ_IN_PROGRESS: 'quizInProgress',
   FLASHCARDS_HISTORY: 'flashcardsHistory',
   CURRENT_FLASHCARD_SET: 'currentFlashcardSet',
-  USER_SETTINGS: 'userSettings',
-  HAS_VISITED_BEFORE: 'hasVisitedBefore'
+  USER_SETTINGS: 'userSettings'
 } as const;
 
 // Event listener to track synchronized state between tabs/windows
@@ -27,28 +26,6 @@ const setupStorageSyncListener = () => {
 if (typeof window !== 'undefined') {
   setupStorageSyncListener();
 }
-
-// Auth related functions
-export const markFirstVisit = () => {
-  localStorage.setItem(STORAGE_KEYS.HAS_VISITED_BEFORE, 'true');
-};
-
-export const hasVisitedBefore = () => {
-  return localStorage.getItem(STORAGE_KEYS.HAS_VISITED_BEFORE) === 'true';
-};
-
-// Reset app data function
-export const resetAppData = () => {
-  try {
-    // Only clear specific app data, not auth-related data
-    clearData('QUIZ_IN_PROGRESS');
-    console.log("App data reset successfully");
-    return true;
-  } catch (error) {
-    console.error("Error resetting app data:", error);
-    return false;
-  }
-};
 
 // Quiz related functions
 export const saveQuizToHistory = (quiz: any) => {

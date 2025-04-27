@@ -14,7 +14,6 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { useEffect } from "react";
 import { initializeAdMob } from "./components/GoogleAds";
 import { supabase } from "./integrations/supabase/client";
-import { resetAppData } from "./utils/storageUtils";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,63 +34,27 @@ const AuthRoute = ({ element }) => {
   const [session, setSession] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
-    // Set up auth state listener first
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      console.log("Auth state change detected", _event, !!newSession);
-      setSession(newSession);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
       setLoading(false);
     });
 
-    // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
-      console.log("Initial session check:", !!existingSession);
-      setSession(existingSession);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
       setLoading(false);
-      
-      if (!existingSession) {
-        // If not logged in, check if we should show first-time experience
-        const hasVisitedBefore = localStorage.getItem("hasVisitedBefore");
-        if (!hasVisitedBefore) {
-          console.log("First time visitor detected");
-          localStorage.setItem("hasVisitedBefore", "true");
-          // Let the landing page redirect handle navigation to auth
-        }
-      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-gradient-to-b from-background to-background/80">
-        <div className="flex flex-col items-center">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-full border-4 border-t-primary border-r-primary/30 border-b-primary/60 border-l-primary/10 animate-spin" />
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-primary">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 12.7a9 9 0 1 1-2.9-6.6"/>
-              </svg>
-            </div>
-          </div>
-          <h1 className="mt-6 text-2xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
-            Quizora AI
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Loading your experience...
-          </p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return null;
 
   return session ? (
     <>{element}</>
   ) : (
-    <Navigate to="/landing" replace />
+    <Navigate to="/auth" replace />
   );
 };
 
@@ -110,6 +73,11 @@ const ToastCleaner = () => {
   
   return null;
 };
+
+function resetAppData() {
+  localStorage.clear();
+  console.log("App data has been reset. Fresh start!");
+}
 
 function App() {
   useEffect(() => {

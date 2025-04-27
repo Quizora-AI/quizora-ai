@@ -60,8 +60,6 @@ export function LogoutButton() {
       // Clear any stored quiz data to prevent issues after logout
       localStorage.removeItem("quizInProgress");
       
-      // Don't delete "hasVisitedBefore" flag to preserve the returning user experience
-      
       navigate("/auth");
     } catch (error) {
       console.error("Error logging out:", error);
