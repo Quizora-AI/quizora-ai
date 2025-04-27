@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import { Toaster as ToastUIToaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
@@ -80,6 +81,7 @@ function resetAppData() {
 
 function App() {
   useEffect(() => {
+    // Enhanced initialization for both AdMob and Play Billing
     const initializePlugins = () => {
       console.log("Checking for Cordova and initializing plugins");
       
@@ -94,24 +96,68 @@ function App() {
     const onDeviceReady = () => {
       console.log("Device is ready, initializing plugins");
       
+      // Initialize AdMob with improved configuration
       if ((window as any).MobileAds) {
         console.log("Initializing AdMob SDK");
-        (window as any).MobileAds.initialize()
-          .then(() => {
-            console.log("AdMob SDK initialized successfully");
-            initializeAdMob();
-          })
-          .catch((error: any) => {
-            console.error("Error initializing AdMob SDK:", error);
-          });
+        try {
+          // Force a delay to ensure device is fully ready
+          setTimeout(() => {
+            (window as any).MobileAds.initialize()
+              .then(() => {
+                console.log("AdMob SDK initialized successfully");
+                // Re-initialize ad units
+                initializeAdMob();
+                console.log("AdMob integration complete - ads should display shortly");
+                
+                // Force refresh ads after initialization
+                if ((window as any).cordova?.plugins?.admob) {
+                  console.log("Refreshing ad units");
+                  (window as any).cordova.plugins.admob.banner.refresh();
+                }
+              })
+              .catch((error: any) => {
+                console.error("Error initializing AdMob SDK:", error);
+              });
+          }, 1000);
+        } catch (error) {
+          console.error("Exception during AdMob initialization:", error);
+        }
+      } else {
+        console.warn("MobileAds not found - AdMob integration may be missing");
       }
       
+      // Initialize Play Billing with enhanced configuration
       if ((window as any).cordova?.plugins?.PlayBilling) {
         console.log("Initializing Play Billing");
-        (window as any).cordova.plugins.PlayBilling.connect(
-          () => console.log("Play Billing connected"),
-          (error: string) => console.error("Error connecting to Play Billing:", error)
-        );
+        try {
+          // Force check for Play Billing before connection
+          console.log("Checking Play Billing availability");
+          
+          // Connect with enhanced parameters
+          (window as any).cordova.plugins.PlayBilling.connect(
+            () => {
+              console.log("Play Billing connected successfully");
+              console.log("Querying subscription products");
+              
+              // Force product query on startup
+              (window as any).cordova.plugins.PlayBilling.queryProducts(
+                (products: any) => {
+                  console.log("Play Billing products available:", products);
+                },
+                (error: string) => {
+                  console.error("Error querying Play Billing products:", error);
+                }
+              );
+            },
+            (error: string) => {
+              console.error("Error connecting to Play Billing:", error);
+            }
+          );
+        } catch (error) {
+          console.error("Exception during Play Billing initialization:", error);
+        }
+      } else {
+        console.warn("PlayBilling plugin not found - subscription features may be unavailable");
       }
     };
     

@@ -4,6 +4,8 @@ package com.quizora.ai.billing
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import com.android.billingclient.api.*
 import org.apache.cordova.CallbackContext
@@ -21,6 +23,7 @@ class PlayBillingPlugin : CordovaPlugin(), PurchasesUpdatedListener {
     private var isServiceConnected = AtomicBoolean(false)
     private var connectionInProgress = AtomicBoolean(false)
     private val TAG = "PlayBillingPlugin"
+    private val mainHandler = Handler(Looper.getMainLooper())
     
     // Callback contexts
     private var purchaseCallbackContext: CallbackContext? = null
@@ -36,11 +39,16 @@ class PlayBillingPlugin : CordovaPlugin(), PurchasesUpdatedListener {
         Log.d(TAG, "Initializing PlayBillingPlugin")
         setupBillingClient()
         
+        // Start billing client connection immediately upon plugin initialization
+        startConnection()
+        
         // Immediately open BillingActivity once to help Google Play detect billing integration
-        val intent = Intent(cordova.activity, BillingActivity::class.java)
-        intent.putExtra("DETECT_ONLY", true) // Flag to indicate this is just for detection
-        cordova.activity.startActivityForResult(intent, DETECT_REQUEST_CODE)
-        Log.d(TAG, "Launched BillingActivity for detection")
+        mainHandler.postDelayed({
+            val intent = Intent(cordova.activity, BillingActivity::class.java)
+            intent.putExtra("DETECT_ONLY", true) // Flag to indicate this is just for detection
+            cordova.activity.startActivity(intent)
+            Log.d(TAG, "Launched BillingActivity for detection")
+        }, 2000)
     }
 
     override fun execute(action: String, args: JSONArray, callbackContext: CallbackContext): Boolean {
@@ -75,6 +83,43 @@ class PlayBillingPlugin : CordovaPlugin(), PurchasesUpdatedListener {
             .setListener(this)
             .enablePendingPurchases()
             .build()
+            
+        Log.d(TAG, "BillingClient setup complete")
+    }
+    
+    private fun startConnection() {
+        if (connectionInProgress.getAndSet(true)) {
+            Log.d(TAG, "Connection attempt already in progress")
+            return
+        }
+        
+        Log.d(TAG, "Starting billing client connection (automatic)")
+        billingClient.startConnection(object : BillingClientStateListener {
+            override fun onBillingSetupFinished(billingResult: BillingResult) {
+                connectionInProgress.set(false)
+                
+                if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                    isServiceConnected.set(true)
+                    Log.d(TAG, "Billing client connected automatically")
+                    queryProductDetails() // Query products automatically
+                } else {
+                    Log.e(TAG, "Failed to connect to billing client: ${billingResult.debugMessage}")
+                }
+            }
+
+            override fun onBillingServiceDisconnected() {
+                isServiceConnected.set(false)
+                Log.d(TAG, "Billing service disconnected, will retry connection")
+                
+                // Auto reconnect after a delay
+                mainHandler.postDelayed({
+                    if (!isServiceConnected.get() && !connectionInProgress.get()) {
+                        Log.d(TAG, "Auto reconnecting to billing service")
+                        startConnection()
+                    }
+                }, 5000)
+            }
+        })
     }
 
     private fun connectToPlayBilling(callbackContext: CallbackContext) {
@@ -116,6 +161,20 @@ class PlayBillingPlugin : CordovaPlugin(), PurchasesUpdatedListener {
         if (!billingClient.isReady) {
             Log.e(TAG, "BillingClient is not ready")
             queryCallbackContext?.error("BillingClient is not ready")
+            
+            // Try to reconnect
+            if (!connectionInProgress.get()) {
+                Log.d(TAG, "Reconnecting billing client before query")
+                connectToPlayBilling(object : CallbackContext("reconnect", webView) {
+                    override fun success(message: String?) {
+                        queryProductDetails() // Retry after reconnection
+                    }
+                    
+                    override fun error(message: String?) {
+                        Log.e(TAG, "Failed to reconnect: $message")
+                    }
+                })
+            }
             return
         }
 
@@ -131,6 +190,7 @@ class PlayBillingPlugin : CordovaPlugin(), PurchasesUpdatedListener {
             )
             .build()
 
+        Log.d(TAG, "Querying product details for: $productIds")
         billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 if (productDetailsList.isEmpty()) {
@@ -184,6 +244,7 @@ class PlayBillingPlugin : CordovaPlugin(), PurchasesUpdatedListener {
         }
 
         val intent = Intent(cordova.activity, BillingActivity::class.java)
+        intent.putExtra("PRODUCT_ID", productId)
         cordova.startActivityForResult(this, intent, PURCHASE_REQUEST_CODE)
     }
 
@@ -191,11 +252,15 @@ class PlayBillingPlugin : CordovaPlugin(), PurchasesUpdatedListener {
         if (requestCode == PURCHASE_REQUEST_CODE) {
             if (resultCode == Activity.RESULT_OK) {
                 // Purchase was successful
+                Log.d(TAG, "Purchase completed successfully via activity")
                 queryProductDetails() // Refresh products
                 purchaseCallbackContext?.success("Purchase completed successfully")
             } else {
+                Log.e(TAG, "Purchase was cancelled or failed")
                 purchaseCallbackContext?.error("Purchase was cancelled or failed")
             }
+        } else if (requestCode == DETECT_REQUEST_CODE) {
+            Log.d(TAG, "Detection activity completed")
         }
     }
 

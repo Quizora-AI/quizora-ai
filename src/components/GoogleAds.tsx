@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 
 interface BannerAdProps {
@@ -11,6 +12,7 @@ export function BannerAd({ adUnitId = "ca-app-pub-8270549953677995/2218567244", 
   const adContainerRef = useRef<HTMLDivElement>(null);
   const [adLoaded, setAdLoaded] = useState(false);
   const [adError, setAdError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   
   useEffect(() => {
     // Check if running in a Cordova mobile context with AdMob
@@ -24,11 +26,18 @@ export function BannerAd({ adUnitId = "ca-app-pub-8270549953677995/2218567244", 
       
       if (admob && admob.banner) {
         try {
+          // Remove any existing event listeners to prevent duplicates
+          document.removeEventListener('admob.banner.events.LOAD', () => {});
+          document.removeEventListener('admob.banner.events.LOAD_FAIL', () => {});
+          document.removeEventListener('admob.banner.events.OPEN', () => {});
+          document.removeEventListener('admob.banner.events.CLOSE', () => {});
+          
           // Add event listeners for ad states
           document.addEventListener('admob.banner.events.LOAD', () => {
             console.log('AdMob banner loaded successfully');
             setAdLoaded(true);
             setAdError(null);
+            setRetryCount(0); // Reset retry count on success
           });
           
           document.addEventListener('admob.banner.events.LOAD_FAIL', (event: any) => {
@@ -38,11 +47,27 @@ export function BannerAd({ adUnitId = "ca-app-pub-8270549953677995/2218567244", 
             
             // Check for specific app-ads.txt related issues
             if (errorMessage.includes('policy') || errorMessage.includes('invalid') || errorMessage.includes('disapproved')) {
-              setAdError(`Ad policy issue detected: ${errorMessage}. Verify app-ads.txt is properly set up.`);
+              setAdError(`Ad policy issue: ${errorMessage}. Verify app-ads.txt is properly set up.`);
             } else {
               setAdError(`Failed to load ad: ${errorMessage}`);
             }
             setAdLoaded(false);
+            
+            // Retry logic for transient failures
+            if (retryCount < 3) {
+              console.log(`Retrying ad load (${retryCount + 1}/3) in 5 seconds...`);
+              setTimeout(() => {
+                setRetryCount(prev => prev + 1);
+                try {
+                  admob.banner.remove();
+                  setTimeout(() => {
+                    admob.banner.prepare();
+                  }, 1000);
+                } catch (err) {
+                  console.error("Error during retry:", err);
+                }
+              }, 5000);
+            }
           });
           
           document.addEventListener('admob.banner.events.OPEN', () => {
@@ -59,18 +84,27 @@ export function BannerAd({ adUnitId = "ca-app-pub-8270549953677995/2218567244", 
             position: position === 'top' ? admob.banner.positions.TOP_CENTER : admob.banner.positions.BOTTOM_CENTER,
             size: admob.banner.sizes[size] || admob.banner.sizes.BANNER,
             autoShow: true,
-            overlap: false,
+            overlap: true, // Changed to true to ensure visibility
             offsetTopBar: false,
-            isTesting: false // Set to true for testing
+            isTesting: false, // Set to false for production ads
           };
           
           console.log("Configuring AdMob banner with options:", JSON.stringify(options));
-          console.log("Verifying app-ads.txt setup for publisher ID: pub-8270549953677995");
-          console.log("Using domain: medquiz-pro-extract.lovable.app for AdMob verification");
+          console.log("Ad unit ID being used:", adUnitId);
+          console.log("Publisher ID: pub-8270549953677995");
+          
+          // First try to remove any existing banners
+          try {
+            admob.banner.remove();
+          } catch (err) {
+            console.log("No existing banner to remove");
+          }
           
           // Create and show the banner
-          admob.banner.config(options);
-          admob.banner.prepare();
+          setTimeout(() => {
+            admob.banner.config(options);
+            admob.banner.prepare();
+          }, 1000);
           
           return () => {
             // Remove banner and event listeners on component unmount
@@ -102,7 +136,7 @@ export function BannerAd({ adUnitId = "ca-app-pub-8270549953677995/2218567244", 
         `;
       }
     }
-  }, [adUnitId, position, size]);
+  }, [adUnitId, position, size, retryCount]);
 
   return (
     <div ref={adContainerRef} className={`admob-banner-container ${className}`}>
@@ -255,15 +289,17 @@ export function initializeAdMob() {
       // Initialize with production options
       const options = {
         bannerAtTop: false,
-        overlap: false,
+        overlap: true, // Set to true to ensure visibility
         offsetTopBar: false,
         isTesting: false, // Set to false for real ads
-        autoShowBanner: false,
+        autoShowBanner: true, // Changed to auto-show
         autoShowInterstitial: false
       };
       
       console.log("Setting AdMob global options:", JSON.stringify(options));
       console.log("Publisher ID: pub-8270549953677995");
+      console.log("Checking app-ads.txt configuration");
+      
       admob.setOptions(options);
       
       // Listen for global AdMob events

@@ -45,6 +45,8 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
     try {
       const PlayBilling = (window as any).cordova.plugins.PlayBilling;
       
+      console.log("Initializing billing client");
+      
       // Connect to billing service
       PlayBilling.connect(
         () => {
@@ -64,9 +66,41 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
   };
   
   const queryProducts = () => {
+    if (!hasNativePlugin) {
+      console.log("Using mock products for web preview");
+      setProducts([
+        {
+          productId: SUBSCRIPTION_PRODUCTS.MONTHLY,
+          title: "Monthly Premium",
+          description: "Quizora AI Monthly Premium Subscription",
+          offers: [{
+            offerId: "mock-monthly",
+            formattedPrice: "$2.49",
+            priceAmountMicros: 2490000,
+            currencyCode: "USD",
+            billingPeriod: "P1M"
+          }]
+        },
+        {
+          productId: SUBSCRIPTION_PRODUCTS.YEARLY,
+          title: "Yearly Premium",
+          description: "Quizora AI Yearly Premium Subscription",
+          offers: [{
+            offerId: "mock-yearly", 
+            formattedPrice: "$15.00",
+            priceAmountMicros: 15000000,
+            currencyCode: "USD", 
+            billingPeriod: "P1Y"
+          }]
+        }
+      ]);
+      return;
+    }
+    
     try {
       const PlayBilling = (window as any).cordova.plugins.PlayBilling;
       
+      console.log("Querying available subscription products");
       PlayBilling.queryProducts(
         (productList: Product[]) => {
           console.log('Products retrieved:', productList);
@@ -167,9 +201,10 @@ export function BillingManager({ userId, isPremium, onPurchaseComplete }: Billin
         setLoading(false);
       }
     } else {
-      // Web fallback for testing
+      // Web fallback for testing - always succeed for easier testing
       setTimeout(() => {
-        const success = Math.random() > 0.2;
+        // Force success for web testing
+        const success = true;
         
         if (success) {
           toast({
