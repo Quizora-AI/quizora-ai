@@ -18,12 +18,25 @@ jobs:
       with:
         java-version: '11'
 
-    - name: Set up Android SDK
-      uses: android-actions/setup-android-sdk@v2  # Use a different setup action
-      with:
-        sdk-version: '30'  # Specify your required SDK version
-        build-tools-version: '30.0.3'  # Specify build tools version
-        android-licenses: yes  # Accept Android SDK licenses
+    - name: Install Android SDK
+      run: |
+        # Install required dependencies
+        sudo apt update
+        sudo apt install -y unzip wget
+
+        # Download and extract the Android SDK
+        wget https://dl.google.com/android/repository/commandlinetools-linux-7583922_latest.zip
+        unzip commandlinetools-linux-7583922_latest.zip -d $HOME/android-sdk
+
+        # Set up environment variables
+        echo "export ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+        echo "export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH" >> $GITHUB_ENV
+
+        # Accept Android SDK licenses
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+
+        # Install required SDK components
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-30" "build-tools;30.0.3" "tools"
 
     - name: Install dependencies
       run: npm install
@@ -34,7 +47,7 @@ jobs:
         ./gradlew bundleRelease
 
     - name: Upload .aab file as artifact
-      uses: actions/upload-artifact@v3  # Updated to v3 for compatibility
+      uses: actions/upload-artifact@v3
       with:
         name: app-release-aab
         path: android/app/build/outputs/bundle/release/app-release.aab
