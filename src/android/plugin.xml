@@ -1,3 +1,4 @@
+
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
         id="cordova-plugin-play-billing"
@@ -19,20 +20,6 @@
             </feature>
         </config-file>
         
-        <config-file target="AndroidManifest.xml" parent="/manifest">
-            <uses-permission android:name="com.android.vending.BILLING" />
-            <uses-permission android:name="android.permission.INTERNET" />
-        </config-file>
-        
-        <config-file target="AndroidManifest.xml" parent="/manifest/application">
-            <activity 
-                android:name="com.quizora.ai.billing.BillingActivity"
-                android:exported="false" />
-            <meta-data 
-                android:name="com.google.android.play.billingclient.version" 
-                android:value="7.1.1" />
-        </config-file>
-        
         <framework src="com.android.billingclient:billing:7.1.1" />
         
         <source-file src="src/android/PlayBillingPlugin.kt" target-dir="src/com/quizora/ai/billing" />
@@ -40,8 +27,6 @@
         
         <preference name="BILLING_KEY" default="MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtVSw2Yq9Mjz35yTkPb+d3rWqnUCnTtDXA6iaa9EhHcrSa2JaK23peJ1hk0Bma+msCABmPfK7nCkAzG4VOA6lBrk+0mjiIatYOfwieKW/e0CBKBVBVZmjvaHRnGHhUWUrudmJ5HWv0ssl+u5ZXlC+L7adaV+u4raVsZYVZT5M2NLLtqObv+dVSikrXhqN2WYMRdC396GqPtVi+QxBolQyiEeScLrNsV08CVVIcWZV6mHaPXkvegkZJOAYG8av6mw0T9N6BII/t3KTSuvuT2NK8t9xN7IDuw6hD+zZt2sfjAqfT+JLeWQjVfUtVNjlGoZTWYxVOlg4NzGBwUjDULTMiwIDAQAB" />
     </platform>
-    
-    <dependency id="cordova-plugin-purchase" version="11.0.0" />
     
     <js-module src="www/play-billing.js" name="PlayBilling">
         <clobbers target="PlayBilling" />

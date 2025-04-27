@@ -25,7 +25,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Billing Activity -->
+        <!-- Billing Activity - in the app's main package -->
         <activity 
             android:name=".billing.BillingActivity"
             android:exported="false" />

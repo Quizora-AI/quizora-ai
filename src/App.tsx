@@ -99,9 +99,19 @@ function App() {
     };
     
     const onDeviceReady = () => {
-      console.log("Device is ready, initializing AdMob");
+      console.log("Device is ready, initializing plugins");
       
+      // Initialize AdMob
       initializeAdMob();
+      
+      // Initialize Google Play Billing immediately
+      if ((window as any).cordova && (window as any).cordova.plugins && (window as any).cordova.plugins.PlayBilling) {
+        console.log("Initializing Play Billing");
+        (window as any).cordova.plugins.PlayBilling.connect(
+          () => console.log("Play Billing connected"),
+          (error: string) => console.error("Error connecting to Play Billing:", error)
+        );
+      }
       
       document.addEventListener('pause', onPause, false);
       document.addEventListener('resume', onResume, false);

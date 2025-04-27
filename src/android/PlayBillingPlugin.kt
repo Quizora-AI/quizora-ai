@@ -1,3 +1,4 @@
+
 package com.quizora.ai.billing
 
 import android.app.Activity
@@ -34,6 +35,12 @@ class PlayBillingPlugin : CordovaPlugin(), PurchasesUpdatedListener {
         super.initialize(cordova, webView)
         Log.d(TAG, "Initializing PlayBillingPlugin")
         setupBillingClient()
+        
+        // Immediately open BillingActivity once to help Google Play detect billing integration
+        val intent = Intent(cordova.activity, BillingActivity::class.java)
+        intent.putExtra("DETECT_ONLY", true) // Flag to indicate this is just for detection
+        cordova.activity.startActivityForResult(intent, DETECT_REQUEST_CODE)
+        Log.d(TAG, "Launched BillingActivity for detection")
     }
 
     override fun execute(action: String, args: JSONArray, callbackContext: CallbackContext): Boolean {
@@ -288,5 +295,6 @@ class PlayBillingPlugin : CordovaPlugin(), PurchasesUpdatedListener {
 
     companion object {
         private const val PURCHASE_REQUEST_CODE = 1001
+        private const val DETECT_REQUEST_CODE = 1002
     }
 }
