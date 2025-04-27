@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Question } from "@/components/FileUpload";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useTokens } from "@/hooks/useTokens";
 
 interface QuizSettingsFormData {
   course: string;
@@ -29,7 +30,8 @@ export function QuizGenerator({ onQuizGenerated }: { onQuizGenerated: (questions
   const [isPremium, setIsPremium] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  
+  const { useToken } = useTokens();
+
   const form = useForm<QuizSettingsFormData>({
     defaultValues: {
       course: "",
@@ -42,14 +44,12 @@ export function QuizGenerator({ onQuizGenerated }: { onQuizGenerated: (questions
   });
 
   useEffect(() => {
-    // Check if user has premium subscription
     const userSettings = localStorage.getItem("userSettings");
     if (userSettings) {
       const settings = JSON.parse(userSettings);
       setIsPremium(settings.isPremium === true);
     }
 
-    // Check if user has exceeded free quiz limit
     if (!isPremium) {
       const quizHistoryStr = localStorage.getItem("quizHistory");
       if (quizHistoryStr) {
@@ -78,7 +78,11 @@ export function QuizGenerator({ onQuizGenerated }: { onQuizGenerated: (questions
   };
 
   const generateQuiz = async (data: QuizSettingsFormData) => {
-    // Check if free user has reached quiz limit
+    const canProceed = await useToken(1, 'quiz');
+    if (!canProceed) {
+      return;
+    }
+
     if (!isPremium) {
       const quizHistoryStr = localStorage.getItem("quizHistory");
       if (quizHistoryStr) {
@@ -99,11 +103,9 @@ export function QuizGenerator({ onQuizGenerated }: { onQuizGenerated: (questions
     setGenerationProgress(0);
     setError(null);
     
-    // Apply free plan restrictions
     const maxQuestions = isPremium ? data.numQuestions : Math.min(data.numQuestions, 10);
     const timePerQuestion = isPremium ? data.timePerQuestion : 30;
     
-    // Simulate initial progress
     const interval = setInterval(() => {
       setGenerationProgress(prev => {
         if (prev >= 95) {
@@ -117,7 +119,6 @@ export function QuizGenerator({ onQuizGenerated }: { onQuizGenerated: (questions
     try {
       const difficulty = getDifficultyFromSlider(data.difficultyLevel);
       
-      // Create an improved educational prompt based on the form data
       const prompt = `
 I need an educational quiz on ${data.topic || "general concepts"} in ${data.subject} for ${data.course} students.
 Focus on creating ${maxQuestions} multiple-choice questions at ${difficulty} difficulty level.
@@ -134,7 +135,6 @@ This quiz will be used for educational purposes to help students test their unde
 
       console.log("Sending quiz generation request with prompt:", prompt);
 
-      // Call the edge function to generate quiz with AI
       const { data: responseData, error: functionError } = await supabase.functions.invoke('process-document', {
         body: {
           promptText: prompt,
@@ -163,7 +163,6 @@ This quiz will be used for educational purposes to help students test their unde
         description: `Created ${responseData.questions.length} questions about ${data.topic || data.subject}`,
       });
       
-      // Apply the specified time per question to the questions
       const questionsWithTime = responseData.questions.map((q: Question) => ({
         ...q,
         timeLimit: timePerQuestion

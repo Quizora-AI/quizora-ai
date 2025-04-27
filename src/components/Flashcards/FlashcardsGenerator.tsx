@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -13,6 +12,7 @@ import * as z from "zod";
 import { Book, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Json } from "@/integrations/supabase/types";
+import { useTokens } from "@/hooks/useTokens";
 
 export interface Flashcard {
   id: string;
@@ -49,6 +49,7 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
   const [isLoading, setIsLoading] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const { useToken } = useTokens();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -60,7 +61,6 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
     },
   });
 
-  // Check premium status from local storage
   useEffect(() => {
     const userSettings = localStorage.getItem("userSettings");
     if (userSettings) {
@@ -87,10 +87,14 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
       return;
     }
 
+    const canProceed = await useToken(1, 'flashcard');
+    if (!canProceed) {
+      return;
+    }
+
     try {
       console.log("Generating flashcards with values:", values);
       
-      // Call the process-document edge function for flashcards
       const response = await fetch("https://ltteeavnkygcgbwlblof.functions.supabase.co/process-document", {
         method: "POST",
         headers: {
@@ -125,7 +129,6 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
         throw new Error("Invalid response format: missing questions array");
       }
 
-      // Build flashcards from response
       const flashcards: Flashcard[] = responseData.questions.map((q: any, idx: number) => ({
         id: `card-${idx}-${Date.now()}`,
         front: q.question,
@@ -137,7 +140,6 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
         throw new Error("No flashcards were generated. Please try again.");
       }
 
-      // Save to Supabase if user logged in
       let setId: string | null = null;
       let flashcardsSet: FlashcardsSet = {
         id: crypto.randomUUID(),
@@ -152,7 +154,6 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         try {
-          // Convert cards to a structure that's compatible with Supabase's Json type
           const cardsForDb = flashcards.map(card => ({
             id: card.id,
             front: card.front,
@@ -183,7 +184,6 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
         }
       }
 
-      // Save in local storage
       try {
         const existingHistory = localStorage.getItem("flashcardsHistory");
         const history = existingHistory ? JSON.parse(existingHistory) : [];
@@ -193,7 +193,6 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
         console.error("Failed to save to local storage:", storageError);
       }
 
-      // Pass metadata up so it can be saved in flow state for further updates
       onFlashcardsGenerated(flashcards, { title: flashcardsSet.title, id: setId || flashcardsSet.id });
 
       toast({
