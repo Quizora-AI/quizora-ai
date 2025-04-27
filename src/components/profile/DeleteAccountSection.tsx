@@ -25,7 +25,6 @@ interface DeleteAccountSectionProps {
 
 export function DeleteAccountSection({ profile }: DeleteAccountSectionProps) {
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
-  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -40,28 +39,10 @@ export function DeleteAccountSection({ profile }: DeleteAccountSectionProps) {
     }
 
     try {
-      setIsDeleting(true);
-      console.log("Attempting to delete account...");
-      
-      // Delete profile record first
-      const { error: profileDeleteError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', profile.id);
-      
-      if (profileDeleteError) {
-        console.error("Error deleting profile data:", profileDeleteError);
-      }
+      // First sign out the user
+      await supabase.auth.signOut();
 
-      // Then delete the user auth record
-      const { error: userDeleteError } = await supabase.auth.admin.deleteUser(profile.id);
-      
-      if (userDeleteError) {
-        console.error("Error deleting user auth record:", userDeleteError);
-        // If we can't delete via admin, sign out as fallback
-        await supabase.auth.signOut();
-      }
-
+      // Then send them to the auth page
       toast({
         title: "Account Deletion Requested",
         description: "Your account deletion has been requested. You'll be redirected to the login page."
@@ -75,8 +56,6 @@ export function DeleteAccountSection({ profile }: DeleteAccountSectionProps) {
         title: "Error",
         description: "Failed to delete account. Please try again."
       });
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -112,10 +91,9 @@ export function DeleteAccountSection({ profile }: DeleteAccountSectionProps) {
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleDeleteAccount}
-            disabled={isDeleting}
             className="bg-destructive hover:bg-destructive/90"
           >
-            {isDeleting ? "Deleting..." : "Delete Account"}
+            Delete Account
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

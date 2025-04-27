@@ -1,28 +1,13 @@
 
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Profile } from "@/hooks/useProfile";
-import { Skeleton } from "@/components/ui/skeleton";
+import { getRandomAvatar } from "@/utils/avatarUtils";
 
 interface AvatarSectionProps {
   profile: Profile | null;
-  loading?: boolean;
 }
 
-export function AvatarSection({ profile, loading = false }: AvatarSectionProps) {
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center space-y-4">
-        <Skeleton className="h-24 w-24 rounded-full" />
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-3 w-48" />
-      </div>
-    );
-  }
-  
-  if (!profile) return null;
-  
-  console.log("Avatar rendering with profile:", profile);
-  
+export function AvatarSection({ profile }: AvatarSectionProps) {
   return (
     <div className="flex flex-col items-center space-y-4">
       <Avatar className="h-24 w-24 border-2 border-primary/20 ring-2 ring-primary/10">
@@ -31,7 +16,6 @@ export function AvatarSection({ profile, loading = false }: AvatarSectionProps) 
             src={profile.avatar_url} 
             alt={profile?.name || 'Avatar'}
             className="object-contain p-1"
-            onError={(e) => console.error("Avatar image failed to load:", e)}
           />
         ) : (
           <AvatarFallback className="text-xl font-medium bg-primary/10 text-primary">

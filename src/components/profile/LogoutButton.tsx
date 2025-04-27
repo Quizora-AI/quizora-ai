@@ -13,8 +13,6 @@ export function LogoutButton() {
   // Show toast for auth state changes
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Auth event in LogoutButton:", event);
-      
       if (event === 'SIGNED_IN') {
         toast({
           title: "Signed in successfully",
@@ -52,12 +50,7 @@ export function LogoutButton() {
 
   const handleLogout = async () => {
     try {
-      console.log("Logging out user...");
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        throw error;
-      }
+      await supabase.auth.signOut();
       
       toast({
         title: "Logged out successfully",
@@ -67,7 +60,6 @@ export function LogoutButton() {
       // Clear any stored quiz data to prevent issues after logout
       localStorage.removeItem("quizInProgress");
       
-      // Navigate to auth page
       navigate("/auth");
     } catch (error) {
       console.error("Error logging out:", error);
