@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import { Toaster as ToastUIToaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
@@ -16,8 +17,6 @@ import { supabase } from "./integrations/supabase/client";
 import { resetAppData } from './utils/storageUtils';
 import { Session, User } from '@supabase/supabase-js';
 import { Loader2 } from 'lucide-react';
-import SplashScreen from './components/SplashScreen';
-import { AnimatePresence } from 'framer-motion';
 
 // Define an authentication context to manage auth state
 type AuthContextType = {
@@ -165,8 +164,6 @@ const ToastCleaner = () => {
 };
 
 function App() {
-  const [showSplash, setShowSplash] = useState(true);
-  
   useEffect(() => {
     // Enhanced initialization for both AdMob and Play Billing
     const initializePlugins = () => {
@@ -267,11 +264,6 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <AuthProvider>
-            <AnimatePresence>
-              {showSplash && (
-                <SplashScreen onComplete={() => setShowSplash(false)} />
-              )}
-            </AnimatePresence>
             <ToastCleaner />
             <ToastUIToaster />
             <SonnerToaster />
