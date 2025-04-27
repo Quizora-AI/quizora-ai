@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -110,23 +111,20 @@ export function PremiumPanel({ isPremium, settings, activatePremium }: PremiumPa
             <div className="font-medium">Free</div>
             <div className="font-medium">Premium</div>
             <div>Quizzes</div>
-            <div className="text-muted-foreground">2 free, then tokens</div>
+            <div className="text-muted-foreground">2 max</div>
             <div className="text-green-600">Unlimited</div>
-            <div>Flashcards</div>
-            <div className="text-muted-foreground">2 free, then tokens</div>
-            <div className="text-green-600">Unlimited</div>
-            <div>Token System</div>
-            <div className="text-muted-foreground">Required</div>
-            <div className="text-green-600">Not needed</div>
-            <div>Ads</div>
-            <div className="text-muted-foreground">Yes</div>
-            <div className="text-green-600">No</div>
             <div>Questions per quiz</div>
             <div className="text-muted-foreground">10 max</div>
             <div className="text-green-600">Up to 50</div>
             <div>Flashcards per set</div>
             <div className="text-muted-foreground">10 max</div>
             <div className="text-green-600">Up to 30</div>
+            <div>Time per question</div>
+            <div className="text-muted-foreground">Fixed 30s</div>
+            <div className="text-green-600">Adjustable</div>
+            <div>Analytics</div>
+            <div className="text-muted-foreground">Basic</div>
+            <div className="text-green-600">Advanced</div>
           </div>
         </div>
       </motion.div>

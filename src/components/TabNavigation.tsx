@@ -1,100 +1,109 @@
 
-import { useLocation } from "react-router-dom";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Question } from "@/components/FileUpload";
-import { Settings, Book, Sparkles, ListChecks } from "lucide-react";
+import { BrainCircuit, History, Book, Settings } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 
-interface NavTabProps {
-  icon: React.ReactNode;
-  label: string;
-  href: string;
-  active: boolean;
+interface TabNavigationProps {
+  onQuizGenerated: (questions: Question[]) => void;
 }
 
-function NavTab({ icon, label, href, active }: NavTabProps) {
-  return (
-    <Link
-      to={href}
-      className="relative flex-1 min-w-0"
-    >
-      <motion.div
-        className={`group flex items-center justify-center`}
-        whileHover={{ scale: 1.02 }}
-        transition={{ type: "spring", stiffness: 400, damping: 17 }}
-      >
-        <div className={`
-          relative w-full flex items-center justify-center gap-1.5 py-3 px-2
-          ${active 
-            ? "text-primary font-medium" 
-            : "text-muted-foreground hover:text-foreground/80"
-          }
-        `}>
-          <div className={`
-            flex items-center gap-1.5 rounded-xl py-2 px-3
-            backdrop-blur-sm backdrop-saturate-150
-            ${active 
-              ? "bg-primary/10 shadow-lg shadow-primary/20 scale-105 -translate-y-0.5" 
-              : "hover:bg-muted/80"
-            }
-            transition-all duration-300 ease-out
-            before:absolute before:inset-0 before:rounded-xl
-            before:bg-gradient-to-b before:from-white/10 before:to-transparent
-            before:opacity-50 before:transition-opacity
-            hover:before:opacity-100
-          `}>
-            {icon}
-            <span className="text-xs font-medium truncate">{label}</span>
-          </div>
-        </div>
-      </motion.div>
-      {active && (
-        <motion.div
-          className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary/60 via-primary to-primary/60"
-          layoutId="activeTab"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ type: "spring", stiffness: 380, damping: 30 }}
-        />
-      )}
-    </Link>
-  );
-}
-
-export function TabNavigation({ onQuizGenerated }: { onQuizGenerated?: (questions: Question[]) => void }) {
+export function TabNavigation({ onQuizGenerated }: TabNavigationProps) {
+  const navigate = useNavigate();
   const location = useLocation();
-  const pathname = location.pathname || "/";
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("generate");
+  const [isPremium, setIsPremium] = useState(false);
+  const [isChangingTab, setIsChangingTab] = useState(false);
+  
+  useEffect(() => {
+    // Determine active tab from URL path
+    const path = location.pathname;
+    
+    if (path === '/history') setActiveTab('history');
+    else if (path === '/flashcards') setActiveTab('flashcards');
+    else if (path === '/settings') setActiveTab('settings');
+    else setActiveTab('generate');
+
+    // Check premium status from local storage
+    const userSettings = localStorage.getItem("userSettings");
+    if (userSettings) {
+      try {
+        const settings = JSON.parse(userSettings);
+        setIsPremium(settings.isPremium === true);
+      } catch (error) {
+        console.error("Error parsing user settings:", error);
+      }
+    }
+  }, [location.pathname]);
+
+  const handleTabChange = (value: string) => {
+    if (isChangingTab) return;
+    
+    console.log(`Changing tab to: ${value} from ${activeTab}`);
+    setIsChangingTab(true);
+    setActiveTab(value);
+
+    requestAnimationFrame(() => {
+      switch (value) {
+        case 'history':
+          navigate('/history', { replace: false });
+          break;
+        case 'flashcards':
+          navigate('/flashcards', { replace: false });
+          break;
+        case 'settings':
+          navigate('/settings', { replace: false });
+          break;
+        default:
+          navigate('/quiz', { replace: false });
+          break;
+      }
+      
+      setTimeout(() => setIsChangingTab(false), 300);
+    });
+  };
+
+  const tabIconStyle = "h-4 w-4 mr-2";
 
   return (
-    <div className="fixed top-[56px] left-0 right-0 z-50">
-      <div className="bg-background/80 backdrop-blur-lg border-b border-border/40">
-        <div className="w-full max-w-screen-lg mx-auto px-1 flex">
-          <NavTab
-            icon={<Sparkles className="h-4 w-4" />}
-            label="Generate"
-            href="/quiz"
-            active={pathname === "/quiz"}
-          />
-          <NavTab
-            icon={<Book className="h-4 w-4" />}
-            label="Cards"
-            href="/flashcards"
-            active={pathname === "/flashcards"}
-          />
-          <NavTab
-            icon={<ListChecks className="h-4 w-4" />}
-            label="History"
-            href="/history"
-            active={pathname === "/history"}
-          />
-          <NavTab
-            icon={<Settings className="h-4 w-4" />}
-            label="Settings"
-            href="/settings"
-            active={pathname === "/settings"}
-          />
-        </div>
-      </div>
-    </div>
+    <TooltipProvider>
+      <motion.div 
+        className="w-full"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
+      >
+        <Tabs 
+          defaultValue="generate" 
+          className="w-full"
+          value={activeTab}
+          onValueChange={handleTabChange}
+        >
+          <TabsList className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 grid grid-cols-4 max-w-md w-[90%] shadow-md bg-background">
+            <TabsTrigger value="generate" className="flex items-center" disabled={isChangingTab}>
+              <BrainCircuit className={tabIconStyle} />
+              <span className="hidden sm:inline">Quiz</span>
+            </TabsTrigger>
+            <TabsTrigger value="flashcards" className="flex items-center" disabled={isChangingTab}>
+              <Book className={tabIconStyle} />
+              <span className="hidden sm:inline">Flashcards</span>
+            </TabsTrigger>
+            <TabsTrigger value="history" className="flex items-center" disabled={isChangingTab}>
+              <History className={tabIconStyle} />
+              <span className="hidden sm:inline">History</span>
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center" disabled={isChangingTab}>
+              <Settings className={tabIconStyle} />
+              <span className="hidden sm:inline">Settings</span>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </motion.div>
+    </TooltipProvider>
   );
 }

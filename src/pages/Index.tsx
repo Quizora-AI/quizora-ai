@@ -14,7 +14,6 @@ import { LegalContentWrapper } from "@/components/LegalContentWrapper";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { TokenPanel } from "@/components/TokenPanel";
 
 const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
   const [appState, setAppState] = useState<number>(0);
@@ -136,6 +135,8 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
   };
 
   const renderContent = () => {
+    console.log("Rendering content for path:", location.pathname, "with appState:", appState);
+    
     if (location.pathname === "/legal") {
       return <LegalContentWrapper />;
     }
@@ -147,7 +148,6 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.2 }}
           key="quiz-flow"
-          className="pt-[120px]"
         >
           <div className="flex items-center mb-4">
             <Button 
@@ -171,11 +171,9 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
       );
     }
     
-    const showTabs = ["/quiz", "/flashcards", "/history", "/settings"].includes(location.pathname);
-    
     return (
       <>
-        {showTabs && <TabNavigation onQuizGenerated={handleQuizGenerated} />}
+        <TabNavigation onQuizGenerated={handleQuizGenerated} />
         
         <AnimatePresence mode="wait">
           {location.pathname === "/quiz" && (
@@ -185,7 +183,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.2 }}
               key="generate-content"
-              className="w-full pt-[120px]"
+              className="w-full mt-4 mb-16"
             >
               <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading Quiz Generator...</div>}>
                 <QuizGenerator onQuizGenerated={handleQuizGenerated} />
@@ -200,7 +198,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.2 }}
               key="flashcards-content"
-              className="w-full pt-[120px] mb-16"
+              className="w-full mt-4 mb-16"
             >
               <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading Flashcards...</div>}>
                 <FlashcardsFlow onBackToCreate={() => navigate('/quiz')} />
@@ -215,7 +213,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.2 }}
               key="history-content"
-              className="w-full mt-4 mb-16 pt-[112px]"
+              className="w-full mt-4 mb-16"
             >
               <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading History...</div>}>
                 <QuizHistory />
@@ -230,25 +228,10 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.2 }}
               key="settings-content"
-              className="w-full mt-4 mb-16 pt-[112px]"
+              className="w-full mt-4 mb-16"
             >
               <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading Settings...</div>}>
                 <SettingsPanel />
-              </Suspense>
-            </motion.div>
-          )}
-
-          {location.pathname === "/tokens" && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              transition={{ duration: 0.2 }}
-              key="tokens-content"
-              className="w-full mt-4 mb-16"
-            >
-              <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading Token System...</div>}>
-                <TokenPanel />
               </Suspense>
             </motion.div>
           )}
@@ -259,15 +242,22 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background/90 flex flex-col">
-      <div className="fixed top-0 left-0 right-0 z-30">
-        <Header />
-      </div>
-      <main className="flex-1 px-4 py-2 pb-28">
+      <Header />
+      <main className="flex-1 px-4 py-8 pb-28">
         <AnimatePresence mode="wait">
           {renderContent()}
         </AnimatePresence>
       </main>
       
+      {(location.pathname === "/flashcards" || 
+        location.pathname === "/history" || 
+        location.pathname === "/settings" || 
+        location.pathname === "/quiz") && appState !== 1 && (
+        <div className="fixed bottom-0 left-0 right-0 z-40">
+          <TabNavigation onQuizGenerated={handleQuizGenerated} />
+        </div>
+      )}
+
       <Dialog open={showQuizResumeDialog} onOpenChange={setShowQuizResumeDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
