@@ -1,4 +1,3 @@
-
 import { Question } from "@/components/FileUpload";
 import { Flashcard } from "@/components/Flashcards/FlashcardsGenerator";
 
@@ -8,7 +7,8 @@ const STORAGE_KEYS = {
   QUIZ_IN_PROGRESS: 'quizInProgress',
   FLASHCARDS_HISTORY: 'flashcardsHistory',
   CURRENT_FLASHCARD_SET: 'currentFlashcardSet',
-  USER_SETTINGS: 'userSettings'
+  USER_SETTINGS: 'userSettings',
+  HAS_VISITED_BEFORE: 'hasVisitedBefore'
 } as const;
 
 // Event listener to track synchronized state between tabs/windows
@@ -26,6 +26,15 @@ const setupStorageSyncListener = () => {
 if (typeof window !== 'undefined') {
   setupStorageSyncListener();
 }
+
+// Auth related functions
+export const markFirstVisit = () => {
+  localStorage.setItem(STORAGE_KEYS.HAS_VISITED_BEFORE, 'true');
+};
+
+export const hasVisitedBefore = () => {
+  return localStorage.getItem(STORAGE_KEYS.HAS_VISITED_BEFORE) === 'true';
+};
 
 // Quiz related functions
 export const saveQuizToHistory = (quiz: any) => {
