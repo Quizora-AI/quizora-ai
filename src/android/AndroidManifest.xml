@@ -6,6 +6,7 @@
     <!-- Permissions -->
     <uses-permission android:name="com.android.vending.BILLING" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
 
     <application
         android:allowBackup="true"
@@ -15,10 +16,21 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <!-- AdMob App ID -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-8270549953677995~3236753992" />
+
+        <!-- Google Play Billing Library Version -->
+        <meta-data
+            android:name="com.google.android.play.billingclient.version"
+            android:value="7.1.1" />
+
         <!-- Main Activity -->
         <activity 
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|uiMode|screenSize|smallestScreenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -29,11 +41,6 @@
         <activity 
             android:name=".billing.BillingActivity"
             android:exported="false" />
-
-        <!-- Metadata for Play Billing -->
-        <meta-data
-            android:name="com.google.android.play.billingclient.version"
-            android:value="7.1.1" />
 
     </application>
 

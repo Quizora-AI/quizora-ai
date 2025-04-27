@@ -87,11 +87,10 @@ function resetAppData() {
 function App() {
   useEffect(() => {
     const initializePlugins = () => {
-      console.log("Checking for Cordova and initializing plugins if available");
+      console.log("Checking for Cordova and initializing plugins");
       
       if ('cordova' in window) {
         console.log("Cordova detected, setting up event listeners");
-        
         document.addEventListener('deviceready', onDeviceReady, false);
       } else {
         console.log("Running in browser environment, skipping native plugins initialization");
@@ -101,11 +100,21 @@ function App() {
     const onDeviceReady = () => {
       console.log("Device is ready, initializing plugins");
       
-      // Initialize AdMob
-      initializeAdMob();
+      // Initialize AdMob with proper initialization
+      if ((window as any).MobileAds) {
+        console.log("Initializing AdMob SDK");
+        (window as any).MobileAds.initialize()
+          .then(() => {
+            console.log("AdMob SDK initialized successfully");
+            initializeAdMob(); // This will set up the actual ad units
+          })
+          .catch((error: any) => {
+            console.error("Error initializing AdMob SDK:", error);
+          });
+      }
       
-      // Initialize Google Play Billing immediately
-      if ((window as any).cordova && (window as any).cordova.plugins && (window as any).cordova.plugins.PlayBilling) {
+      // Initialize Play Billing immediately
+      if ((window as any).cordova?.plugins?.PlayBilling) {
         console.log("Initializing Play Billing");
         (window as any).cordova.plugins.PlayBilling.connect(
           () => console.log("Play Billing connected"),
