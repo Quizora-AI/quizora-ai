@@ -7,11 +7,42 @@ import { DeleteAccountSection } from "./profile/DeleteAccountSection";
 import { useProfile } from "@/hooks/useProfile";
 import { LogoutButton } from "./profile/LogoutButton";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 export function ProfileTab() {
-  const { profile, loading } = useProfile();
+  const { profile, loading, fetchProfile } = useProfile();
+  const { toast } = useToast();
+  const navigate = useNavigate();
   
   console.log("ProfileTab render - loading:", loading, "profile:", profile);
+
+  // Check authentication status when component mounts
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      console.log("Current auth session in ProfileTab:", data?.session);
+      
+      if (!data?.session) {
+        toast({
+          variant: "destructive", 
+          title: "Not authenticated",
+          description: "Please sign in to view your profile"
+        });
+        navigate("/auth");
+      } else {
+        // Refresh profile data if we're authenticated but have no profile
+        if (!loading && !profile) {
+          console.log("Authenticated but no profile, refreshing...");
+          fetchProfile();
+        }
+      }
+    };
+    
+    checkAuth();
+  }, []);
 
   return (
     <motion.div
@@ -43,13 +74,25 @@ export function ProfileTab() {
                 </div>
               </div>
             </>
-          ) : (
+          ) : profile ? (
             <>
               <AvatarSection profile={profile} />
               <ProfileForm profile={profile} />
               <LogoutButton />
               <DeleteAccountSection profile={profile} />
             </>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">
+                Unable to load profile data. Please try signing in again.
+              </p>
+              <button 
+                onClick={fetchProfile}
+                className="mt-4 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
+              >
+                Retry
+              </button>
+            </div>
           )}
         </CardContent>
       </Card>

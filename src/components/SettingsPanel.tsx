@@ -10,6 +10,7 @@ import { PremiumPanel } from "./PremiumPanel";
 import { AnalyticsPanel } from "./AnalyticsPanel";
 import { LegalPanel } from "./LegalPanel";
 import { ProfileTab } from "./ProfileTab";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UserSettings {
   course: string;
@@ -39,6 +40,36 @@ export function SettingsPanel() {
   const [quizHistory, setQuizHistory] = useState<any[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
+  
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        console.log("SettingsPanel: Checking auth status...");
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Auth error:", error);
+          throw error;
+        }
+
+        if (!data?.session) {
+          console.log("User not authenticated, redirecting to auth page");
+          toast({
+            title: "Authentication required",
+            description: "Please sign in to access settings",
+            variant: "destructive"
+          });
+          navigate('/auth');
+        } else {
+          console.log("User is authenticated:", data.session.user.id);
+        }
+      } catch (err) {
+        console.error("Error checking authentication:", err);
+      }
+    };
+    
+    checkAuth();
+  }, [navigate, toast]);
   
   useEffect(() => {
     try {

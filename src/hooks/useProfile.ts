@@ -19,9 +19,15 @@ export function useProfile() {
   const fetchProfile = async () => {
     try {
       setLoading(true);
+      console.log("Fetching profile...");
       
       // Get the current user
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error("Error fetching auth user:", userError);
+        throw userError;
+      }
       
       if (!user) {
         console.log("No authenticated user found");
@@ -29,7 +35,7 @@ export function useProfile() {
         return;
       }
       
-      console.log("Auth user found:", user.id);
+      console.log("Auth user found:", user.id, user.email);
 
       // Check if profile exists
       const { data, error } = await supabase
@@ -37,6 +43,8 @@ export function useProfile() {
         .select('*')
         .eq('id', user.id)
         .maybeSingle();
+
+      console.log("Profile fetch response:", { data, error });
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching profile:', error);
@@ -88,7 +96,41 @@ export function useProfile() {
   };
 
   useEffect(() => {
-    fetchProfile();
+    // Check if we're on a page that needs the profile data
+    const checkAndFetchProfile = async () => {
+      // Get session to check if user is authenticated
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log("Current session:", sessionData?.session);
+      
+      if (sessionData?.session) {
+        fetchProfile();
+      } else {
+        console.log("No active session, skipping profile fetch");
+        setLoading(false);
+      }
+    };
+    
+    checkAndFetchProfile();
+  }, []);
+
+  // Add listener for auth state changes
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth state changed:", event, session?.user?.id);
+      
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        // Only call fetchProfile on next tick to avoid Supabase auth deadlocks
+        setTimeout(() => {
+          fetchProfile();
+        }, 0);
+      } else if (event === 'SIGNED_OUT') {
+        setProfile(null);
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   return {

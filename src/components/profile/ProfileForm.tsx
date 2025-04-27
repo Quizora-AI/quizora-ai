@@ -24,12 +24,16 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     
     setIsUpdating(true);
     try {
+      console.log("Updating profile with name:", name);
       const { error } = await supabase
         .from('profiles')
         .update({ name })
         .eq('id', profile.id);
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating profile:', error);
+        throw error;
+      }
       
       toast({
         title: "Profile updated",
