@@ -1,8 +1,8 @@
-# Quizora AI
+# Welcome to your Lovable project
 
 ## Project info
 
-**URL**: https://quizora-ai.lovable.app
+**URL**: https://lovable.dev/projects/bc56d890-e79e-4cfe-a636-2c9d1bb3bc37
 
 ## How can I edit this code?
 

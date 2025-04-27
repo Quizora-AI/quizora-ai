@@ -1,3 +1,4 @@
+
 import { Question } from "@/components/FileUpload";
 import { Flashcard } from "@/components/Flashcards/FlashcardsGenerator";
 
@@ -237,16 +238,4 @@ export const syncDataWithStorage = () => {
   });
   
   return data;
-};
-
-// Add this new function at the end of the file
-export const clearAllData = () => {
-  try {
-    localStorage.clear();
-    console.log("App data has been reset. Fresh start!");
-    return true;
-  } catch (error) {
-    console.error('Error clearing data:', error);
-    return false;
-  }
 };

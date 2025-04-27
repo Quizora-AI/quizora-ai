@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import { Toaster as ToastUIToaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
@@ -10,17 +11,16 @@ import LandingPage from "./pages/LandingPage";
 import QuizReview from "./pages/QuizReview";
 import AuthPage from "./pages/AuthPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { initializeAdMob } from "./components/GoogleAds";
 import { supabase } from "./integrations/supabase/client";
-import { clearAllData } from "./utils/storageUtils";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: 30000,
+      staleTime: 30000, // 30 seconds
       meta: {
         errorHandler: (error: Error) => {
           console.error("Query error:", error);
@@ -30,83 +30,32 @@ const queryClient = new QueryClient({
   },
 });
 
-const AuthContext = React.createContext<{
-  session: any;
-  user: any;
-  loading: boolean;
-}>({
-  session: null,
-  user: null,
-  loading: true,
-});
-
-export const useAuth = () => React.useContext(AuthContext);
-
-const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [session, setSession] = useState<any>(null);
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+const AuthRoute = ({ element }) => {
+  const [session, setSession] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log("Auth state changed:", _event, session?.user?.email);
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setUser(session?.user || null);
       setLoading(false);
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("Got existing session:", session?.user?.email);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      setUser(session?.user || null);
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  return (
-    <AuthContext.Provider value={{ session, user, loading }}>
-      {children}
-    </AuthContext.Provider>
+  if (loading) return null;
+
+  return session ? (
+    <>{element}</>
+  ) : (
+    <Navigate to="/auth" replace />
   );
-};
-
-const AuthRoute = ({ element }: { element: React.ReactNode }) => {
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
-
-  if (loading) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  return user ? element : <Navigate to="/auth" replace />;
-};
-
-const ProtectedAuthPage = () => {
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
-  
-  useEffect(() => {
-    if (!loading && user) {
-      console.log("User already logged in, redirecting to quiz");
-      navigate('/quiz', { replace: true });
-    }
-  }, [user, loading, navigate]);
-
-  if (loading) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  return !user ? <AuthPage /> : null;
 };
 
 const ToastCleaner = () => {
@@ -125,8 +74,14 @@ const ToastCleaner = () => {
   return null;
 };
 
+function resetAppData() {
+  localStorage.clear();
+  console.log("App data has been reset. Fresh start!");
+}
+
 function App() {
   useEffect(() => {
+    // Enhanced initialization for both AdMob and Play Billing
     const initializePlugins = () => {
       console.log("Checking for Cordova and initializing plugins");
       
@@ -141,16 +96,20 @@ function App() {
     const onDeviceReady = () => {
       console.log("Device is ready, initializing plugins");
       
+      // Initialize AdMob with improved configuration
       if ((window as any).MobileAds) {
         console.log("Initializing AdMob SDK");
         try {
+          // Force a delay to ensure device is fully ready
           setTimeout(() => {
             (window as any).MobileAds.initialize()
               .then(() => {
                 console.log("AdMob SDK initialized successfully");
+                // Re-initialize ad units
                 initializeAdMob();
                 console.log("AdMob integration complete - ads should display shortly");
                 
+                // Force refresh ads after initialization
                 if ((window as any).cordova?.plugins?.admob) {
                   console.log("Refreshing ad units");
                   (window as any).cordova.plugins.admob.banner.refresh();
@@ -167,16 +126,20 @@ function App() {
         console.warn("MobileAds not found - AdMob integration may be missing");
       }
       
+      // Initialize Play Billing with enhanced configuration
       if ((window as any).cordova?.plugins?.PlayBilling) {
         console.log("Initializing Play Billing");
         try {
+          // Force check for Play Billing before connection
           console.log("Checking Play Billing availability");
           
+          // Connect with enhanced parameters
           (window as any).cordova.plugins.PlayBilling.connect(
             () => {
               console.log("Play Billing connected successfully");
               console.log("Querying subscription products");
               
+              // Force product query on startup
               (window as any).cordova.plugins.PlayBilling.queryProducts(
                 (products: any) => {
                   console.log("Play Billing products available:", products);
@@ -208,32 +171,30 @@ function App() {
   }, []);
 
   React.useEffect(() => {
-    clearAllData();
+    resetAppData();
   }, []);
 
   return (
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <BrowserRouter>
-            <ToastCleaner />
-            <ToastUIToaster />
-            <SonnerToaster />
-            <Routes>
-              <Route path="/" element={<Navigate to="/landing" />} />
-              <Route path="/landing" element={<LandingPage />} />
-              <Route path="/auth" element={<ProtectedAuthPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-              <Route path="/quiz" element={<AuthRoute element={<Index initialTab="generate" />} />} />
-              <Route path="/flashcards" element={<AuthRoute element={<Index initialTab="flashcards" />} />} />
-              <Route path="/history" element={<AuthRoute element={<Index initialTab="history" />} />} />
-              <Route path="/history/:quizId" element={<AuthRoute element={<QuizReview />} />} />
-              <Route path="/settings" element={<AuthRoute element={<Index initialTab="settings" />} />} />
-              <Route path="/legal" element={<Index initialTab="generate" />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </AuthProvider>
+        <BrowserRouter>
+          <ToastCleaner />
+          <ToastUIToaster />
+          <SonnerToaster />
+          <Routes>
+            <Route path="/" element={<Navigate to="/landing" />} />
+            <Route path="/landing" element={<LandingPage />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/quiz" element={<AuthRoute element={<Index initialTab="generate" />} />} />
+            <Route path="/flashcards" element={<AuthRoute element={<Index initialTab="flashcards" />} />} />
+            <Route path="/history" element={<AuthRoute element={<Index initialTab="history" />} />} />
+            <Route path="/history/:quizId" element={<AuthRoute element={<QuizReview />} />} />
+            <Route path="/settings" element={<AuthRoute element={<Index initialTab="settings" />} />} />
+            <Route path="/legal" element={<Index initialTab="generate" />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
       </QueryClientProvider>
     </React.StrictMode>
   );
