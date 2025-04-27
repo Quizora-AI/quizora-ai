@@ -14,19 +14,19 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v2
       
     - name: Set up Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v2
       with:
-        node-version: '18'
+        node-version: '16'
         cache: 'yarn'
         
     - name: Install dependencies
       run: yarn install --frozen-lockfile
 
     - name: Set up JDK
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v2
       with:
         distribution: 'zulu'
         java-version: '11'
@@ -35,7 +35,7 @@ jobs:
       uses: android-actions/setup-android@v2
       
     - name: Cache Gradle packages
-      uses: actions/cache@v3
+      uses: actions/cache@v2
       with:
         path: |
           ~/.gradle/caches
@@ -74,7 +74,7 @@ jobs:
         
     # Upload AAB artifact
     - name: Upload AAB
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v2
       with:
         name: app-release-bundle
         path: android/app/build/outputs/bundle/release/app-release.aab
@@ -84,7 +84,7 @@ jobs:
       run: cd android && ./gradlew assembleRelease --no-daemon
         
     - name: Upload APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v2
       with:
         name: app-release-apk
         path: android/app/build/outputs/apk/release/app-release.apk
