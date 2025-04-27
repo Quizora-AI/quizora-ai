@@ -2,12 +2,24 @@
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Profile } from "@/hooks/useProfile";
 import { getRandomAvatar } from "@/utils/avatarUtils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface AvatarSectionProps {
   profile: Profile | null;
+  loading?: boolean;
 }
 
-export function AvatarSection({ profile }: AvatarSectionProps) {
+export function AvatarSection({ profile, loading = false }: AvatarSectionProps) {
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center space-y-4">
+        <Skeleton className="h-24 w-24 rounded-full" />
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-3 w-48" />
+      </div>
+    );
+  }
+  
   if (!profile) return null;
   
   return (
