@@ -1,4 +1,3 @@
-
 import { create } from "zustand";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -16,7 +15,7 @@ interface TokenState {
   refreshTokenBalance: () => Promise<void>;
 }
 
-export const useTokenStore = create<TokenState>((set, get) => ({
+export const useTokenStore = create<TokenState>()((set, get) => ({
   balance: 0,
   loading: false,
   error: null,
@@ -44,9 +43,9 @@ export const useTokenStore = create<TokenState>((set, get) => ({
 
       await get().refreshTokenBalance();
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating token balance:', error);
-      set({ error: error.message });
+      set({ error: error instanceof Error ? error.message : String(error) });
       return false;
     } finally {
       set({ loading: false });
