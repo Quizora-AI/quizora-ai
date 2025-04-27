@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
@@ -19,7 +19,7 @@ jobs:
         java-version: '11'
 
     - name: Set up Android SDK
-      uses: reactivecircus/android-sdk@v2
+      uses: android-actions/setup-android-sdk@v2  # Use a different setup action
       with:
         sdk-version: '30'  # Specify your required SDK version
         build-tools-version: '30.0.3'  # Specify build tools version
