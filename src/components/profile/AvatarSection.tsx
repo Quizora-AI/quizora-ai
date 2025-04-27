@@ -8,6 +8,8 @@ interface AvatarSectionProps {
 }
 
 export function AvatarSection({ profile }: AvatarSectionProps) {
+  if (!profile) return null;
+  
   return (
     <div className="flex flex-col items-center space-y-4">
       <Avatar className="h-24 w-24 border-2 border-primary/20 ring-2 ring-primary/10">

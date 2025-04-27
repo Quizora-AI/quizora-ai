@@ -6,13 +6,10 @@ import { ProfileForm } from "./profile/ProfileForm";
 import { DeleteAccountSection } from "./profile/DeleteAccountSection";
 import { useProfile } from "@/hooks/useProfile";
 import { LogoutButton } from "./profile/LogoutButton";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function ProfileTab() {
   const { profile, loading } = useProfile();
-
-  if (loading) {
-    return <div className="flex justify-center items-center p-8">Loading profile...</div>;
-  }
 
   return (
     <motion.div
@@ -26,10 +23,32 @@ export function ProfileTab() {
           <CardTitle>Profile</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <AvatarSection profile={profile} />
-          <ProfileForm profile={profile} />
-          <LogoutButton />
-          <DeleteAccountSection profile={profile} />
+          {loading ? (
+            <>
+              <div className="flex flex-col items-center space-y-4">
+                <Skeleton className="h-24 w-24 rounded-full" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-48" />
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <AvatarSection profile={profile} />
+              <ProfileForm profile={profile} />
+              <LogoutButton />
+              <DeleteAccountSection profile={profile} />
+            </>
+          )}
         </CardContent>
       </Card>
     </motion.div>
