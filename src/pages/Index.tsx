@@ -1,3 +1,4 @@
+
 import { useState, useEffect, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Question } from "@/components/FileUpload";
@@ -172,11 +173,12 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
       );
     }
     
+    // Show TabNavigation only for main app routes
+    const showTabs = ["/quiz", "/flashcards", "/history", "/settings"].includes(location.pathname);
+    
     return (
       <>
-        {["/quiz", "/flashcards", "/history", "/settings"].includes(location.pathname) && (
-          <TabNavigation onQuizGenerated={handleQuizGenerated} />
-        )}
+        {showTabs && <TabNavigation onQuizGenerated={handleQuizGenerated} />}
         
         <AnimatePresence mode="wait">
           {location.pathname === "/quiz" && (
@@ -261,21 +263,12 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background/90 flex flex-col">
       <Header />
-      <main className="flex-1 px-4 py-8 pb-28">
+      <main className="flex-1 px-4 py-2 pb-28">
         <AnimatePresence mode="wait">
           {renderContent()}
         </AnimatePresence>
       </main>
       
-      {(location.pathname === "/flashcards" || 
-        location.pathname === "/history" || 
-        location.pathname === "/settings" || 
-        location.pathname === "/quiz") && appState !== 1 && (
-        <div className="fixed bottom-0 left-0 right-0 z-40">
-          <TabNavigation onQuizGenerated={handleQuizGenerated} />
-        </div>
-      )}
-
       <Dialog open={showQuizResumeDialog} onOpenChange={setShowQuizResumeDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

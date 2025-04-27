@@ -8,8 +8,17 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useTokens } from "@/hooks/useTokens";
-import { Coins, Gift, Award, Share2, Star, RefreshCw, CheckCircle } from "lucide-react";
+import { Coins, Gift, Award, Share2, Star, RefreshCw, CheckCircle, Copy } from "lucide-react";
 import { BannerAd, useInterstitialAd } from "./GoogleAds";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+
+// Social sharing options
+interface ShareOption {
+  name: string;
+  icon: string;
+  color: string;
+  action: (code: string) => void;
+}
 
 export function TokenPanel() {
   const { toast } = useToast();
@@ -19,6 +28,7 @@ export function TokenPanel() {
   const [referralError, setReferralError] = useState("");
   const [dailyRewardStatus, setDailyRewardStatus] = useState<{ claimed: boolean, hoursRemaining?: number }>({ claimed: false });
   const [hasRated, setHasRated] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
 
   const { 
     tokenBalance, 
@@ -31,6 +41,49 @@ export function TokenPanel() {
     createReferralCode,
     checkReferralCode 
   } = useTokens();
+
+  const shareOptions: ShareOption[] = [
+    {
+      name: "WhatsApp",
+      icon: "🟢",
+      color: "bg-green-500",
+      action: (code) => {
+        const text = encodeURIComponent(`Try Quizora AI app! Use my referral code ${code} to get 5 free tokens: https://play.google.com/store/apps/details?id=com.quizora.ai`);
+        window.open(`https://wa.me/?text=${text}`, '_blank');
+      }
+    },
+    {
+      name: "Telegram",
+      icon: "📘",
+      color: "bg-blue-500",
+      action: (code) => {
+        const text = encodeURIComponent(`Try Quizora AI app! Use my referral code ${code} to get 5 free tokens: https://play.google.com/store/apps/details?id=com.quizora.ai`);
+        window.open(`https://t.me/share/url?url=https://play.google.com/store/apps/details?id=com.quizora.ai&text=${text}`, '_blank');
+      }
+    },
+    {
+      name: "Instagram",
+      icon: "📸",
+      color: "bg-purple-500",
+      action: (code) => {
+        navigator.clipboard.writeText(`Try Quizora AI app! Use my referral code ${code} to get 5 free tokens: https://play.google.com/store/apps/details?id=com.quizora.ai`);
+        toast({
+          title: "Caption Copied",
+          description: "Instagram sharing text copied to clipboard. Paste in Instagram.",
+        });
+      }
+    },
+    {
+      name: "Email",
+      icon: "📧",
+      color: "bg-gray-500",
+      action: (code) => {
+        const subject = encodeURIComponent("Try Quizora AI app!");
+        const body = encodeURIComponent(`Use my referral code ${code} to get 5 free tokens: https://play.google.com/store/apps/details?id=com.quizora.ai`);
+        window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+      }
+    }
+  ];
 
   const { showInterstitial } = useInterstitialAd({
     adUnitId: "ca-app-pub-8270549953677995/1430802017",
@@ -60,6 +113,8 @@ export function TokenPanel() {
           } else {
             setDailyRewardStatus({ claimed: false });
           }
+        } else {
+          setDailyRewardStatus({ claimed: false });
         }
       }
     };
@@ -86,10 +141,19 @@ export function TokenPanel() {
           setTimeout(async () => {
             // Add token only after ad is completed
             await addTokens(1, "Watched a rewarded ad");
+            setIsAdLoading(false);
           }, 3000); // Wait for ad to complete
+        } else {
+          setIsAdLoading(false);
+          toast({
+            title: "Ad Not Available",
+            description: "Unable to load ad right now. Please try again later.",
+            variant: "destructive",
+          });
         }
       } catch (error) {
         console.error("Error showing rewarded ad:", error);
+        setIsAdLoading(false);
         toast({
           title: "Ad Error",
           description: "There was an error displaying the ad. Please try again later.",
@@ -101,6 +165,10 @@ export function TokenPanel() {
       setTimeout(async () => {
         await addTokens(1, "Watched a rewarded ad (simulated)");
         setIsAdLoading(false);
+        toast({
+          title: "Token Earned!",
+          description: "You received 1 token for watching an ad.",
+        });
       }, 2000);
     }
   };
@@ -115,7 +183,7 @@ export function TokenPanel() {
     }
     
     // Open Play Store URL
-    const playStoreUrl = "https://play.google.com/store/apps/details?id=app.lovable.quizora";
+    const playStoreUrl = "https://play.google.com/store/apps/details?id=com.quizora.ai";
     
     if (typeof window !== 'undefined') {
       // Open in new tab/window
@@ -125,6 +193,10 @@ export function TokenPanel() {
       const result = await markAppRated();
       if (result.success) {
         setHasRated(true);
+        toast({
+          title: "Thanks for Rating!",
+          description: "You've received 5 tokens for rating our app.",
+        });
       }
     }
   };
@@ -152,6 +224,12 @@ export function TokenPanel() {
           title: "Already Claimed",
           description: `You've already claimed your daily reward. Come back in ${result.hoursRemaining} hours.`,
         });
+      } else {
+        toast({
+          title: "Reward Error",
+          description: result.reason || "Couldn't claim reward. Please try again later.",
+          variant: "destructive",
+        });
       }
     }
   };
@@ -160,6 +238,7 @@ export function TokenPanel() {
     const result = await createReferralCode();
     if (result.success) {
       setMyReferralCode(result.code);
+      setShowShareDialog(true);
       toast({
         title: "Referral Code Created!",
         description: "Share this code with friends. You'll get 10 tokens when they use it.",
@@ -261,7 +340,7 @@ export function TokenPanel() {
                 >
                   <div className="flex items-center gap-2">
                     <Gift className="h-5 w-5 text-primary" />
-                    <span>Watch Ad</span>
+                    <span>{isAdLoading ? "Loading Ad..." : "Watch Ad"}</span>
                   </div>
                   <div className="bg-primary/10 px-2 py-1 rounded-full">
                     <span className="text-xs font-bold text-primary">+1</span>
@@ -328,7 +407,14 @@ export function TokenPanel() {
                   </p>
                   <div className="flex gap-2">
                     <Input value={myReferralCode} readOnly className="font-mono" />
-                    <Button onClick={handleCopyReferralCode} variant="outline">Copy</Button>
+                    <Button onClick={handleCopyReferralCode} variant="outline">
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy
+                    </Button>
+                    <Button onClick={() => setShowShareDialog(true)} variant="default">
+                      <Share2 className="h-4 w-4 mr-2" />
+                      Share
+                    </Button>
                   </div>
                 </div>
               )}
@@ -375,6 +461,41 @@ export function TokenPanel() {
       <div className="mt-4">
         <BannerAd adUnitId="ca-app-pub-8270549953677995/2218567244" />
       </div>
+
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Share Your Referral Code</DialogTitle>
+            <DialogDescription>
+              Choose how you want to share your referral code with friends
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3 py-4">
+            {shareOptions.map((option) => (
+              <Button 
+                key={option.name}
+                variant="outline" 
+                className="flex-col h-24 py-6"
+                onClick={() => {
+                  option.action(myReferralCode);
+                  setShowShareDialog(false);
+                }}
+              >
+                <div className="text-2xl mb-2">{option.icon}</div>
+                <div className="text-sm font-medium">{option.name}</div>
+              </Button>
+            ))}
+          </div>
+          <DialogFooter className="sm:justify-center">
+            <Button 
+              variant="ghost" 
+              onClick={() => setShowShareDialog(false)}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }
