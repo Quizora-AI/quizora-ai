@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Coin } from 'lucide-react';
+import { Coins } from 'lucide-react';
 import { useTokens } from '@/hooks/useTokens';
 import { Button } from '@/components/ui/button';
 
@@ -45,7 +45,7 @@ export function TokenDisplay() {
         onClick={() => navigate('/tokens')}
       >
         <div className="bg-gradient-to-r from-amber-500 to-orange-600 rounded-full p-1.5 shadow-inner">
-          <Coin className="h-4 w-4 text-white" />
+          <Coins className="h-4 w-4 text-white" />
         </div>
         <span className="font-medium text-sm">{tokenBalance}</span>
       </Button>

@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useTokens } from "@/hooks/useTokens";
-import { Coin, Gift, Award, Share2, Star, RefreshCw, CheckCircle } from "lucide-react";
+import { Coins, Gift, Award, Share2, Star, RefreshCw, CheckCircle } from "lucide-react";
 import { BannerAd, useInterstitialAd } from "./GoogleAds";
 
 export function TokenPanel() {
@@ -213,7 +213,7 @@ export function TokenPanel() {
             className="flex items-center gap-3"
           >
             <div className="bg-primary/10 p-3 rounded-full">
-              <Coin className="h-6 w-6 text-primary" />
+              <Coins className="h-6 w-6 text-primary" />
             </div>
             <div className="flex-1">
               <CardTitle className="text-2xl font-bold">Token Wallet</CardTitle>
@@ -222,7 +222,7 @@ export function TokenPanel() {
               </CardDescription>
             </div>
             <div className="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-4 py-2 rounded-full flex items-center gap-2 shadow-lg">
-              <Coin className="h-5 w-5" />
+              <Coins className="h-5 w-5" />
               <span className="font-bold text-lg">{tokenBalance}</span>
             </div>
           </motion.div>
