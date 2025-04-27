@@ -19,10 +19,11 @@ jobs:
         java-version: '11'
 
     - name: Set up Android SDK
-      uses: reactivecircus/android-sdk@v2
+      uses: android-actions/setup-android-sdk@v2
       with:
-        api-level: 30
-        build-tools: 30.0.3
+        sdk-version: '30'
+        build-tools-version: '30.0.3'
+        android-licenses: yes
 
     - name: Install dependencies
       run: npm install
