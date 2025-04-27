@@ -147,7 +147,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.2 }}
           key="quiz-flow"
-          className="pt-[84px]"
+          className="pt-[104px]"
         >
           <div className="flex items-center mb-4">
             <Button 
@@ -185,7 +185,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.2 }}
               key="generate-content"
-              className="w-full mt-2 pt-[84px]"
+              className="w-full pt-[104px]"
             >
               <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading Quiz Generator...</div>}>
                 <QuizGenerator onQuizGenerated={handleQuizGenerated} />
