@@ -185,7 +185,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.2 }}
               key="generate-content"
-              className="w-full pt-[92px]"
+              className="w-full pt-[107px]"
             >
               <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading Quiz Generator...</div>}>
                 <QuizGenerator onQuizGenerated={handleQuizGenerated} />
@@ -200,7 +200,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.2 }}
               key="flashcards-content"
-              className="w-full pt-[92px] mb-16"
+              className="w-full pt-[107px] mb-16"
             >
               <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading Flashcards...</div>}>
                 <FlashcardsFlow onBackToCreate={() => navigate('/quiz')} />
