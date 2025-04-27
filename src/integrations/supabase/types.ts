@@ -48,15 +48,11 @@ export type Database = {
           course: string | null
           created_at: string | null
           email: string
-          free_flashcards_used: number
           free_quizzes_used: number | null
-          has_rated_app: boolean
           id: string
           isPremium: boolean | null
-          last_daily_reward: string | null
           last_login: string | null
           name: string | null
-          token_balance: number
           updated_at: string | null
         }
         Insert: {
@@ -64,15 +60,11 @@ export type Database = {
           course?: string | null
           created_at?: string | null
           email: string
-          free_flashcards_used?: number
           free_quizzes_used?: number | null
-          has_rated_app?: boolean
           id: string
           isPremium?: boolean | null
-          last_daily_reward?: string | null
           last_login?: string | null
           name?: string | null
-          token_balance?: number
           updated_at?: string | null
         }
         Update: {
@@ -80,15 +72,11 @@ export type Database = {
           course?: string | null
           created_at?: string | null
           email?: string
-          free_flashcards_used?: number
           free_quizzes_used?: number | null
-          has_rated_app?: boolean
           id?: string
           isPremium?: boolean | null
-          last_daily_reward?: string | null
           last_login?: string | null
           name?: string | null
-          token_balance?: number
           updated_at?: string | null
         }
         Relationships: []
@@ -139,63 +127,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      referrals: {
-        Row: {
-          completed_at: string | null
-          created_at: string | null
-          id: string
-          referral_code: string
-          referred_user_id: string | null
-          referrer_id: string
-          status: string
-        }
-        Insert: {
-          completed_at?: string | null
-          created_at?: string | null
-          id?: string
-          referral_code: string
-          referred_user_id?: string | null
-          referrer_id: string
-          status?: string
-        }
-        Update: {
-          completed_at?: string | null
-          created_at?: string | null
-          id?: string
-          referral_code?: string
-          referred_user_id?: string | null
-          referrer_id?: string
-          status?: string
-        }
-        Relationships: []
-      }
-      token_transactions: {
-        Row: {
-          amount: number
-          created_at: string | null
-          description: string | null
-          id: string
-          transaction_type: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          transaction_type: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          transaction_type?: string
-          user_id?: string
-        }
-        Relationships: []
       }
     }
     Views: {

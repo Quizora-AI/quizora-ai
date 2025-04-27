@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -14,7 +15,6 @@ import {
 } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { TokenDisplay } from "./TokenDisplay";
 
 export function Header() {
   const [mounted, setMounted] = useState(false);
@@ -22,9 +22,11 @@ export function Header() {
   const [isPremium, setIsPremium] = useState(false);
   const navigate = useNavigate();
   
+  // When the component mounts, set the mounted state to true
   useEffect(() => {
     setMounted(true);
     
+    // Check if there's a theme in localStorage
     const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
     if (savedTheme) {
       setTheme(savedTheme);
@@ -33,12 +35,14 @@ export function Header() {
       }
     }
 
+    // Check if user has premium subscription
     const checkPremiumStatus = () => {
       const userSettings = localStorage.getItem("userSettings");
       if (userSettings) {
         try {
           const settings = JSON.parse(userSettings);
           
+          // Check if premium and not expired
           if (settings.isPremium === true) {
             if (settings.expiryDate) {
               const expiryDate = new Date(settings.expiryDate);
@@ -47,8 +51,10 @@ export function Header() {
               if (expiryDate > now) {
                 setIsPremium(true);
               } else {
+                // Premium expired
                 setIsPremium(false);
                 
+                // Update localStorage to reflect expired premium
                 const updatedSettings = {
                   ...settings,
                   isPremium: false
@@ -70,7 +76,9 @@ export function Header() {
 
     checkPremiumStatus();
     
-    const intervalId = setInterval(checkPremiumStatus, 60000);
+    // Set up interval to regularly check premium status
+    const intervalId = setInterval(checkPremiumStatus, 60000); // Check every minute
+    
     return () => clearInterval(intervalId);
   }, []);
   
@@ -90,11 +98,12 @@ export function Header() {
     navigate('/settings?tab=premium');
   };
   
+  // Avoid rendering with the wrong theme while not mounted
   if (!mounted) return null;
   
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center">
+    <header className="w-full py-4 px-6 bg-white dark:bg-gray-900 border-b">
+      <div className="max-w-7xl mx-auto flex justify-between items-center">
         <motion.div 
           className="flex items-center"
           initial={{ opacity: 0, y: -10 }}
@@ -105,8 +114,7 @@ export function Header() {
           <div className="text-2xl font-light">AI</div>
         </motion.div>
         
-        <div className="flex items-center gap-4">
-          {!isPremium && <TokenDisplay />}
+        <div className="flex items-center space-x-2">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>

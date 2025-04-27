@@ -4,14 +4,13 @@ import { Toaster as ToastUIToaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import { ThemeProvider } from "next-themes";
+import { useToast } from "@/hooks/use-toast";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import LandingPage from "./pages/LandingPage";
 import QuizReview from "./pages/QuizReview";
 import AuthPage from "./pages/AuthPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
-import TokensPage from "./pages/TokensPage";
 import { useEffect } from "react";
 import { initializeAdMob } from "./components/GoogleAds";
 import { supabase } from "./integrations/supabase/client";
@@ -59,7 +58,22 @@ const AuthRoute = ({ element }) => {
   );
 };
 
-// Moved ToastCleaner inside the app render to ensure it has proper context
+const ToastCleaner = () => {
+  const { dismissAll } = useToast();
+  
+  React.useEffect(() => {
+    dismissAll();
+    
+    const interval = setInterval(() => {
+      dismissAll();
+    }, 10000);
+    
+    return () => clearInterval(interval);
+  }, [dismissAll]);
+  
+  return null;
+};
+
 function resetAppData() {
   localStorage.clear();
   console.log("App data has been reset. Fresh start!");
@@ -67,6 +81,7 @@ function resetAppData() {
 
 function App() {
   useEffect(() => {
+    // Enhanced initialization for both AdMob and Play Billing
     const initializePlugins = () => {
       console.log("Checking for Cordova and initializing plugins");
       
@@ -81,16 +96,20 @@ function App() {
     const onDeviceReady = () => {
       console.log("Device is ready, initializing plugins");
       
+      // Initialize AdMob with improved configuration
       if ((window as any).MobileAds) {
         console.log("Initializing AdMob SDK");
         try {
+          // Force a delay to ensure device is fully ready
           setTimeout(() => {
             (window as any).MobileAds.initialize()
               .then(() => {
                 console.log("AdMob SDK initialized successfully");
+                // Re-initialize ad units
                 initializeAdMob();
                 console.log("AdMob integration complete - ads should display shortly");
                 
+                // Force refresh ads after initialization
                 if ((window as any).cordova?.plugins?.admob) {
                   console.log("Refreshing ad units");
                   (window as any).cordova.plugins.admob.banner.refresh();
@@ -107,16 +126,20 @@ function App() {
         console.warn("MobileAds not found - AdMob integration may be missing");
       }
       
+      // Initialize Play Billing with enhanced configuration
       if ((window as any).cordova?.plugins?.PlayBilling) {
         console.log("Initializing Play Billing");
         try {
+          // Force check for Play Billing before connection
           console.log("Checking Play Billing availability");
           
+          // Connect with enhanced parameters
           (window as any).cordova.plugins.PlayBilling.connect(
             () => {
               console.log("Play Billing connected successfully");
               console.log("Querying subscription products");
               
+              // Force product query on startup
               (window as any).cordova.plugins.PlayBilling.queryProducts(
                 (products: any) => {
                   console.log("Play Billing products available:", products);
@@ -153,28 +176,26 @@ function App() {
 
   return (
     <React.StrictMode>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <QueryClientProvider client={queryClient}>
-          <BrowserRouter>
-            <ToastUIToaster />
-            <SonnerToaster />
-            <Routes>
-              <Route path="/" element={<Navigate to="/landing" />} />
-              <Route path="/landing" element={<LandingPage />} />
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-              <Route path="/quiz" element={<AuthRoute element={<Index initialTab="generate" />} />} />
-              <Route path="/flashcards" element={<AuthRoute element={<Index initialTab="flashcards" />} />} />
-              <Route path="/history" element={<AuthRoute element={<Index initialTab="history" />} />} />
-              <Route path="/history/:quizId" element={<AuthRoute element={<QuizReview />} />} />
-              <Route path="/settings" element={<AuthRoute element={<Index initialTab="settings" />} />} />
-              <Route path="/legal" element={<Index initialTab="generate" />} />
-              <Route path="/tokens" element={<AuthRoute element={<TokensPage />} />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </QueryClientProvider>
-      </ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <ToastCleaner />
+          <ToastUIToaster />
+          <SonnerToaster />
+          <Routes>
+            <Route path="/" element={<Navigate to="/landing" />} />
+            <Route path="/landing" element={<LandingPage />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/quiz" element={<AuthRoute element={<Index initialTab="generate" />} />} />
+            <Route path="/flashcards" element={<AuthRoute element={<Index initialTab="flashcards" />} />} />
+            <Route path="/history" element={<AuthRoute element={<Index initialTab="history" />} />} />
+            <Route path="/history/:quizId" element={<AuthRoute element={<QuizReview />} />} />
+            <Route path="/settings" element={<AuthRoute element={<Index initialTab="settings" />} />} />
+            <Route path="/legal" element={<Index initialTab="generate" />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </QueryClientProvider>
     </React.StrictMode>
   );
 }

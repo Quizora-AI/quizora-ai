@@ -5,8 +5,7 @@ import { Toaster as Sonner } from "sonner"
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  // Use a safe default if theme provider is not available
-  const { theme = "system" } = useTheme() || { theme: "system" }
+  const { theme = "system" } = useTheme()
 
   return (
     <Sonner
