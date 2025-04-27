@@ -174,7 +174,9 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
     
     return (
       <>
-        <TabNavigation onQuizGenerated={handleQuizGenerated} />
+        {["/quiz", "/flashcards", "/history", "/settings"].includes(location.pathname) && (
+          <TabNavigation onQuizGenerated={handleQuizGenerated} />
+        )}
         
         <AnimatePresence mode="wait">
           {location.pathname === "/quiz" && (

@@ -2,8 +2,7 @@
 import { useLocation } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { Question } from "@/components/FileUpload";
-import { Settings, Book, Sparkles, ListChecks, Coins } from "lucide-react";
-import { useTokens } from "@/hooks/useTokens";
+import { Settings, Book, Sparkles, ListChecks } from "lucide-react";
 
 interface NavTabProps {
   icon: React.ReactNode;
@@ -31,7 +30,6 @@ function NavTab({ icon, label, href, active }: NavTabProps) {
 export function TabNavigation({ onQuizGenerated }: { onQuizGenerated?: (questions: Question[]) => void }) {
   const location = useLocation();
   const pathname = location.pathname || "/";
-  const { isPremium } = useTokens();
 
   return (
     <div className="sticky top-[56px] z-10 bg-background/80 backdrop-blur-md border-b flex flex-col items-center pt-1 px-2">
@@ -54,16 +52,6 @@ export function TabNavigation({ onQuizGenerated }: { onQuizGenerated?: (question
           href="/history"
           active={pathname === "/history"}
         />
-
-        {!isPremium && (
-          <NavTab 
-            icon={<Coins className="h-4 w-4" />}
-            label="Tokens"
-            href="/tokens"
-            active={pathname === "/tokens"}
-          />
-        )}
-
         <NavTab
           icon={<Settings className="h-4 w-4" />}
           label="Settings"
