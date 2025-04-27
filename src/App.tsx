@@ -3,7 +3,7 @@ import * as React from 'react';
 import { Toaster as ToastUIToaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -11,126 +11,9 @@ import LandingPage from "./pages/LandingPage";
 import QuizReview from "./pages/QuizReview";
 import AuthPage from "./pages/AuthPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
-import { useEffect, useMemo, useState, createContext, useContext } from "react";
+import { useEffect } from "react";
 import { initializeAdMob } from "./components/GoogleAds";
 import { supabase } from "./integrations/supabase/client";
-import { resetAppData } from './utils/storageUtils';
-import { Session, User } from '@supabase/supabase-js';
-import { Loader2 } from 'lucide-react';
-
-// Define an authentication context to manage auth state
-type AuthContextType = {
-  session: Session | null;
-  user: User | null;
-  loading: boolean;
-  signOut: () => Promise<void>;
-};
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-};
-
-// Auth provider component to handle authentication state
-const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    // First set up the auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
-      console.log('Auth state changed:', event);
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      
-      if (event === 'SIGNED_IN') {
-        toast({
-          title: "Signed in successfully",
-          description: "Welcome back!",
-        });
-      } else if (event === 'SIGNED_OUT') {
-        toast({
-          title: "Signed out",
-          description: "You have been signed out successfully",
-        });
-      }
-    });
-
-    // Then check the current session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      console.log('Current session:', currentSession ? 'exists' : 'none');
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [toast]);
-
-  const signOut = async () => {
-    await supabase.auth.signOut();
-  };
-
-  const value = useMemo(() => ({
-    session,
-    user,
-    loading,
-    signOut
-  }), [session, user, loading]);
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
-
-// Protected route component for auth routes (redirects authenticated users away)
-const ProtectedAuthRoute: React.FC<{ element: React.ReactNode }> = ({ element }) => {
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    if (!loading && user && location.pathname === '/auth') {
-      navigate('/quiz');
-    }
-  }, [user, loading, navigate, location]);
-  
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-  
-  return <>{element}</>;
-};
-
-// Protected route component for app routes (redirects unauthenticated users to auth)
-const AuthRoute = ({ element }: { element: React.ReactNode }) => {
-  const { user, loading } = useAuth();
-  
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-  
-  return user ? <>{element}</> : <Navigate to="/auth" replace />;
-};
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -147,6 +30,34 @@ const queryClient = new QueryClient({
   },
 });
 
+const AuthRoute = ({ element }) => {
+  const [session, setSession] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (loading) return null;
+
+  return session ? (
+    <>{element}</>
+  ) : (
+    <Navigate to="/auth" replace />
+  );
+};
+
 const ToastCleaner = () => {
   const { dismissAll } = useToast();
   
@@ -162,6 +73,11 @@ const ToastCleaner = () => {
   
   return null;
 };
+
+function resetAppData() {
+  localStorage.clear();
+  console.log("App data has been reset. Fresh start!");
+}
 
 function App() {
   useEffect(() => {
@@ -254,8 +170,7 @@ function App() {
     };
   }, []);
 
-  // Used to reset app data for fresh start (do only once during development)
-  useEffect(() => {
+  React.useEffect(() => {
     resetAppData();
   }, []);
 
@@ -263,24 +178,22 @@ function App() {
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <AuthProvider>
-            <ToastCleaner />
-            <ToastUIToaster />
-            <SonnerToaster />
-            <Routes>
-              <Route path="/" element={<Navigate to="/landing" />} />
-              <Route path="/landing" element={<LandingPage />} />
-              <Route path="/auth" element={<ProtectedAuthRoute element={<AuthPage />} />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-              <Route path="/quiz" element={<AuthRoute element={<Index initialTab="generate" />} />} />
-              <Route path="/flashcards" element={<AuthRoute element={<Index initialTab="flashcards" />} />} />
-              <Route path="/history" element={<AuthRoute element={<Index initialTab="history" />} />} />
-              <Route path="/history/:quizId" element={<AuthRoute element={<QuizReview />} />} />
-              <Route path="/settings" element={<AuthRoute element={<Index initialTab="settings" />} />} />
-              <Route path="/legal" element={<Index initialTab="generate" />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AuthProvider>
+          <ToastCleaner />
+          <ToastUIToaster />
+          <SonnerToaster />
+          <Routes>
+            <Route path="/" element={<Navigate to="/landing" />} />
+            <Route path="/landing" element={<LandingPage />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/quiz" element={<AuthRoute element={<Index initialTab="generate" />} />} />
+            <Route path="/flashcards" element={<AuthRoute element={<Index initialTab="flashcards" />} />} />
+            <Route path="/history" element={<AuthRoute element={<Index initialTab="history" />} />} />
+            <Route path="/history/:quizId" element={<AuthRoute element={<QuizReview />} />} />
+            <Route path="/settings" element={<AuthRoute element={<Index initialTab="settings" />} />} />
+            <Route path="/legal" element={<Index initialTab="generate" />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </BrowserRouter>
       </QueryClientProvider>
     </React.StrictMode>
