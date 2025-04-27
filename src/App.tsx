@@ -14,6 +14,7 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { useEffect } from "react";
 import { initializeAdMob } from "./components/GoogleAds";
 import { supabase } from "./integrations/supabase/client";
+import { resetAppData } from "./utils/storageUtils";
 
 const queryClient = new QueryClient({
   defaultOptions: {

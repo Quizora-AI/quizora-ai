@@ -1,3 +1,4 @@
+
 import { Question } from "@/components/FileUpload";
 import { Flashcard } from "@/components/Flashcards/FlashcardsGenerator";
 
@@ -34,6 +35,19 @@ export const markFirstVisit = () => {
 
 export const hasVisitedBefore = () => {
   return localStorage.getItem(STORAGE_KEYS.HAS_VISITED_BEFORE) === 'true';
+};
+
+// Reset app data function
+export const resetAppData = () => {
+  try {
+    // Only clear specific app data, not auth-related data
+    clearData('QUIZ_IN_PROGRESS');
+    console.log("App data reset successfully");
+    return true;
+  } catch (error) {
+    console.error("Error resetting app data:", error);
+    return false;
+  }
 };
 
 // Quiz related functions
