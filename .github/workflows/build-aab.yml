@@ -1,86 +1,40 @@
-name: Build Android App Bundle
+name: Build and Deploy .aab
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-  # Allow manual triggering
-  workflow_dispatch:
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v2
-      
-    - name: Set up Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: '16'
-        cache: 'yarn'
-        
-    - name: Install dependencies
-      run: yarn install --frozen-lockfile
 
-    - name: Set up JDK
+    - name: Set up JDK 11
       uses: actions/setup-java@v2
       with:
-        distribution: 'zulu'
         java-version: '11'
-        
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v2
-      
-    # Note: We've removed the Gradle cache step due to compatibility issues
-    # But we can use a simple directory creation to ensure Gradle directories exist
-    - name: Create Gradle directories
-      run: |
-        mkdir -p ~/.gradle/caches
-        mkdir -p ~/.gradle/wrapper
-    - name: Make Gradlew Executable
-      run: cd android && chmod +x ./gradlew
-      
-    - name: Update Gradle wrapper
-      run: cd android && ./gradlew wrapper --gradle-version=7.6
-      
-    # Create local.properties with SDK location
-    - name: Create local.properties
-      run: |
-        echo "sdk.dir=$ANDROID_HOME" > android/local.properties
-        
-    # Check keystore existence and create if needed
-    - name: Setup Keystore
-      env:
-        KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        KEY_PROPERTIES: ${{ secrets.KEY_PROPERTIES }}
-      run: |
-        if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEY_PROPERTIES" ]; then
-          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
-          echo "$KEY_PROPERTIES" > android/key.properties
-        else
-          echo "Warning: Keystore secrets not found. Building with debug configuration."
-        fi
-        
-    # Build Release AAB
-    - name: Build Android App Bundle
-      run: cd android && ./gradlew bundleRelease --no-daemon
-        
-    # Upload AAB artifact
-    - name: Upload AAB
-      uses: actions/upload-artifact@v2
+
+    - name: Set up Android SDK
+      uses: reactivecircus/android-sdk@v2
       with:
-        name: app-release-bundle
+        sdk-version: '30'  # Specify your required SDK version
+        build-tools-version: '30.0.3'  # Specify build tools version
+        android-licenses: yes  # Accept Android SDK licenses
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Build .aab file
+      run: |
+        cd android
+        ./gradlew bundleRelease
+
+    - name: Upload .aab file as artifact
+      uses: actions/upload-artifact@v3  # Updated to v3 for compatibility
+      with:
+        name: app-release-aab
         path: android/app/build/outputs/bundle/release/app-release.aab
-        
-    # Optional: Upload APK for testing
-    - name: Build APK for testing
-      run: cd android && ./gradlew assembleRelease --no-daemon
-        
-    - name: Upload APK
-      uses: actions/upload-artifact@v2
-      with:
-        name: app-release-apk
-        path: android/app/build/outputs/apk/release/app-release.apk
