@@ -32,6 +32,7 @@ export const useTokenStore = create<TokenState>((set, get) => ({
         throw new Error("User not authenticated");
       }
 
+      // Using rpc with typed parameters
       const { error } = await supabase.rpc('update_token_balance', {
         p_user_id: user.id,
         p_amount: amount,
