@@ -239,3 +239,20 @@ export const syncDataWithStorage = () => {
   
   return data;
 };
+
+// Added function to reset all app data
+export const resetAppData = () => {
+  try {
+    Object.values(STORAGE_KEYS).forEach(key => {
+      localStorage.removeItem(key);
+    });
+    console.log("All app data has been reset. Fresh start!");
+    return true;
+  } catch (error) {
+    console.error("Error resetting app data:", error);
+    return false;
+  }
+};
+
+// Added function to clear all data - alias for resetAppData
+export const clearAllData = resetAppData;

@@ -19,11 +19,13 @@ const QuizTaking = ({
 }: QuizTakingProps) => {
   const { toast } = useToast();
   const [startTime, setStartTime] = useState<Date>(new Date());
+  const [keyPrefix, setKeyPrefix] = useState<string>(`q-${Date.now()}`);
   
-  // Reset the timer whenever the question changes
+  // Reset the timer and key prefix whenever the question changes
   useEffect(() => {
     const now = new Date();
     setStartTime(now);
+    setKeyPrefix(`q-${question.id}-${currentQuestionNumber}-${Date.now()}`);
     console.log(`Started timer for question ${currentQuestionNumber} at ${now.toISOString()}`);
   }, [currentQuestionNumber, question]);
 
@@ -38,6 +40,7 @@ const QuizTaking = ({
 
   return (
     <QuizQuestion
+      key={keyPrefix}
       question={question}
       onNext={handleNextQuestion}
       currentQuestionNumber={currentQuestionNumber}
