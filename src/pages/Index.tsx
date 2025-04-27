@@ -1,4 +1,3 @@
-
 import { useState, useEffect, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Question } from "@/components/FileUpload";
@@ -137,8 +136,6 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
   };
 
   const renderContent = () => {
-    console.log("Rendering content for path:", location.pathname, "with appState:", appState);
-    
     if (location.pathname === "/legal") {
       return <LegalContentWrapper />;
     }
@@ -150,7 +147,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.2 }}
           key="quiz-flow"
-          className="pt-[112px]"
+          className="pt-[84px]"
         >
           <div className="flex items-center mb-4">
             <Button 
@@ -174,7 +171,6 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
       );
     }
     
-    // Show TabNavigation only for main app routes
     const showTabs = ["/quiz", "/flashcards", "/history", "/settings"].includes(location.pathname);
     
     return (
@@ -189,7 +185,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.2 }}
               key="generate-content"
-              className="w-full mt-4 mb-16 pt-[112px]"
+              className="w-full mt-2 pt-[84px]"
             >
               <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading Quiz Generator...</div>}>
                 <QuizGenerator onQuizGenerated={handleQuizGenerated} />
