@@ -47,7 +47,7 @@ jobs:
         ./gradlew bundleRelease
 
     - name: Upload .aab file as artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v2
       with:
         name: app-release-aab
         path: android/app/build/outputs/bundle/release/app-release.aab
