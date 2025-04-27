@@ -87,7 +87,7 @@ export function FlashcardsGenerator({ onFlashcardsGenerated }: { onFlashcardsGen
       return;
     }
 
-    const canProceed = await useToken(1, 'flashcard');
+    const canProceed = await useToken(2, 'flashcard');
     if (!canProceed) {
       return;
     }

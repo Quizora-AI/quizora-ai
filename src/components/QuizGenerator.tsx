@@ -78,7 +78,7 @@ export function QuizGenerator({ onQuizGenerated }: { onQuizGenerated: (questions
   };
 
   const generateQuiz = async (data: QuizSettingsFormData) => {
-    const canProceed = await useToken(1, 'quiz');
+    const canProceed = await useToken(3, 'quiz'); // Update to 3 tokens
     if (!canProceed) {
       return;
     }

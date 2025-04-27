@@ -14,6 +14,7 @@ import { LegalContentWrapper } from "@/components/LegalContentWrapper";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { TokenPanel } from "@/components/TokenPanel";
 
 const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
   const [appState, setAppState] = useState<number>(0);
@@ -232,6 +233,21 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
             >
               <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading Settings...</div>}>
                 <SettingsPanel />
+              </Suspense>
+            </motion.div>
+          )}
+
+          {location.pathname === "/tokens" && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.2 }}
+              key="tokens-content"
+              className="w-full mt-4 mb-16"
+            >
+              <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading Token System...</div>}>
+                <TokenPanel />
               </Suspense>
             </motion.div>
           )}
