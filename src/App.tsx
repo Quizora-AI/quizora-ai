@@ -1,8 +1,9 @@
+
 import * as React from 'react';
 import { Toaster as ToastUIToaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -10,7 +11,7 @@ import LandingPage from "./pages/LandingPage";
 import QuizReview from "./pages/QuizReview";
 import AuthPage from "./pages/AuthPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { initializeAdMob } from "./components/GoogleAds";
 import { supabase } from "./integrations/supabase/client";
 import { TokenPanel } from "./components/TokenPanel";
@@ -31,15 +32,20 @@ const queryClient = new QueryClient({
 });
 
 const AuthRoute = ({ element }) => {
-  const [session, setSession] = React.useState(null);
-  const [loading, setLoading] = React.useState(true);
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Only check session on component mount, not on every location change
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
       setLoading(false);
-    });
+    };
+
+    checkSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
@@ -54,7 +60,7 @@ const AuthRoute = ({ element }) => {
   return session ? (
     <>{element}</>
   ) : (
-    <Navigate to="/auth" replace />
+    <Navigate to="/auth" state={{ from: location.pathname }} replace />
   );
 };
 
@@ -73,11 +79,6 @@ const ToastCleaner = () => {
   
   return null;
 };
-
-function resetAppData() {
-  localStorage.clear();
-  console.log("App data has been reset. Fresh start!");
-}
 
 function App() {
   useEffect(() => {
@@ -161,10 +162,6 @@ function App() {
     };
   }, []);
 
-  React.useEffect(() => {
-    resetAppData();
-  }, []);
-
   return (
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
@@ -182,7 +179,7 @@ function App() {
             <Route path="/history" element={<AuthRoute element={<Index initialTab="history" />} />} />
             <Route path="/history/:quizId" element={<AuthRoute element={<QuizReview />} />} />
             <Route path="/settings" element={<AuthRoute element={<Index initialTab="settings" />} />} />
-            <Route path="/tokens" element={<AuthRoute element={<Index initialTab="tokens" />} />} />
+            <Route path="/tokens" element={<AuthRoute element={<TokenPanel />} />} />
             <Route path="/legal" element={<Index initialTab="generate" />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -29,6 +29,9 @@ export function TokenPanel() {
   const [dailyRewardStatus, setDailyRewardStatus] = useState<{ claimed: boolean, hoursRemaining?: number }>({ claimed: false });
   const [hasRated, setHasRated] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+  const [isClaimingReward, setIsClaimingReward] = useState(false);
+  const [isLoadingRating, setIsLoadingRating] = useState(false);
 
   const { 
     tokenBalance, 
@@ -97,6 +100,9 @@ export function TokenPanel() {
       const profile = await checkTokenBalance();
       if (profile) {
         setHasRated(profile.has_rated_app);
+
+        // Check for existing referral code
+        checkForExistingReferralCode();
         
         // Check daily reward status
         if (profile.last_daily_reward) {
@@ -127,6 +133,25 @@ export function TokenPanel() {
     return null;
   }
 
+  const checkForExistingReferralCode = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: existingReferrals } = await supabase
+        .from('referrals')
+        .select('referral_code')
+        .eq('referrer_id', user.id)
+        .limit(1);
+
+      if (existingReferrals && existingReferrals.length > 0) {
+        setMyReferralCode(existingReferrals[0].referral_code);
+      }
+    } catch (error) {
+      console.error("Error checking for existing referral code:", error);
+    }
+  };
+
   const handleWatchAd = async () => {
     setIsAdLoading(true);
     
@@ -136,12 +161,16 @@ export function TokenPanel() {
         'admob' in (window as any).cordova.plugins) {
       
       try {
-        const shown = showInterstitial();
+        const shown = await showInterstitial();
         if (shown) {
           setTimeout(async () => {
             // Add token only after ad is completed
             await addTokens(1, "Watched a rewarded ad");
             setIsAdLoading(false);
+            toast({
+              title: "Ad Completed",
+              description: "You've earned 1 token for watching an ad.",
+            });
           }, 3000); // Wait for ad to complete
         } else {
           setIsAdLoading(false);
@@ -182,6 +211,8 @@ export function TokenPanel() {
       return;
     }
     
+    setIsLoadingRating(true);
+    
     // Open Play Store URL
     const playStoreUrl = "https://play.google.com/store/apps/details?id=com.quizora.ai";
     
@@ -191,6 +222,8 @@ export function TokenPanel() {
       
       // Mark as rated and award tokens
       const result = await markAppRated();
+      setIsLoadingRating(false);
+      
       if (result.success) {
         setHasRated(true);
         toast({
@@ -210,7 +243,11 @@ export function TokenPanel() {
       return;
     }
     
+    setIsClaimingReward(true);
+    
     const result = await claimDailyReward();
+    setIsClaimingReward(false);
+    
     if (result.success) {
       toast({
         title: "Daily Reward Claimed!",
@@ -235,13 +272,28 @@ export function TokenPanel() {
   };
 
   const handleCreateReferral = async () => {
+    if (myReferralCode) {
+      setShowShareDialog(true);
+      return;
+    }
+    
+    setIsGeneratingCode(true);
+    
     const result = await createReferralCode();
+    setIsGeneratingCode(false);
+    
     if (result.success) {
       setMyReferralCode(result.code);
       setShowShareDialog(true);
       toast({
         title: "Referral Code Created!",
         description: "Share this code with friends. You'll get 10 tokens when they use it.",
+      });
+    } else {
+      toast({
+        title: "Error Creating Code",
+        description: "Failed to create referral code. Please try again.",
+        variant: "destructive",
       });
     }
   };
@@ -281,7 +333,7 @@ export function TokenPanel() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="w-full max-w-4xl mx-auto"
+      className="w-full max-w-4xl mx-auto pt-[75px]"
     >
       <Card className="bg-card shadow-lg border border-primary/10">
         <CardHeader>
@@ -351,11 +403,13 @@ export function TokenPanel() {
                   onClick={handleRateApp} 
                   className="w-full flex justify-between items-center"
                   variant="outline"
-                  disabled={hasRated}
+                  disabled={hasRated || isLoadingRating}
                 >
                   <div className="flex items-center gap-2">
                     <Star className="h-5 w-5 text-amber-500" />
-                    <span>Rate App</span>
+                    <span>
+                      {isLoadingRating ? "Opening Store..." : hasRated ? "Already Rated" : "Rate App"}
+                    </span>
                     {hasRated && <CheckCircle className="h-4 w-4 text-green-500" />}
                   </div>
                   <div className="bg-primary/10 px-2 py-1 rounded-full">
@@ -367,14 +421,15 @@ export function TokenPanel() {
                   onClick={handleDailyReward} 
                   className="w-full flex justify-between items-center"
                   variant="outline"
-                  disabled={dailyRewardStatus.claimed}
+                  disabled={dailyRewardStatus.claimed || isClaimingReward}
                 >
                   <div className="flex items-center gap-2">
                     <RefreshCw className="h-5 w-5 text-blue-500" />
                     <span>
-                      {dailyRewardStatus.claimed 
-                        ? `Come back in ${dailyRewardStatus.hoursRemaining}h` 
-                        : "Daily Reward"}
+                      {isClaimingReward ? "Claiming..." : 
+                        dailyRewardStatus.claimed 
+                          ? `Come back in ${dailyRewardStatus.hoursRemaining}h` 
+                          : "Daily Reward"}
                     </span>
                     {dailyRewardStatus.claimed && <CheckCircle className="h-4 w-4 text-green-500" />}
                   </div>
@@ -395,9 +450,13 @@ export function TokenPanel() {
                   <p className="text-sm text-muted-foreground">
                     Create a referral code to share with friends. When they use your code, you'll get 10 tokens!
                   </p>
-                  <Button onClick={handleCreateReferral} className="w-full">
+                  <Button 
+                    onClick={handleCreateReferral} 
+                    className="w-full"
+                    disabled={isGeneratingCode}
+                  >
                     <Share2 className="h-4 w-4 mr-2" />
-                    Create Referral Code
+                    {isGeneratingCode ? "Creating Code..." : "Create Referral Code"}
                   </Button>
                 </div>
               ) : (

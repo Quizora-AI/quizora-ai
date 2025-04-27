@@ -15,14 +15,19 @@ function NavTab({ icon, label, href, active }: NavTabProps) {
   return (
     <Link
       to={href}
-      className={`flex-1 flex items-center justify-center gap-2 py-3 transition-colors text-sm font-medium
+      className={`flex-1 flex items-center justify-center gap-2 py-4 transition-all text-sm font-medium relative
         ${active
-          ? "bg-gradient-to-r from-primary/10 to-primary/20 text-primary border-b-2 border-primary"
-          : "hover:bg-secondary/30 text-muted-foreground hover:text-foreground/80"
+          ? "text-primary font-semibold"
+          : "text-muted-foreground hover:text-foreground/80"
         }`}
     >
-      {icon}
-      <span>{label}</span>
+      <div className="flex items-center gap-2">
+        {icon}
+        <span>{label}</span>
+      </div>
+      {active && (
+        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary/70"></div>
+      )}
     </Link>
   );
 }
@@ -33,7 +38,7 @@ export function TabNavigation({ onQuizGenerated }: { onQuizGenerated?: (question
 
   return (
     <div className="sticky top-[56px] z-10 bg-background/95 backdrop-blur-md shadow-sm flex flex-col items-center">
-      <div className="w-full max-w-screen-lg mx-auto flex overflow-x-auto">
+      <div className="w-full max-w-screen-lg mx-auto flex overflow-x-auto border-b border-border/40 bg-gradient-to-b from-background/80 to-background/100">
         <NavTab
           icon={<Sparkles className="h-4 w-4" />}
           label="Generate"

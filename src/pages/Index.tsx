@@ -150,6 +150,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.2 }}
           key="quiz-flow"
+          className="pt-[112px]"
         >
           <div className="flex items-center mb-4">
             <Button 
@@ -188,7 +189,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.2 }}
               key="generate-content"
-              className="w-full mt-4 mb-16"
+              className="w-full mt-4 mb-16 pt-[112px]"
             >
               <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading Quiz Generator...</div>}>
                 <QuizGenerator onQuizGenerated={handleQuizGenerated} />
@@ -203,7 +204,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.2 }}
               key="flashcards-content"
-              className="w-full mt-4 mb-16"
+              className="w-full mt-4 mb-16 pt-[112px]"
             >
               <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading Flashcards...</div>}>
                 <FlashcardsFlow onBackToCreate={() => navigate('/quiz')} />
@@ -218,7 +219,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.2 }}
               key="history-content"
-              className="w-full mt-4 mb-16"
+              className="w-full mt-4 mb-16 pt-[112px]"
             >
               <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading History...</div>}>
                 <QuizHistory />
@@ -233,7 +234,7 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.2 }}
               key="settings-content"
-              className="w-full mt-4 mb-16"
+              className="w-full mt-4 mb-16 pt-[112px]"
             >
               <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading Settings...</div>}>
                 <SettingsPanel />
@@ -262,7 +263,9 @@ const Index = ({ initialTab = "generate" }: { initialTab?: string }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background/90 flex flex-col">
-      <Header />
+      <div className="fixed top-0 left-0 right-0 z-30">
+        <Header />
+      </div>
       <main className="flex-1 px-4 py-2 pb-28">
         <AnimatePresence mode="wait">
           {renderContent()}

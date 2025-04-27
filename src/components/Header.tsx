@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -93,7 +94,7 @@ export function Header() {
   if (!mounted) return null;
   
   return (
-    <header className="w-full py-4 px-6 bg-white dark:bg-gray-900 border-b">
+    <header className="w-full py-4 px-6 bg-white dark:bg-gray-900 border-b shadow-sm">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         <motion.div 
           className="flex items-center"
