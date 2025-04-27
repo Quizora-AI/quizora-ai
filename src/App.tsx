@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 import { Toaster as ToastUIToaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
@@ -14,13 +13,14 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { useEffect } from "react";
 import { initializeAdMob } from "./components/GoogleAds";
 import { supabase } from "./integrations/supabase/client";
+import { clearAllData } from "./utils/storageUtils";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: 30000, // 30 seconds
+      staleTime: 30000,
       meta: {
         errorHandler: (error: Error) => {
           console.error("Query error:", error);
@@ -49,13 +49,44 @@ const AuthRoute = ({ element }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
-  return session ? (
-    <>{element}</>
-  ) : (
-    <Navigate to="/auth" replace />
-  );
+  return session ? element : <Navigate to="/auth" replace />;
+};
+
+const ProtectedAuthPage = () => {
+  const [session, setSession] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return session ? <Navigate to="/quiz" replace /> : <AuthPage />;
 };
 
 const ToastCleaner = () => {
@@ -74,14 +105,8 @@ const ToastCleaner = () => {
   return null;
 };
 
-function resetAppData() {
-  localStorage.clear();
-  console.log("App data has been reset. Fresh start!");
-}
-
 function App() {
   useEffect(() => {
-    // Enhanced initialization for both AdMob and Play Billing
     const initializePlugins = () => {
       console.log("Checking for Cordova and initializing plugins");
       
@@ -96,20 +121,16 @@ function App() {
     const onDeviceReady = () => {
       console.log("Device is ready, initializing plugins");
       
-      // Initialize AdMob with improved configuration
       if ((window as any).MobileAds) {
         console.log("Initializing AdMob SDK");
         try {
-          // Force a delay to ensure device is fully ready
           setTimeout(() => {
             (window as any).MobileAds.initialize()
               .then(() => {
                 console.log("AdMob SDK initialized successfully");
-                // Re-initialize ad units
                 initializeAdMob();
                 console.log("AdMob integration complete - ads should display shortly");
                 
-                // Force refresh ads after initialization
                 if ((window as any).cordova?.plugins?.admob) {
                   console.log("Refreshing ad units");
                   (window as any).cordova.plugins.admob.banner.refresh();
@@ -126,20 +147,16 @@ function App() {
         console.warn("MobileAds not found - AdMob integration may be missing");
       }
       
-      // Initialize Play Billing with enhanced configuration
       if ((window as any).cordova?.plugins?.PlayBilling) {
         console.log("Initializing Play Billing");
         try {
-          // Force check for Play Billing before connection
           console.log("Checking Play Billing availability");
           
-          // Connect with enhanced parameters
           (window as any).cordova.plugins.PlayBilling.connect(
             () => {
               console.log("Play Billing connected successfully");
               console.log("Querying subscription products");
               
-              // Force product query on startup
               (window as any).cordova.plugins.PlayBilling.queryProducts(
                 (products: any) => {
                   console.log("Play Billing products available:", products);
@@ -171,7 +188,7 @@ function App() {
   }, []);
 
   React.useEffect(() => {
-    resetAppData();
+    clearAllData();
   }, []);
 
   return (
@@ -184,7 +201,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/landing" />} />
             <Route path="/landing" element={<LandingPage />} />
-            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/auth" element={<ProtectedAuthPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/quiz" element={<AuthRoute element={<Index initialTab="generate" />} />} />
             <Route path="/flashcards" element={<AuthRoute element={<Index initialTab="flashcards" />} />} />
