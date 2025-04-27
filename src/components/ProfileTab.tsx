@@ -10,6 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function ProfileTab() {
   const { profile, loading } = useProfile();
+  
+  console.log("ProfileTab render - loading:", loading, "profile:", profile);
 
   return (
     <motion.div

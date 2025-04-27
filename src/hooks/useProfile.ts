@@ -19,14 +19,19 @@ export function useProfile() {
   const fetchProfile = async () => {
     try {
       setLoading(true);
+      
+      // Get the current user
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
+        console.log("No authenticated user found");
         setLoading(false);
         return;
       }
+      
+      console.log("Auth user found:", user.id);
 
-      // First check if profile exists
+      // Check if profile exists
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -40,6 +45,7 @@ export function useProfile() {
       
       // If no profile exists, create one
       if (!data || error?.code === 'PGRST116') {
+        console.log("No profile found, creating new profile");
         const randomAvatar = getRandomAvatar();
         const newProfile = {
           id: user.id,
@@ -57,9 +63,11 @@ export function useProfile() {
           throw insertError;
         }
         
+        console.log("New profile created:", newProfile);
         setProfile(newProfile);
       } else {
         // Profile exists, set it
+        console.log("Existing profile found:", data);
         setProfile({
           id: user.id,
           name: data?.name || user.user_metadata?.name || user.email?.split('@')[0] || '',
