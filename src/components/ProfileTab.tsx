@@ -43,7 +43,7 @@ export function ProfileTab() {
             </>
           ) : (
             <>
-              <AvatarSection profile={profile} />
+              <AvatarSection profile={profile} loading={loading} />
               <ProfileForm profile={profile} />
               <LogoutButton />
               <DeleteAccountSection profile={profile} />
