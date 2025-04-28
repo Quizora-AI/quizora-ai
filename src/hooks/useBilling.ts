@@ -1,244 +1,127 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { useToast } from './use-toast';
-import { SUBSCRIPTION_PRODUCTS } from '@/utils/purchaseConfig';
+import { useState, useEffect } from 'react';
+import BillingService from '../services/BillingService';
 
-interface BillingHook {
-  isReady: boolean;
-  isLoading: boolean;
-  error: string | null;
-  products: any[];
-  purchaseSubscription: (productId: string) => Promise<boolean>;
-  restorePurchases: () => Promise<boolean>;
+interface Product {
+  productId: string;
+  title: string;
+  description: string;
+  price: string;
+  type: string;
 }
 
-export function useBilling(): BillingHook {
+export function useBilling() {
   const [isReady, setIsReady] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [purchases, setPurchases] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [products, setProducts] = useState<any[]>([]);
-  const { toast } = useToast();
   
-  const hasNativeBilling = typeof window !== 'undefined' && 
-    'cordova' in window && 
-    'plugins' in (window as any) && 
-    'PlayBilling' in (window as any).cordova.plugins;
-  
+  // Initialize billing on component mount
   useEffect(() => {
-    if (hasNativeBilling) {
-      initializeBilling();
-    } else {
-      console.log('Native billing not available, running in web mode');
-      setIsReady(true);
-      // Load mock products for web testing
-      setProducts([
-        {
-          productId: SUBSCRIPTION_PRODUCTS.MONTHLY,
-          title: 'Monthly Premium',
-          description: 'Monthly Premium Subscription',
-          formattedPrice: '$2.49',
-          billingPeriod: 'P1M'
-        },
-        {
-          productId: SUBSCRIPTION_PRODUCTS.YEARLY,
-          title: 'Annual Premium',
-          description: 'Annual Premium Subscription',
-          formattedPrice: '$15.00',
-          billingPeriod: 'P1Y'
-        }
-      ]);
-    }
-  }, [hasNativeBilling]);
-  
-  const initializeBilling = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const PlayBilling = (window as any).cordova.plugins.PlayBilling;
-      
-      // Initialize the billing system with our subscription IDs
-      const subscriptionIds = [
-        SUBSCRIPTION_PRODUCTS.MONTHLY,
-        SUBSCRIPTION_PRODUCTS.YEARLY
-      ];
-      
-      console.log('Initializing Play Billing with subscriptions:', subscriptionIds);
-      
-      PlayBilling.initialize(
-        subscriptionIds,
-        () => {
-          console.log('PlayBilling initialized successfully');
-          setIsReady(true);
-          
-          // Query available products
-          PlayBilling.queryProducts(
-            (productList: any[]) => {
-              console.log('Products retrieved:', productList);
-              setProducts(productList);
-              setIsLoading(false);
-            },
-            (error: string) => {
-              console.error('Error querying products:', error);
-              setError('Failed to retrieve product information');
-              setIsLoading(false);
-            }
-          );
-        },
-        (error: string) => {
-          console.error('Error initializing PlayBilling:', error);
-          setError('Failed to initialize billing service');
-          setIsLoading(false);
-        }
-      );
-    } catch (error) {
-      console.error('Error initializing billing:', error);
-      setError('Failed to initialize billing service');
-      setIsLoading(false);
-    }
-  }, []);
-  
-  const purchaseSubscription = useCallback(async (productId: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      setIsLoading(true);
+    const initBilling = async () => {
+      setLoading(true);
       setError(null);
       
-      if (hasNativeBilling) {
-        try {
-          const PlayBilling = (window as any).cordova.plugins.PlayBilling;
-          console.log(`Initiating purchase flow for: ${productId}`);
-          
-          PlayBilling.purchase(
-            productId,
-            (purchase: any) => {
-              console.log('Purchase successful:', purchase);
-              setIsLoading(false);
-              toast({
-                title: "Purchase Successful",
-                description: "Your subscription is now active.",
-                variant: "success",
-              });
-              resolve(true);
-            },
-            (error: string) => {
-              console.error('Purchase failed:', error);
-              setError(`Purchase failed: ${error}`);
-              setIsLoading(false);
-              toast({
-                title: "Purchase Failed",
-                description: error || "There was an error processing your purchase.",
-                variant: "destructive"
-              });
-              resolve(false);
-            }
-          );
-        } catch (error: any) {
-          console.error('Error initiating purchase:', error);
-          setError(error?.message || 'Purchase failed');
-          setIsLoading(false);
-          toast({
-            title: "Purchase Error",
-            description: "There was a problem initiating the purchase.",
-            variant: "destructive"
-          });
-          resolve(false);
-        }
-      } else {
-        // Web fallback for testing
-        setTimeout(() => {
-          const success = Math.random() > 0.2;
-          
-          if (success) {
-            toast({
-              title: "Purchase Successful (Demo)",
-              description: "This is a simulated purchase for the web preview.",
-              variant: "success",
-            });
-            setIsLoading(false);
-            resolve(true);
-          } else {
-            setError('Simulated purchase failure');
-            toast({
-              title: "Purchase Failed (Demo)",
-              description: "This is a simulated failure for the web preview.",
-              variant: "destructive"
-            });
-            setIsLoading(false);
-            resolve(false);
-          }
-        }, 1500);
-      }
-    });
-  }, [hasNativeBilling, toast]);
-  
-  const restorePurchases = useCallback(async (): Promise<boolean> => {
-    return new Promise((resolve) => {
-      if (!hasNativeBilling) {
-        toast({
-          title: "Feature Unavailable",
-          description: "This feature is only available on mobile devices.",
-          variant: "default"
-        });
-        resolve(false);
-        return;
-      }
-      
-      setIsLoading(true);
-      
       try {
-        const PlayBilling = (window as any).cordova.plugins.PlayBilling;
+        const initialized = await BillingService.initialize();
+        setIsReady(initialized);
         
-        PlayBilling.restorePurchases(
-          (purchases: any[]) => {
-            console.log('Restored purchases:', purchases);
-            setIsLoading(false);
-            
-            if (purchases.length > 0) {
-              toast({
-                title: "Purchases Restored",
-                description: "Your subscription has been restored.",
-                variant: "success",
-              });
-              resolve(true);
-            } else {
-              toast({
-                title: "No Purchases Found",
-                description: "No previous subscriptions were found.",
-                variant: "default"
-              });
-              resolve(false);
-            }
-          },
-          (error: string) => {
-            console.error('Error restoring purchases:', error);
-            setError(`Restore failed: ${error}`);
-            setIsLoading(false);
-            toast({
-              title: "Restore Failed",
-              description: "Failed to restore previous purchases.",
-              variant: "destructive"
-            });
-            resolve(false);
-          }
-        );
-      } catch (error: any) {
-        console.error('Error restoring purchases:', error);
-        setError(error?.message || 'Restore failed');
-        setIsLoading(false);
-        toast({
-          title: "Restore Error",
-          description: "There was a problem restoring purchases.",
-          variant: "destructive"
-        });
-        resolve(false);
+        if (initialized) {
+          // Query initial purchases
+          const purchasesResult = await BillingService.getPurchases();
+          setPurchases(purchasesResult.purchases || []);
+        }
+      } catch (err: any) {
+        console.error('Error initializing billing:', err);
+        setError(err.message || 'Failed to initialize billing');
+      } finally {
+        setLoading(false);
       }
+    };
+    
+    initBilling();
+    
+    // Add purchase listener
+    const subscription = BillingService.addPurchaseListener((purchase) => {
+      console.log('Purchase updated:', purchase);
+      setPurchases(prev => {
+        // Update or add the purchase
+        const exists = prev.some(p => p.productId === purchase.productId);
+        if (exists) {
+          return prev.map(p => p.productId === purchase.productId ? purchase : p);
+        }
+        return [...prev, purchase];
+      });
     });
-  }, [hasNativeBilling, toast]);
+    
+    return () => {
+      if (subscription?.remove) {
+        subscription.remove();
+      }
+    };
+  }, []);
+  
+  // Function to get available products
+  const getProducts = async (productType: 'inapp' | 'subs', productIds: string[]) => {
+    if (!isReady) {
+      setError('Billing is not initialized');
+      return [];
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await BillingService.getProducts(productType, productIds);
+      setProducts(result.products || []);
+      return result.products || [];
+    } catch (err: any) {
+      console.error('Error getting products:', err);
+      setError(err.message || 'Failed to get products');
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Function to purchase a product
+  const purchaseProduct = async (productId: string, productType: 'inapp' | 'subs') => {
+    if (!isReady) {
+      setError('Billing is not initialized');
+      return false;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      return await BillingService.purchaseProduct(productId, productType);
+    } catch (err: any) {
+      console.error('Error purchasing product:', err);
+      setError(err.message || 'Failed to purchase product');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Function to check if a product is purchased
+  const isPurchased = (productId: string) => {
+    return purchases.some(p => 
+      p.productId === productId && 
+      p.purchaseState === 1 // PURCHASED state
+    );
+  };
   
   return {
     isReady,
-    isLoading,
-    error,
     products,
-    purchaseSubscription,
-    restorePurchases
+    purchases,
+    loading,
+    error,
+    getProducts,
+    purchaseProduct,
+    isPurchased
   };
 }
