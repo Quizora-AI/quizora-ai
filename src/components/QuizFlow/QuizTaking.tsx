@@ -1,7 +1,7 @@
 
 import { Question } from "../FileUpload";
 import { QuizQuestion } from "../QuizQuestion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 interface QuizTakingProps {
@@ -19,16 +19,19 @@ const QuizTaking = ({
 }: QuizTakingProps) => {
   const { toast } = useToast();
   const [startTime, setStartTime] = useState<Date>(new Date());
+  const startTimeRef = useRef<Date>(new Date());
   
   // Reset the timer whenever the question changes
   useEffect(() => {
-    setStartTime(new Date());
-    console.log(`Started timer for question ${currentQuestionNumber} at ${new Date().toISOString()}`);
+    const now = new Date();
+    setStartTime(now);
+    startTimeRef.current = now;
+    console.log(`Started timer for question ${currentQuestionNumber} at ${now.toISOString()}`);
   }, [currentQuestionNumber, question]);
 
   const handleNextQuestion = (selectedOption: number) => {
     const endTime = new Date();
-    const timeSpent = Math.round((endTime.getTime() - startTime.getTime()) / 1000);
+    const timeSpent = Math.round((endTime.getTime() - startTimeRef.current.getTime()) / 1000);
     console.log(`Question ${currentQuestionNumber} took ${timeSpent} seconds to answer`);
     
     // Pass both the selected option and time spent to the parent component

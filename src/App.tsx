@@ -11,7 +11,7 @@ import LandingPage from "./pages/LandingPage";
 import QuizReview from "./pages/QuizReview";
 import AuthPage from "./pages/AuthPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { initializeAdMob } from "./components/GoogleAds";
 import { supabase } from "./integrations/supabase/client";
 
@@ -80,6 +80,8 @@ function resetAppData() {
 }
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  
   useEffect(() => {
     // Enhanced initialization for both AdMob and Play Billing
     const initializePlugins = () => {
@@ -89,114 +91,53 @@ function App() {
         console.log("Cordova detected, setting up event listeners");
         document.addEventListener('deviceready', onDeviceReady, false);
       } else {
-        console.log("Running in browser environment");
+        console.log("Running in web environment - showing AdMob banner placeholder");
+        initializeAdMob();
       }
     };
     
     const onDeviceReady = () => {
-      console.log("Device is ready, initializing plugins");
-      
-      // Initialize AdMob with improved configuration
-      if ((window as any).MobileAds) {
-        console.log("Initializing AdMob SDK");
-        try {
-          // Force a delay to ensure device is fully ready
-          setTimeout(() => {
-            (window as any).MobileAds.initialize()
-              .then(() => {
-                console.log("AdMob SDK initialized successfully");
-                // Re-initialize ad units
-                initializeAdMob();
-                console.log("AdMob integration complete - ads should display shortly");
-                
-                // Force refresh ads after initialization
-                if ((window as any).cordova?.plugins?.admob) {
-                  console.log("Refreshing ad units");
-                  (window as any).cordova.plugins.admob.banner.refresh();
-                }
-              })
-              .catch((error: any) => {
-                console.error("Error initializing AdMob SDK:", error);
-              });
-          }, 1000);
-        } catch (error) {
-          console.error("Exception during AdMob initialization:", error);
-        }
-      } else {
-        console.warn("MobileAds not found - AdMob integration may be missing");
-      }
-      
-      // Initialize Play Billing with enhanced configuration
-      if ((window as any).cordova?.plugins?.PlayBilling) {
-        console.log("Initializing Play Billing");
-        try {
-          // Force check for Play Billing before connection
-          console.log("Checking Play Billing availability");
-          
-          // Connect with enhanced parameters
-          (window as any).cordova.plugins.PlayBilling.connect(
-            () => {
-              console.log("Play Billing connected successfully");
-              console.log("Querying subscription products");
-              
-              // Force product query on startup
-              (window as any).cordova.plugins.PlayBilling.queryProducts(
-                (products: any) => {
-                  console.log("Play Billing products available:", products);
-                },
-                (error: string) => {
-                  console.error("Error querying Play Billing products:", error);
-                }
-              );
-            },
-            (error: string) => {
-              console.error("Error connecting to Play Billing:", error);
-            }
-          );
-        } catch (error) {
-          console.error("Exception during Play Billing initialization:", error);
-        }
-      } else {
-        console.warn("PlayBilling plugin not found - subscription features may be unavailable");
-      }
+      console.log("Device ready event fired - initializing mobile plugins");
+      initializeAdMob();
     };
     
     initializePlugins();
     
+    // Check if user is authenticated
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsAuthenticated(!!session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
     return () => {
-      if ('cordova' in window) {
-        document.removeEventListener('deviceready', onDeviceReady);
-      }
+      subscription.unsubscribe();
     };
   }, []);
 
-  React.useEffect(() => {
-    resetAppData();
-  }, []);
+  // Show loading until auth state is determined
+  if (isAuthenticated === null) {
+    return <div>Loading...</div>;
+  }
 
   return (
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <ToastCleaner />
-          <ToastUIToaster />
-          <SonnerToaster />
-          <Routes>
-            <Route path="/" element={<Navigate to="/landing" />} />
-            <Route path="/landing" element={<LandingPage />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/quiz" element={<AuthRoute element={<Index initialTab="generate" />} />} />
-            <Route path="/flashcards" element={<AuthRoute element={<Index initialTab="flashcards" />} />} />
-            <Route path="/history" element={<AuthRoute element={<Index initialTab="history" />} />} />
-            <Route path="/history/:quizId" element={<AuthRoute element={<QuizReview />} />} />
-            <Route path="/settings" element={<AuthRoute element={<Index initialTab="settings" />} />} />
-            <Route path="/legal" element={<Index initialTab="generate" />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={isAuthenticated ? <LandingPage /> : <Navigate to="/auth" replace />} />
+          <Route path="/auth" element={isAuthenticated ? <Navigate to="/" replace /> : <AuthPage />} />
+          <Route path="/quiz" element={<AuthRoute element={<Index />} />} />
+          <Route path="/quiz/review" element={<AuthRoute element={<QuizReview />} />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        <ToastUIToaster />
+        <SonnerToaster />
+        <ToastCleaner />
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }
 

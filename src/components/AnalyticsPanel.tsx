@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -82,7 +81,6 @@ export function AnalyticsPanel({ isPremium, quizHistory, navigate }: AnalyticsPa
     );
   }
 
-  // Analyze quiz data
   const analytics = analyzeQuizData(quizHistory);
   const progressData = generateProgressData(quizHistory);
   const scoreDistribution = analyzeScoreDistribution(quizHistory);
@@ -400,69 +398,76 @@ export function AnalyticsPanel({ isPremium, quizHistory, navigate }: AnalyticsPa
   );
 }
 
-// Helper functions for analytics
 function analyzeQuizData(quizHistory: AnalyticsPanelProps['quizHistory']) {
-  // Calculate overall stats
   const totalQuizzes = quizHistory.length;
   const totalQuestions = quizHistory.reduce((acc, quiz) => acc + quiz.questionsCount, 0);
   const totalScore = quizHistory.reduce((acc, quiz) => acc + quiz.score, 0);
   const averageScore = totalQuizzes ? Math.round(totalScore / totalQuizzes) : 0;
 
-  // Extract topics and performance
   const topicsData: Record<string, { totalScore: number; count: number }> = {};
   
   quizHistory.forEach(quiz => {
-    // Extract topics from quiz title and extract course/subject data
-    const { topic, course, subject } = extractQuizMetadata(quiz.title);
-    
-    // Process topics
-    if (!topicsData[topic]) {
-      topicsData[topic] = { totalScore: 0, count: 0 };
-    }
-    topicsData[topic].totalScore += quiz.score;
-    topicsData[topic].count += 1;
-    
-    // Process course data
-    if (course && course.trim() !== '') {
-      if (!topicsData[course]) {
-        topicsData[course] = { totalScore: 0, count: 0 };
-      }
-      topicsData[course].totalScore += quiz.score;
-      topicsData[course].count += 1;
-    }
-    
-    // Process subject data
-    if (subject && subject.trim() !== '') {
-      if (!topicsData[subject]) {
-        topicsData[subject] = { totalScore: 0, count: 0 };
-      }
-      topicsData[subject].totalScore += quiz.score;
-      topicsData[subject].count += 1;
-    }
-    
-    // Also extract concepts from question text when available
     if (quiz.questions && quiz.questions.length > 0) {
-      quiz.questions.forEach(question => {
-        const conceptKeywords = extractKeywords(question.question);
-        conceptKeywords.forEach(keyword => {
-          if (!topicsData[keyword]) {
-            topicsData[keyword] = { totalScore: 0, count: 0 };
+      quiz.questions.forEach((question, index) => {
+        const isCorrect = quiz.userAnswers && 
+          quiz.userAnswers[index] === question.correctAnswer;
+        
+        let key = '';
+        if (question.subject && question.topic) {
+          key = `${question.subject}-${question.topic}`;
+        } else if (question.subject) {
+          key = question.subject;
+        } else if (question.topic) {
+          key = question.topic;
+        } else {
+          const { subject, topic } = extractQuizMetadata(quiz.title);
+          if (subject && topic) {
+            key = `${subject}-${topic}`;
+          } else if (subject) {
+            key = subject;
+          } else if (topic) {
+            key = topic;
+          } else {
+            key = 'General';
           }
-          topicsData[keyword].totalScore += quiz.score;
-          topicsData[keyword].count += 1;
-        });
+        }
+        
+        if (!topicsData[key]) {
+          topicsData[key] = { totalScore: 0, count: 0 };
+        }
+        
+        topicsData[key].count += 1;
+        topicsData[key].totalScore += isCorrect ? 100 : 0;
       });
+    } else {
+      const { subject, topic } = extractQuizMetadata(quiz.title);
+      let key = '';
+      
+      if (subject && topic) {
+        key = `${subject}-${topic}`;
+      } else if (subject) {
+        key = subject;
+      } else if (topic) {
+        key = topic;
+      } else {
+        key = 'General';
+      }
+      
+      if (!topicsData[key]) {
+        topicsData[key] = { totalScore: 0, count: 0 };
+      }
+      
+      topicsData[key].totalScore += quiz.score;
+      topicsData[key].count += 1;
     }
   });
   
-  // Calculate average score per topic
   const topicsPerformance = Object.entries(topicsData).map(([topic, data]) => ({
     topic,
     averageScore: Math.round(data.totalScore / data.count),
     count: data.count
   }));
   
-  // Find strengths and weaknesses
   const strengths = topicsPerformance
     .filter(t => t.count >= 1 && t.averageScore >= 70)
     .map(t => ({ topic: t.topic, score: t.averageScore }))
@@ -470,15 +475,13 @@ function analyzeQuizData(quizHistory: AnalyticsPanelProps['quizHistory']) {
     .slice(0, 3);
     
   const weaknesses = topicsPerformance
-    .filter(t => t.count >= 1)
+    .filter(t => t.count >= 1 && t.averageScore < 70)
     .map(t => ({ topic: t.topic, score: t.averageScore }))
     .sort((a, b) => a.score - b.score)
     .slice(0, 3);
   
-  // Performance trend analysis
   const trend = determinePerformanceTrend(quizHistory);
   
-  // Generate topic performance data for charts
   const topicPerformance = topicsPerformance
     .filter(t => t.count > 0)
     .map(t => ({
@@ -489,7 +492,6 @@ function analyzeQuizData(quizHistory: AnalyticsPanelProps['quizHistory']) {
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
   
-  // Generate next steps recommendation
   const nextStepsRecommendation = generateNextStepsRecommendation(strengths, weaknesses, averageScore);
   
   return {
@@ -518,14 +520,12 @@ function analyzeScoreDistribution(quizHistory: AnalyticsPanelProps['quizHistory'
     if (range) range.value += 1;
   });
   
-  // Only return ranges with values
   return ranges.filter(range => range.value > 0);
 }
 
 function generateProgressData(quizHistory: AnalyticsPanelProps['quizHistory']) {
   if (quizHistory.length === 0) return [];
   
-  // Sort by date
   const sortedQuizzes = [...quizHistory].sort((a, b) => 
     new Date(a.date).getTime() - new Date(b.date).getTime()
   );
@@ -545,15 +545,12 @@ function generateProgressData(quizHistory: AnalyticsPanelProps['quizHistory']) {
 function determinePerformanceTrend(quizHistory: AnalyticsPanelProps['quizHistory']) {
   if (quizHistory.length < 3) return "stable";
   
-  // Sort quizzes by date
   const sortedQuizzes = [...quizHistory].sort((a, b) => 
     new Date(a.date).getTime() - new Date(b.date).getTime()
   );
   
-  // Get the last 3 quizzes
   const recent = sortedQuizzes.slice(-3);
   
-  // Check if scores are improving, declining, or stable
   if (recent[0].score < recent[1].score && recent[1].score < recent[2].score) {
     return "improving";
   } else if (recent[0].score > recent[1].score && recent[1].score > recent[2].score) {
@@ -563,14 +560,14 @@ function determinePerformanceTrend(quizHistory: AnalyticsPanelProps['quizHistory
   }
 }
 
-// Extract relevant metadata from quiz titles
 function extractQuizMetadata(title: string) {
+  if (!title) return { course: '', subject: '', topic: '' };
+  
   const lowerTitle = title.toLowerCase();
   let course = "";
   let subject = "";
   let topic = "";
   
-  // Try to extract structured info (Course: X, Subject: Y, Topic: Z)
   const courseMatch = /course:?\s*([^,]+)/i.exec(title);
   const subjectMatch = /subject:?\s*([^,]+)/i.exec(title);
   const topicMatch = /topic:?\s*([^,]+)/i.exec(title);
@@ -579,66 +576,43 @@ function extractQuizMetadata(title: string) {
   if (subjectMatch) subject = subjectMatch[1].trim();
   if (topicMatch) topic = topicMatch[1].trim();
   
-  // If no structured info found, try common patterns
-  if (!course) {
-    if (lowerTitle.includes('neet') || lowerTitle.includes('medical')) course = 'Medical';
-    else if (lowerTitle.includes('engineering')) course = 'Engineering';
-    else if (lowerTitle.includes('upsc')) course = 'UPSC';
-    else if (lowerTitle.includes('gk')) course = 'General Knowledge';
-    else course = 'General';
-  }
-  
-  // Extract subject based on common medical/academic subjects
   if (!subject) {
-    const subjects = [
+    const medicalSubjects = [
       'anatomy', 'physiology', 'biochemistry', 'pathology', 'microbiology',
       'pharmacology', 'medicine', 'surgery', 'pediatrics', 'gynecology',
-      'physics', 'chemistry', 'biology', 'mathematics', 'history',
-      'geography', 'economics', 'political science'
+      'cardiology', 'neurology', 'ophthalmology', 'orthopedics', 'radiology'
     ];
     
-    for (const s of subjects) {
+    for (const s of medicalSubjects) {
       if (lowerTitle.includes(s)) {
         subject = s.charAt(0).toUpperCase() + s.slice(1);
         break;
       }
     }
-    
-    if (!subject) subject = 'General';
   }
   
-  // Extract topic from remaining words or use default
-  if (!topic) {
-    // Clean up the title
-    const cleanTitle = title
-      .replace(/quiz|test|exam|course:.*|subject:.*|topic:.*/gi, '')
-      .replace(/[^\w\s]/gi, ' ')
-      .trim();
-    
-    const words = cleanTitle.split(/\s+/);
-    if (words.length > 0) {
-      // Find the most specific word (not already used as course/subject)
-      for (const word of words) {
-        if (word.length > 3 && 
-            !word.toLowerCase().includes(course.toLowerCase()) && 
-            !word.toLowerCase().includes(subject.toLowerCase())) {
-          topic = word.charAt(0).toUpperCase() + word.slice(1);
+  const delimiters = ['-', ':', '|', '—'];
+  for (const delimiter of delimiters) {
+    if (title.includes(delimiter)) {
+      const parts = title.split(delimiter);
+      if (parts.length > 1) {
+        if (!subject && parts[0].trim()) {
+          subject = parts[0].trim();
+        }
+        if (parts[1].trim()) {
+          topic = parts[1].trim();
           break;
         }
       }
     }
-    
-    if (!topic) topic = cleanTitle || 'General';
   }
   
   return { course, subject, topic };
 }
 
-// Extract potential keywords from text for concept analysis
 function extractKeywords(text: string): string[] {
   if (!text) return [];
   
-  // Common medical/academic keywords to look for
   const commonKeywords = [
     'kidney', 'heart', 'liver', 'brain', 'lung', 'bone', 'muscle',
     'nerve', 'artery', 'vein', 'cell', 'tissue', 'organ', 'system',
@@ -651,32 +625,25 @@ function extractKeywords(text: string): string[] {
     .split(/\s+/)
     .filter(w => w.length > 3);
   
-  // Prioritize common keywords, then find other potentially meaningful words
   const foundKeywords = new Set<string>();
   
-  // First check for common keywords
   for (const keyword of commonKeywords) {
     if (text.toLowerCase().includes(keyword)) {
       foundKeywords.add(keyword.charAt(0).toUpperCase() + keyword.slice(1));
     }
   }
   
-  // If no common keywords found, extract nouns or important-looking words
-  if (foundKeywords.size === 0) {
-    // Simple heuristic: longer words are more likely to be meaningful
-    const potentialKeywords = words
-      .filter(w => w.length > 5 && !['about', 'because', 'through', 'without', 'between'].includes(w))
-      .slice(0, 2);
-    
-    potentialKeywords.forEach(k => {
-      foundKeywords.add(k.charAt(0).toUpperCase() + k.slice(1));
-    });
-  }
+  const potentialKeywords = words
+    .filter(w => w.length > 5 && !['about', 'because', 'through', 'without', 'between'].includes(w))
+    .slice(0, 2);
+  
+  potentialKeywords.forEach(k => {
+    foundKeywords.add(k.charAt(0).toUpperCase() + k.slice(1));
+  });
   
   return Array.from(foundKeywords);
 }
 
-// Generate personalized next steps recommendation
 function generateNextStepsRecommendation(
   strengths: {topic: string, score: number}[], 
   weaknesses: {topic: string, score: number}[],
