@@ -11,6 +11,7 @@ import LandingPage from "./pages/LandingPage";
 import QuizReview from "./pages/QuizReview";
 import AuthPage from "./pages/AuthPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import Settings from "./pages/Settings";
 import { useEffect, useState } from "react";
 import { initializeAdMob } from "./components/GoogleAds";
 import { supabase } from "./integrations/supabase/client";
@@ -130,6 +131,9 @@ function App() {
           <Route path="/auth" element={isAuthenticated ? <Navigate to="/" replace /> : <AuthPage />} />
           <Route path="/quiz" element={<AuthRoute element={<Index />} />} />
           <Route path="/quiz/review" element={<AuthRoute element={<QuizReview />} />} />
+          <Route path="/settings" element={<AuthRoute element={<Settings />} />} />
+          <Route path="/history" element={<AuthRoute element={<Index initialTab="history" />} />} />
+          <Route path="/flashcards" element={<AuthRoute element={<Index initialTab="flashcards" />} />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
