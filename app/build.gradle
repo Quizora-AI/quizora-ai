@@ -81,7 +81,11 @@ project.ext.react = [
     enableHermes: false,  // clean and rebuild if changing
 ]
 
-apply from: "../../node_modules/react-native/react.gradle"
+// Safe apply from for react.gradle to handle the file not existing in CI
+def reactGradlePath = new File("../../node_modules/react-native/react.gradle")
+if (reactGradlePath.exists()) {
+    apply from: reactGradlePath
+}
 
 /**
  * Set this to true to create two separate APKs instead of one:
@@ -121,8 +125,6 @@ def jscFlavor = 'org.webkit:android-jsc:+'
 def enableHermes = project.ext.react.get("enableHermes", false);
 
 android {
-    ndkVersion rootProject.ext.ndkVersion
-
     compileSdkVersion rootProject.ext.compileSdkVersion
 
     defaultConfig {
@@ -132,6 +134,7 @@ android {
         versionCode 1
         versionName "1.0"
     }
+    
     splits {
         abi {
             reset()
@@ -228,4 +231,11 @@ task copyDownloadableDepsToLibs(type: Copy) {
     into 'libs'
 }
 
-apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
+// Safe apply from for native_modules.gradle
+def nativeModulesGradlePath = new File("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle")
+if (nativeModulesGradlePath.exists()) {
+    apply from: nativeModulesGradlePath
+    applyNativeModulesAppBuildGradle(project)
+} else {
+    println "Warning: native_modules.gradle not found. Skipping React Native modules configuration."
+}

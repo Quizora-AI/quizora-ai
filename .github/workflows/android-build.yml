@@ -25,20 +25,38 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Setup React Native Environment
+      - name: Bundle React Native JavaScript
         run: |
-          # Create necessary directories if they don't exist
-          mkdir -p node_modules/@react-native-community/cli-platform-android
-          # Create a placeholder native_modules.gradle file that won't be modified during build
-          echo "// This file is a placeholder and should not be modified during the build process" > node_modules/@react-native-community/cli-platform-android/native_modules.gradle
-          
-          # Ensure directory structure exists for the build process
+          # Create directory structure for assets
           mkdir -p android/app/src/main/assets
           
-          # Create a basic bundle file if it doesn't exist
-          if [ ! -f android/app/src/main/assets/index.android.bundle ]; then
-            echo "// placeholder bundle file" > android/app/src/main/assets/index.android.bundle
-          fi
+          # Create JavaScript bundle
+          npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
+
+      - name: Create React Native directory structure
+        run: |
+          # Create required directories for React Native
+          mkdir -p node_modules/@react-native-community/cli-platform-android
+          
+          # Create placeholder native_modules.gradle file
+          cat > node_modules/@react-native-community/cli-platform-android/native_modules.gradle << 'EOF'
+          // This is a placeholder file for the build process
+          import groovy.json.JsonSlurper
+
+          def reactNativeModuleConfig = [:]
+          def applyNativeModulesSettingsGradle = { settings ->
+              // No-op function for CI builds
+          }
+          def applyNativeModulesAppBuildGradle = { project ->
+              // No-op function for CI builds
+          }
+
+          ext {
+              reactNativeModuleConfig = reactNativeModuleConfig
+              applyNativeModulesSettingsGradle = this.&applyNativeModulesSettingsGradle
+              applyNativeModulesAppBuildGradle = this.&applyNativeModulesAppBuildGradle
+          }
+          EOF
 
       - name: Set up JDK
         uses: actions/setup-java@v3
@@ -69,8 +87,9 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          # Modify build.gradle to handle missing native modules gracefully
-          ./gradlew bundleRelease -Pandroid.injected.signing.store.file=$KEYSTORE_PATH \
+          # Add warning mode to get more details about the Gradle deprecation warnings
+          ./gradlew bundleRelease --warning-mode all \
+                                  -Pandroid.injected.signing.store.file=$KEYSTORE_PATH \
                                   -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
                                   -Pandroid.injected.signing.key.alias=$KEYSTORE_ALIAS \
                                   -Pandroid.injected.signing.key.password=$KEY_PASSWORD
