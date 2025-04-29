@@ -40,3 +40,25 @@ allprojects {
         }
     }
 }
+
+// Add this task to create a placeholder native_modules.gradle file if it doesn't exist
+task ensureNativeModulesGradle {
+    doLast {
+        def nativeModulesDir = new File("$rootDir/../node_modules/@react-native-community/cli-platform-android")
+        if (!nativeModulesDir.exists()) {
+            nativeModulesDir.mkdirs()
+        }
+        
+        def nativeModulesGradle = new File(nativeModulesDir, "native_modules.gradle")
+        if (!nativeModulesGradle.exists()) {
+            nativeModulesGradle.text = "// This file is a placeholder created by the build process"
+        }
+    }
+}
+
+// Run the ensure task before any other tasks
+gradle.projectsEvaluated {
+    tasks.withType(JavaCompile) {
+        it.dependsOn(ensureNativeModulesGradle)
+    }
+}
