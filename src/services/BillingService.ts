@@ -8,6 +8,15 @@
 const isCordova = typeof window !== 'undefined' && 'cordova' in window;
 const isMobile = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
+// Type declaration for our response types
+interface ProductsResponse {
+  products: any[];
+}
+
+interface PurchasesResponse {
+  purchases: any[];
+}
+
 /**
  * A service to handle in-app purchases and subscriptions
  */
@@ -25,9 +34,9 @@ export const BillingService = {
       console.log('Initializing billing service');
       
       return new Promise((resolve) => {
-        // Access the native module through the window.cordova interface
-        if (window.cordova && window.cordova.plugins && window.cordova.plugins.PlayBilling) {
-          window.cordova.plugins.PlayBilling.connect(
+        // Access the native module through the window.cordova interface with type assertion
+        if (window && (window as any).cordova && (window as any).cordova.plugins && (window as any).cordova.plugins.PlayBilling) {
+          (window as any).cordova.plugins.PlayBilling.connect(
             () => {
               console.log('Billing service initialized successfully');
               resolve(true);
@@ -53,7 +62,7 @@ export const BillingService = {
    * @param productType 'inapp' or 'subs'
    * @param productIds list of product IDs to query
    */
-  getProducts: async (productType: 'inapp' | 'subs', productIds: string[]) => {
+  getProducts: async (productType: 'inapp' | 'subs', productIds: string[]): Promise<ProductsResponse> => {
     if (!isCordova || !isMobile) {
       console.warn('Billing is not supported on this platform');
       return { products: [] };
@@ -62,9 +71,9 @@ export const BillingService = {
     try {
       console.log(`Getting ${productType} products:`, productIds);
       
-      return new Promise((resolve) => {
-        if (window.cordova && window.cordova.plugins && window.cordova.plugins.PlayBilling) {
-          window.cordova.plugins.PlayBilling.queryProducts(
+      return new Promise<ProductsResponse>((resolve) => {
+        if (window && (window as any).cordova && (window as any).cordova.plugins && (window as any).cordova.plugins.PlayBilling) {
+          (window as any).cordova.plugins.PlayBilling.queryProducts(
             (products: any) => {
               console.log('Products retrieved:', products);
               resolve({ products: products || [] });
@@ -100,8 +109,8 @@ export const BillingService = {
       console.log(`Purchasing ${productType} product:`, productId);
       
       return new Promise((resolve) => {
-        if (window.cordova && window.cordova.plugins && window.cordova.plugins.PlayBilling) {
-          window.cordova.plugins.PlayBilling.purchase(
+        if (window && (window as any).cordova && (window as any).cordova.plugins && (window as any).cordova.plugins.PlayBilling) {
+          (window as any).cordova.plugins.PlayBilling.purchase(
             productId,
             (purchase: any) => {
               console.log('Purchase successful:', purchase);
@@ -126,7 +135,7 @@ export const BillingService = {
   /**
    * Get active purchases
    */
-  getPurchases: async () => {
+  getPurchases: async (): Promise<PurchasesResponse> => {
     if (!isCordova || !isMobile) {
       console.warn('Billing is not supported on this platform');
       return { purchases: [] };
@@ -135,9 +144,9 @@ export const BillingService = {
     try {
       console.log('Getting purchases');
       
-      return new Promise((resolve) => {
-        if (window.cordova && window.cordova.plugins && window.cordova.plugins.PlayBilling) {
-          window.cordova.plugins.PlayBilling.restorePurchases(
+      return new Promise<PurchasesResponse>((resolve) => {
+        if (window && (window as any).cordova && (window as any).cordova.plugins && (window as any).cordova.plugins.PlayBilling) {
+          (window as any).cordova.plugins.PlayBilling.restorePurchases(
             (purchases: any) => {
               console.log('Purchases retrieved:', purchases);
               resolve({ purchases: purchases || [] });
