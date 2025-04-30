@@ -14,24 +14,16 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Bundle React Native JavaScript
-        run: |
-          # Create directory structure for assets
-          mkdir -p android/app/src/main/assets
-          
-          # Create JavaScript bundle
-          npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
 
       - name: Create React Native directory structure
         run: |
@@ -58,14 +50,25 @@ jobs:
           }
           EOF
 
+      - name: Bundle React Native JavaScript
+        run: |
+          # Create directory structure for assets
+          mkdir -p android/app/src/main/assets
+          
+          # Create JavaScript bundle
+          npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
+
       - name: Set up JDK
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: 17
 
-      - name: Cache Gradle
-        uses: actions/cache@v3
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
@@ -74,31 +77,42 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Grant execute permission to gradlew
+      - name: Make gradlew executable
         run: chmod +x ./gradlew
 
       - name: Decode keystore
-        run: echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 -d > release.keystore
+        run: echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
 
-      - name: Build signed .aab
-        env:
-          KEYSTORE_PATH: release.keystore
-          KEYSTORE_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
-          KEYSTORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
-          KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+      - name: Create gradle.properties with signing configs
         run: |
-          # Add warning mode to get more details about the Gradle deprecation warnings
-          ./gradlew bundleRelease --warning-mode all \
-                                  -Pandroid.injected.signing.store.file=$KEYSTORE_PATH \
-                                  -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
-                                  -Pandroid.injected.signing.key.alias=$KEYSTORE_ALIAS \
-                                  -Pandroid.injected.signing.key.password=$KEY_PASSWORD
+          echo "MYAPP_UPLOAD_STORE_FILE=release.keystore" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_KEY_ALIAS=${{ secrets.SIGNING_KEY_ALIAS }}" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.SIGNING_STORE_PASSWORD }}" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.SIGNING_KEY_PASSWORD }}" >> android/gradle.properties
+
+      - name: Build release AAB
+        run: |
+          cd android
+          ./gradlew bundleRelease --no-daemon
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-bundle
-          path: app/build/outputs/bundle/release/app-release.aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 7
+
+      - name: Generate APK for testing
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 7
 
       - name: Clean up keystore
-        run: rm -f release.keystore
+        run: rm -f android/app/release.keystore

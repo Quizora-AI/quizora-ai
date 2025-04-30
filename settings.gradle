@@ -9,7 +9,21 @@ def safelyApplyNativeModulesSettingsGradle = { settingsObj ->
             apply from: nativeModulesSettingsGradlePath
             applyNativeModulesSettingsGradle(settingsObj)
         } else {
-            println "Warning: native_modules.gradle not found. Skipping native modules configuration."
+            println "Native modules settings gradle not found. Creating placeholder..."
+            def placeholderDir = new File("$rootDir/../node_modules/@react-native-community/cli-platform-android")
+            placeholderDir.mkdirs()
+            
+            def placeholderFile = new File(placeholderDir, "native_modules.gradle")
+            placeholderFile.text = """
+            // Placeholder file created by settings.gradle
+            def applyNativeModulesSettingsGradle = { settings ->
+                // No-op implementation for builds
+            }
+            
+            ext {
+                applyNativeModulesSettingsGradle = this.&applyNativeModulesSettingsGradle
+            }
+            """
         }
     } catch (Exception e) {
         println "Error applying native modules settings: ${e.message}"
