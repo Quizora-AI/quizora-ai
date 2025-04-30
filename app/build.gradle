@@ -1,5 +1,6 @@
 
 apply plugin: "com.android.application"
+apply plugin: "kotlin-android" // Add Kotlin plugin explicitly
 
 import com.android.build.OutputFile
 
@@ -131,8 +132,9 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
     
-    kotlin {
-        jvmToolchain(17)
+    // Fix: Replace the kotlin {} block with kotlinOptions
+    kotlinOptions {
+        jvmTarget = '17'
     }
     
     packagingOptions {
@@ -149,6 +151,7 @@ android {
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
     implementation "com.facebook.react:react-native:+"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:${rootProject.ext.kotlinVersion}" // Add Kotlin standard library explicitly
 
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:${rootProject.ext.androidxSwipeRefreshLayoutVersion}"
 
