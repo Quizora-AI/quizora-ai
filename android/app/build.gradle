@@ -12,8 +12,6 @@ import com.android.build.OutputFile
  * bundle directly from the development server. Below you can see all the possible configurations
  * and their defaults. If you decide to add a configuration block, make sure to add it before the
  * `apply from: "../../node_modules/react-native/react.gradle"` line.
- *
- * // ... keep existing code (React Native configuration comments)
  */
 
 project.ext.react = [
@@ -23,7 +21,10 @@ project.ext.react = [
 // Safe apply from for react.gradle to handle the file not existing in CI
 def reactGradlePath = new File("../../node_modules/react-native/react.gradle")
 if (reactGradlePath.exists()) {
+    println "Found react.gradle, applying..."
     apply from: reactGradlePath
+} else {
+    println "react.gradle not found, skipping..."
 }
 
 /**
@@ -43,15 +44,11 @@ def enableProguardInReleaseBuilds = true
 
 /**
  * The preferred build flavor of JavaScriptCore.
- *
- * // ... keep existing code (JavaScriptCore configuration comments)
  */
 def jscFlavor = 'org.webkit:android-jsc:+'
 
 /**
  * Whether to enable the Hermes VM.
- *
- * // ... keep existing code (Hermes configuration comments)
  */
 def enableHermes = project.ext.react.get("enableHermes", false);
 
@@ -166,7 +163,7 @@ dependencies {
     implementation "androidx.appcompat:appcompat:${rootProject.ext.androidxAppCompatVersion}"
     implementation "androidx.core:core-ktx:${rootProject.ext.androidxCoreKtxVersion}"
 
-    // Remove Flipper dependencies as they're causing issues and not required
+    // Removed Flipper dependencies as they're causing issues and not required
     // for production builds
     
     if (enableHermes) {
@@ -188,10 +185,11 @@ task copyDownloadableDepsToLibs(type: Copy) {
 // Safe apply from for native_modules.gradle
 def nativeModulesGradlePath = new File("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle")
 if (nativeModulesGradlePath.exists()) {
+    println "Found native_modules.gradle, applying..."
     apply from: nativeModulesGradlePath
     applyNativeModulesAppBuildGradle(project)
 } else {
-    println "Warning: native_modules.gradle not found. Skipping React Native modules configuration."
+    println "Warning: native_modules.gradle not found. Creating placeholder..."
     
     // Create a placeholder if it doesn't exist
     def placeholderDir = new File("$rootDir/../node_modules/@react-native-community/cli-platform-android")
@@ -203,10 +201,17 @@ if (nativeModulesGradlePath.exists()) {
         // Placeholder file created by app/build.gradle
         def applyNativeModulesAppBuildGradle = { project ->
             // No-op implementation for builds
+            println "Using placeholder applyNativeModulesAppBuildGradle implementation"
+        }
+        
+        def applyNativeModulesSettingsGradle = { settings ->
+            // No-op implementation for builds
+            println "Using placeholder applyNativeModulesSettingsGradle implementation"
         }
         
         ext {
             applyNativeModulesAppBuildGradle = this.&applyNativeModulesAppBuildGradle
+            applyNativeModulesSettingsGradle = this.&applyNativeModulesSettingsGradle
         }
         """
     }

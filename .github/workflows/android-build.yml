@@ -35,9 +35,11 @@ jobs:
           // This is a placeholder file for the build process
           def applyNativeModulesSettingsGradle = { settings ->
               // No-op function for CI builds
+              println "Using placeholder applyNativeModulesSettingsGradle implementation"
           }
           def applyNativeModulesAppBuildGradle = { project ->
               // No-op function for CI builds
+              println "Using placeholder applyNativeModulesAppBuildGradle implementation"
           }
 
           ext {
@@ -45,6 +47,9 @@ jobs:
               applyNativeModulesAppBuildGradle = this.&applyNativeModulesAppBuildGradle
           }
           EOF
+          
+          # Verify the file was created
+          ls -la node_modules/@react-native-community/cli-platform-android/
 
       - name: Bundle React Native JavaScript
         run: |
@@ -53,6 +58,9 @@ jobs:
           
           # Create JavaScript bundle
           npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
+          
+          # Verify the bundle was created
+          ls -la android/app/src/main/assets/
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -86,10 +94,15 @@ jobs:
           echo "MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.SIGNING_STORE_PASSWORD }}" >> android/gradle.properties
           echo "MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.SIGNING_KEY_PASSWORD }}" >> android/gradle.properties
 
+      - name: List available Gradle tasks
+        run: |
+          cd android
+          ./gradlew tasks --all
+
       - name: Build release AAB
         run: |
           cd android
-          ./gradlew bundleRelease --no-daemon
+          ./gradlew bundleRelease --no-daemon --stacktrace
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
@@ -101,7 +114,7 @@ jobs:
       - name: Generate APK for testing
         run: |
           cd android
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

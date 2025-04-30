@@ -50,20 +50,25 @@ allprojects {
 // Add custom task to create necessary placeholder files for CI builds
 task ensureReactNativeModules {
     doLast {
+        println "Ensuring React Native module placeholders exist..."
         def rnModulesDir = new File("$rootDir/../node_modules/@react-native-community/cli-platform-android")
         if (!rnModulesDir.exists()) {
+            println "Creating React Native modules directory..."
             rnModulesDir.mkdirs()
             
             def nativeModulesFile = new File(rnModulesDir, "native_modules.gradle")
             if (!nativeModulesFile.exists()) {
+                println "Creating native_modules.gradle placeholder..."
                 nativeModulesFile.text = """
                 // This is a placeholder file created by the build process
                 def applyNativeModulesSettingsGradle = { settings ->
                     // No-op implementation for CI
+                    println "Using placeholder applyNativeModulesSettingsGradle implementation"
                 }
                 
                 def applyNativeModulesAppBuildGradle = { project ->
                     // No-op implementation for CI
+                    println "Using placeholder applyNativeModulesAppBuildGradle implementation"
                 }
                 
                 ext {
@@ -77,11 +82,13 @@ task ensureReactNativeModules {
         // Create assets directory and bundle file if needed
         def assetsDir = new File("$rootDir/app/src/main/assets")
         if (!assetsDir.exists()) {
+            println "Creating assets directory..."
             assetsDir.mkdirs()
         }
         
         def bundleFile = new File(assetsDir, "index.android.bundle")
         if (!bundleFile.exists()) {
+            println "Creating placeholder bundle file..."
             bundleFile.text = "// Placeholder bundle file created by build process"
         }
     }
