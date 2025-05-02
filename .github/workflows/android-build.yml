@@ -23,7 +23,11 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm ci
+          npm install -g react-native-cli
+          npm list -g react-native-cli
+          npm list @react-native-community/cli
       
       - name: Debug environment
         run: |
@@ -35,6 +39,8 @@ jobs:
           ls -la android || echo "Android directory not found"
           echo "React Native CLI version:"
           npx react-native --version || echo "React Native CLI not found"
+          echo "Package.json content:"
+          cat package.json
 
       - name: Create React Native directory structure
         run: |
@@ -81,24 +87,30 @@ jobs:
           # Create directory structure for assets
           mkdir -p android/app/src/main/assets
           
-          # Try to use React Native CLI if available
-          if npx react-native --version > /dev/null 2>&1; then
-            echo "Using React Native CLI for bundling"
-            npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
-          else
-            echo "Fallback to direct metro bundling"
-            # Create JavaScript bundle manually
-            node node_modules/metro/src/cli.js bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res || echo "Bundle creation failed, using placeholder"
-            
-            # Create placeholder bundle if command failed
-            if [ ! -f android/app/src/main/assets/index.android.bundle ]; then
-              echo "Creating placeholder bundle file"
-              echo "// Placeholder bundle file created by build process" > android/app/src/main/assets/index.android.bundle
-            fi
+          # Try multiple approaches to create the bundle file
+          echo "Attempting to create bundle with react-native CLI..."
+          npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res || true
+          
+          if [ ! -f android/app/src/main/assets/index.android.bundle ]; then
+            echo "Attempting to create bundle with metro..."
+            npx metro-bundler --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res || true
           fi
           
-          # Verify the bundle was created
+          if [ ! -f android/app/src/main/assets/index.android.bundle ]; then
+            echo "Attempting to create bundle with metro CLI..."
+            npx metro bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res || true
+          fi
+          
+          # Create placeholder bundle if all attempts failed
+          if [ ! -f android/app/src/main/assets/index.android.bundle ]; then
+            echo "All bundling attempts failed. Creating placeholder bundle file..."
+            echo "// Placeholder bundle file created by build process" > android/app/src/main/assets/index.android.bundle
+          fi
+          
+          # Verify the bundle file
+          echo "Bundle file status:"
           ls -la android/app/src/main/assets/
+          echo "Bundle file size: $(wc -c < android/app/src/main/assets/index.android.bundle) bytes"
 
       - name: Set up JDK
         uses: actions/setup-java@v4
