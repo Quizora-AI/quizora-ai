@@ -215,4 +215,11 @@ if (nativeModulesGradlePath.exists()) {
         }
         """
     }
+    
+    // Apply the newly created placeholder
+    try {
+        apply from: placeholderFile.absolutePath
+    } catch (Exception e) {
+        println "Could not apply placeholder file: ${e.message}"
+    }
 }

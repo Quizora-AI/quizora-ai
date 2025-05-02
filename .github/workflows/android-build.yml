@@ -24,6 +24,15 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+      
+      - name: Debug environment
+        run: |
+          echo "Node version: $(node -v)"
+          echo "NPM version: $(npm -v)"
+          echo "Directory structure:"
+          ls -la
+          echo "Android directory:"
+          ls -la android || echo "Android directory not found"
 
       - name: Create React Native directory structure
         run: |
@@ -50,6 +59,20 @@ jobs:
           
           # Verify the file was created
           ls -la node_modules/@react-native-community/cli-platform-android/
+
+      - name: Ensure gradle.properties has correct AndroidX settings
+        run: |
+          # Ensure android.useAndroidX is set to true
+          if ! grep -q "android.useAndroidX=true" android/gradle.properties; then
+            echo "android.useAndroidX=true" >> android/gradle.properties
+          fi
+          if ! grep -q "android.enableJetifier=true" android/gradle.properties; then
+            echo "android.enableJetifier=true" >> android/gradle.properties
+          fi
+          
+          # Print gradle.properties for debugging
+          echo "Contents of gradle.properties:"
+          cat android/gradle.properties
 
       - name: Bundle React Native JavaScript
         run: |
@@ -99,10 +122,20 @@ jobs:
           cd android
           ./gradlew tasks --all
 
+      - name: Debug build task
+        run: |
+          cd android
+          ./gradlew projects --info
+          
+      - name: Clean project
+        run: |
+          cd android
+          ./gradlew clean --info
+
       - name: Build release AAB
         run: |
           cd android
-          ./gradlew bundleRelease --no-daemon --stacktrace
+          ./gradlew bundleRelease --no-daemon --stacktrace --info
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
