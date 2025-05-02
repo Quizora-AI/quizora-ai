@@ -82,6 +82,32 @@ jobs:
           echo "Contents of gradle.properties:"
           cat android/gradle.properties
 
+      - name: Create index.js if needed
+        run: |
+          # Check if index.js exists, and create a placeholder if it doesn't
+          if [ ! -f index.js ]; then
+            echo "Creating placeholder index.js file..."
+            cat > index.js << 'EOF'
+            import { AppRegistry } from 'react-native';
+            import App from './src/App';
+            import { name as appName } from './app.json';
+
+            // Register the app
+            AppRegistry.registerComponent(appName, () => App);
+            EOF
+            
+            # Create minimal app.json if it doesn't exist
+            if [ ! -f app.json ]; then
+              echo "Creating minimal app.json..."
+              cat > app.json << 'EOF'
+              {
+                "name": "QuizoraAI",
+                "displayName": "Quizora AI"
+              }
+              EOF
+            fi
+          fi
+
       - name: Bundle React Native JavaScript
         run: |
           # Create directory structure for assets
