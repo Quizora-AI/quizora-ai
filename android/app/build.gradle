@@ -1,4 +1,3 @@
-
 apply plugin: "com.android.application"
 apply plugin: "kotlin-android" // Add Kotlin plugin explicitly
 
@@ -25,12 +24,31 @@ if (reactGradlePath.exists()) {
     apply from: reactGradlePath
 } else {
     println "react.gradle not found, skipping..."
-    // Create a minimal placeholder for react.gradle functionality
-    task bundleReleaseJsAndAssets(type: Exec) {
-        // This is a placeholder task that would normally be provided by react.gradle
-        commandLine 'echo', 'Using placeholder bundleReleaseJsAndAssets task'
-        doLast {
-            println "Placeholder for bundleReleaseJsAndAssets completed"
+    // Check if expo-modules-core exists and try to apply its react.gradle
+    def expoReactGradlePath = new File("../../node_modules/expo-modules-core/android/react.gradle")
+    if (expoReactGradlePath.exists()) {
+        println "Found expo react.gradle, applying..."
+        apply from: expoReactGradlePath
+    } else {
+        println "No react.gradle found, using placeholder task"
+        // Create a minimal placeholder for react.gradle functionality
+        task bundleReleaseJsAndAssets(type: Exec) {
+            // This is a placeholder task that would normally be provided by react.gradle
+            commandLine 'echo', 'Using placeholder bundleReleaseJsAndAssets task'
+            doLast {
+                println "Placeholder for bundleReleaseJsAndAssets completed"
+                // Create the assets directory if it doesn't exist
+                def assetsDir = new File("${projectDir}/src/main/assets")
+                if (!assetsDir.exists()) {
+                    assetsDir.mkdirs()
+                    
+                    // Create a placeholder bundle file
+                    def bundleFile = new File(assetsDir, "index.android.bundle")
+                    if (!bundleFile.exists()) {
+                        bundleFile.text = "// Placeholder bundle file created by build process"
+                    }
+                }
+            }
         }
     }
 }
@@ -92,9 +110,15 @@ android {
             keyPassword 'android'
         }
         release {
-            // Use a secure method to access keystore details such as environment variables
-            // For GitHub Actions, these are set as repository secrets
-            if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
+            // For EAS Build compatibility - check environment variables first
+            if (System.getenv("EAS_BUILD") == "true") {
+                storeFile file(System.getenv("ANDROID_KEYSTORE_PATH") ?: "release.keystore")
+                storePassword System.getenv("MYAPP_UPLOAD_STORE_PASSWORD")
+                keyAlias System.getenv("MYAPP_UPLOAD_KEY_ALIAS")
+                keyPassword System.getenv("MYAPP_UPLOAD_KEY_PASSWORD")
+            }
+            // Fall back to gradle.properties values when not in EAS Build
+            else if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
                 storeFile file(MYAPP_UPLOAD_STORE_FILE)
                 storePassword MYAPP_UPLOAD_STORE_PASSWORD
                 keyAlias MYAPP_UPLOAD_KEY_ALIAS
@@ -151,6 +175,9 @@ android {
                         'META-INF/*.kotlin_module']
         }
     }
+    
+    // Add support for EAS Build's NDK
+    ndkVersion "25.1.8937393"
 }
 
 dependencies {
@@ -197,37 +224,46 @@ if (nativeModulesGradlePath.exists()) {
     apply from: nativeModulesGradlePath
     applyNativeModulesAppBuildGradle(project)
 } else {
-    println "Warning: native_modules.gradle not found. Creating placeholder..."
-    
-    // Create a placeholder if it doesn't exist
-    def placeholderDir = new File("$rootDir/../node_modules/@react-native-community/cli-platform-android")
-    placeholderDir.mkdirs()
-    
-    def placeholderFile = new File(placeholderDir, "native_modules.gradle")
-    if (!placeholderFile.exists()) {
-        placeholderFile.text = """
-        // Placeholder file created by app/build.gradle
-        def applyNativeModulesAppBuildGradle = { project ->
-            // No-op implementation for builds
-            println "Using placeholder applyNativeModulesAppBuildGradle implementation"
+    println "Checking Expo native modules..."
+    def expoModulesGradlePath = new File("../../node_modules/expo/android/native_modules.gradle")
+    if (expoModulesGradlePath.exists()) {
+        println "Found Expo native_modules.gradle, applying..."
+        apply from: expoModulesGradlePath
+        // Expo uses a different function name
+        applyExpoModulesAppBuildGradle(project)
+    } else {
+        println "Warning: native_modules.gradle not found. Creating placeholder..."
+        
+        // Create a placeholder if it doesn't exist
+        def placeholderDir = new File("$rootDir/../node_modules/@react-native-community/cli-platform-android")
+        placeholderDir.mkdirs()
+        
+        def placeholderFile = new File(placeholderDir, "native_modules.gradle")
+        if (!placeholderFile.exists()) {
+            placeholderFile.text = """
+            // Placeholder file created by app/build.gradle
+            def applyNativeModulesAppBuildGradle = { project ->
+                // No-op implementation for builds
+                println "Using placeholder applyNativeModulesAppBuildGradle implementation"
+            }
+            
+            def applyNativeModulesSettingsGradle = { settings ->
+                // No-op implementation for builds
+                println "Using placeholder applyNativeModulesSettingsGradle implementation"
+            }
+            
+            ext {
+                applyNativeModulesAppBuildGradle = this.&applyNativeModulesAppBuildGradle
+                applyNativeModulesSettingsGradle = this.&applyNativeModulesSettingsGradle
+            }
+            """
         }
         
-        def applyNativeModulesSettingsGradle = { settings ->
-            // No-op implementation for builds
-            println "Using placeholder applyNativeModulesSettingsGradle implementation"
+        // Apply the newly created placeholder
+        try {
+            apply from: placeholderFile.absolutePath
+        } catch (Exception e) {
+            println "Could not apply placeholder file: ${e.message}"
         }
-        
-        ext {
-            applyNativeModulesAppBuildGradle = this.&applyNativeModulesAppBuildGradle
-            applyNativeModulesSettingsGradle = this.&applyNativeModulesSettingsGradle
-        }
-        """
-    }
-    
-    // Apply the newly created placeholder
-    try {
-        apply from: placeholderFile.absolutePath
-    } catch (Exception e) {
-        println "Could not apply placeholder file: ${e.message}"
     }
 }
