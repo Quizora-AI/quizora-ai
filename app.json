@@ -42,11 +42,6 @@
         }
       ]
     ],
-    "extra": {
-      "eas": {
-        "projectId": "your-expo-project-id"
-      }
-    },
     "updates": {
       "fallbackToCacheTimeout": 0
     },
@@ -63,6 +58,11 @@
     },
     "ios": {
       "bundleIdentifier": "com.quizora.com"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "8e3ba7ff-542e-4cad-a22e-4b6376a1209d"
+      }
     }
   }
 }
