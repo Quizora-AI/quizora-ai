@@ -20,6 +20,10 @@ def reactNativeAndroidDir = new File(
   "../android"
 )
 
+println ">>> android.useAndroidX = $
+{project.hasProperty("android.useAndroidX") ? 
+  project.getProperty("android.useAndroidX") : "NOT SET"}"
+
 allprojects {
   repositories {
     maven {
