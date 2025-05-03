@@ -1,18 +1,16 @@
 {
-  "cli": {
-    "version": ">= 3.13.0",
-    "requireCommit": false
-  },
   "build": {
     "production": {
       "android": {
         "buildType": "app-bundle"
       },
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.example.com"
-      },
-      "cache": {
-        "disabled": true
+      "ios": {
+        "buildType": "release"
+      }
+    },
+    "preview": {
+      "android": {
+        "buildType": "apk"
       }
     }
   }
