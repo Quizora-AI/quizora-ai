@@ -1,21 +1,62 @@
+
 {
   "cli": {
-    "version": ">= 16.3.3",
-    "appVersionSource": "remote"
+    "version": ">= 3.13.0",
+    "requireCommit": false,
+    "promptToConfigurePushNotifications": false
   },
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api-dev.example.com"
+      },
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      },
+      "cache": {
+        "disabled": true
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api-staging.example.com"
+      },
+      "cache": {
+        "disabled": true
+      }
     },
     "production": {
-      "autoIncrement": true
+      "android": {
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.example.com"
+      },
+      "autoIncrement": true,
+      "cache": {
+        "disabled": true
+      }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "path/to/your/service-account-key.json",
+        "track": "production"
+      }
+    }
+  },
+  "hooks": {
+    "preInstall": "./eas-build-pre-install.js",
+    "postInstall": "./eas-build-post-install.js",
+    "onSuccess": "./eas-build-on-success.js"
   }
 }

@@ -1,0 +1,27 @@
+workflows:
+  react-native-signed-android:
+    name: React Native Signed Android Build
+    environment:
+      vars:
+        NODE_VERSION: 16.20.0
+      java: 17
+    scripts:
+      - name: Install dependencies
+        script: |
+          npm install
+
+      - name: Decode and save keystore
+        script: |
+          echo $SIGNING_KEYSTORE_BASE64 | base64 --decode > $CM_BUILD_DIR/keystore.jks
+          echo "MYAPP_UPLOAD_STORE_FILE=$CM_BUILD_DIR/keystore.jks" >> $CM_BUILD_DIR/android/gradle.properties
+          echo "MYAPP_UPLOAD_KEY_ALIAS=$SIGNING_KEY_ALIAS" >> $CM_BUILD_DIR/android/gradle.properties
+          echo "MYAPP_UPLOAD_STORE_PASSWORD=$SIGNING_STORE_PASSWORD" >> $CM_BUILD_DIR/android/gradle.properties
+          echo "MYAPP_UPLOAD_KEY_PASSWORD=$SIGNING_KEY_PASSWORD" >> $CM_BUILD_DIR/android/gradle.properties
+
+      - name: Build Android App Bundle
+        script: |
+          cd android
+          ./gradlew bundleRelease
+
+    artifacts:
+      - android/app/build/outputs/**/*.aab
