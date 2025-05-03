@@ -20,6 +20,17 @@ module.exports = {
     }),
     assetPlugins: ['expo-asset/tools/hashAssetFiles'],
   },
+  // Optimize for Termux environment
   maxWorkers: 2,
-  resetCache: true
+  resetCache: true,
+  server: {
+    port: 8081,
+    enhanceMiddleware: (middleware) => {
+      return (req, res, next) => {
+        // Allow connections from all IPs
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        return middleware(req, res, next);
+      };
+    }
+  }
 };

@@ -18,7 +18,7 @@ try {
   
   console.log('Build completed with info:', JSON.stringify(buildInfo, null, 2));
   
-  // If in EAS Build environment, we could save this info to a file for reference
+  // If in EAS Build environment, save this info to a file for reference
   if (process.env.EAS_BUILD === 'true') {
     const artifactsDir = process.env.EAS_BUILD_ARTIFACTS_PATH;
     if (artifactsDir && fs.existsSync(artifactsDir)) {
