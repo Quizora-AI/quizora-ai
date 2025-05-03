@@ -44,6 +44,6 @@
     }
   },
   "hooks": {
-    "postInstall": "npx patch-package"
+    "postInstall": "node ./.eas-hooks/postInstall.js"
   }
 }
