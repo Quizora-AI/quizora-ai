@@ -53,6 +53,14 @@
     },
     "runtimeVersion": {
       "policy": "sdkVersion"
+    },
+    "hooks": {
+      "postPublish": [
+        {
+          "file": "eas-build-post-install.js",
+          "config": {}
+        }
+      ]
     }
   }
 }

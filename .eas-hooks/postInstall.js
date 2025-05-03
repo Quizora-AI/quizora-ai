@@ -10,7 +10,7 @@ console.log('Running postInstall hook...');
 console.log('Node version:', process.version);
 console.log('Working directory:', process.cwd());
 
-// Create eas-build-post-install.js file in the root directory
+// Create eas-build-post-install.js file in the root directory if it doesn't exist
 try {
   console.log('Creating eas-build-post-install.js script...');
   
@@ -24,22 +24,27 @@ const { execSync } = require('child_process');
 try {
   console.log('Running EAS Build post-install script...');
   
-  // Run bun install without frozen lockfile
-  console.log('Updating dependencies with unfrozen lockfile...');
-  try {
-    execSync('bun install --no-frozen-lockfile', { stdio: 'inherit' });
-    console.log('Dependencies updated successfully');
-  } catch (error) {
-    console.error('Error updating dependencies:', error.message);
+  // Check if we're in an EAS Build environment
+  if (process.env.EAS_BUILD === 'true') {
+    console.log('In EAS Build environment, ensuring all dependencies are up to date');
     
-    // Fallback to npm if bun fails
-    console.log('Trying npm as fallback...');
+    // Run bun install without frozen lockfile
+    console.log('Updating dependencies with unfrozen lockfile...');
     try {
-      execSync('npm install --no-package-lock', { stdio: 'inherit' });
-      console.log('Fallback to npm succeeded');
-    } catch (npmError) {
-      console.error('Npm fallback also failed:', npmError.message);
-      // Continue anyway to not fail the build
+      execSync('bun install --no-frozen-lockfile', { stdio: 'inherit' });
+      console.log('Dependencies updated successfully with bun');
+    } catch (error) {
+      console.error('Error updating dependencies with bun:', error.message);
+      
+      // Fallback to npm if bun fails
+      console.log('Trying npm as fallback...');
+      try {
+        execSync('npm install --no-package-lock', { stdio: 'inherit' });
+        console.log('Fallback to npm succeeded');
+      } catch (npmError) {
+        console.error('Npm fallback also failed:', npmError.message);
+        // Continue anyway to not fail the build
+      }
     }
   }
   
@@ -53,14 +58,27 @@ try {
   fs.chmodSync(path.join(process.cwd(), 'eas-build-post-install.js'), '755');
   console.log('Created eas-build-post-install.js script with executable permissions');
   
-  // Try to run bun install without frozen lockfile to update the lockfile
-  console.log('Updating lockfile in postInstall hook...');
+  // Ensure bun doesn't use frozen lockfile
+  console.log('Creating .bunrc to disable frozen lockfile...');
   try {
-    execSync('bun install --no-frozen-lockfile', { stdio: 'inherit' });
-    console.log('Lockfile updated successfully');
+    fs.writeFileSync(path.join(process.cwd(), '.bunrc'), '{"install": {"frozen": false}}\n');
+    console.log('Created .bunrc file');
   } catch (error) {
-    console.error('Error updating lockfile in hook:', error.message);
-    // Don't fail the build due to lockfile issues
+    console.error('Error creating .bunrc file:', error.message);
+  }
+  
+  // Modify bunfig.toml if it exists
+  try {
+    const bunfigPath = path.join(process.cwd(), 'bunfig.toml');
+    if (fs.existsSync(bunfigPath)) {
+      fs.appendFileSync(bunfigPath, '\n[install]\nfrozen = false\n');
+      console.log('Updated bunfig.toml to disable frozen lockfile');
+    } else {
+      fs.writeFileSync(bunfigPath, '[install]\nfrozen = false\n');
+      console.log('Created bunfig.toml to disable frozen lockfile');
+    }
+  } catch (error) {
+    console.error('Error updating bunfig.toml:', error.message);
   }
   
 } catch (error) {

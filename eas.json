@@ -44,6 +44,8 @@
     }
   },
   "hooks": {
-    "postInstall": "node ./.eas-hooks/postInstall.js"
+    "preInstall": "./eas-build-pre-install.js",
+    "postInstall": "./eas-build-post-install.js",
+    "onSuccess": "./eas-build-on-success.js"
   }
 }
