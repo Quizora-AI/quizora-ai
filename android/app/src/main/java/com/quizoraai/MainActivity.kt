@@ -1,4 +1,4 @@
-package com.vitereactshadcnts
+package com.quizoraai
 
 import android.os.Build
 import android.os.Bundle

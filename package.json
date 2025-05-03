@@ -8,7 +8,9 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "@expo/metro-config": "^0.17.8",
@@ -53,7 +55,7 @@
     "eas-cli": "^7.8.5",
     "embla-carousel-react": "^8.3.0",
     "expo": "^50.0.21",
-    "expo-build-properties": "^0.11.1",
+    "expo-build-properties": "^0.14.6",
     "expo-modules-core": "^1.12.26",
     "framer-motion": "^12.6.5",
     "input-otp": "^1.2.4",
@@ -74,7 +76,8 @@
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^11.1.0",
     "vaul": "^0.9.3",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "react-native": "0.73.6"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",

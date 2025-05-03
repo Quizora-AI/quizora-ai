@@ -1,4 +1,3 @@
-
 #!/usr/bin/env node
 
 // This script runs after the npm install command in EAS Build
@@ -11,10 +10,10 @@ try {
   
   // Check if we're in an EAS Build environment
   if (process.env.EAS_BUILD === 'true') {
-    console.log('In EAS Build environment, ensuring all dependencies are up to date');
+    console.log('In EAS Build environment, ensuring all dependencies are properly installed');
     
-    // Run bun install without frozen lockfile
-    console.log('Updating dependencies with unfrozen lockfile...');
+    // Force install without frozen lockfile
+    console.log('Updating dependencies without frozen lockfile...');
     try {
       execSync('bun install --no-frozen-lockfile', { stdio: 'inherit' });
       console.log('Dependencies updated successfully with bun');
@@ -30,6 +29,18 @@ try {
         console.error('Npm fallback also failed:', npmError.message);
         // Continue anyway to not fail the build
       }
+    }
+
+    // Verify node_modules is properly installed
+    try {
+      const nodeModulesPath = path.join(process.cwd(), 'node_modules');
+      if (!fs.existsSync(nodeModulesPath)) {
+        console.log('node_modules directory not found, creating it...');
+        fs.mkdirSync(nodeModulesPath, { recursive: true });
+      }
+      console.log('node_modules directory verified');
+    } catch (error) {
+      console.error('Error verifying node_modules directory:', error.message);
     }
   }
   
