@@ -36,5 +36,10 @@ rootProject.name = 'QuizoraAI'
 expoAutolinking.useExpoVersionCatalog()
 
 include ':app'
-includeBuild(expoAutolinking.reactNativeGradlePlugin)
+
+// Ensure that React Native is included
+setProjectDir(':react-native', file('node_modules/react-native'))
+
+// Include the React Native settings
+applyNativeModulesSettingsGradle()
 apply from: new File(rootDir, 'node_modules/react-native/react.gradle')
