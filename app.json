@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "fc39ffdc-0c53-4cbf-a2e4-faad6d311f0d"
+      }
+    },
+    "android": {
+      "package": "com.ecoli.vite_react_shadcn_ts"
+    },
+    "ios": {
+      "bundleIdentifier": "com.ecoli.vite-react-shadcn-ts"
+    },
+    "owner": "ecoli"
+  }
+}
