@@ -1,4 +1,4 @@
-package com.quizoraai
+package com.quizora.com
 
 import android.os.Build
 import android.os.Bundle
