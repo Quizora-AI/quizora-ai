@@ -43,11 +43,7 @@
         }
       ]
     ],
-    "extra": {
-      "eas": {
-        "projectId": "your-expo-project-id"
-      }
-    },
+    
     "updates": {
       "fallbackToCacheTimeout": 0
     },
