@@ -1,213 +1,41 @@
-
-name: Build and Sign Android App Bundle
+name: Android Build
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build and Sign AAB
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: |
-          npm ci
-          npm install -g react-native-cli
-          npm list -g react-native-cli
-          npm list @react-native-community/cli
-      
-      - name: Debug environment
-        run: |
-          echo "Node version: $(node -v)"
-          echo "NPM version: $(npm -v)"
-          echo "Directory structure:"
-          ls -la
-          echo "Android directory:"
-          ls -la android || echo "Android directory not found"
-          echo "React Native CLI version:"
-          npx react-native --version || echo "React Native CLI not found"
-          echo "Package.json content:"
-          cat package.json
-
-      - name: Create React Native directory structure
-        run: |
-          # Create required directories for React Native
-          mkdir -p node_modules/@react-native-community/cli-platform-android
-          
-          # Create placeholder native_modules.gradle file with proper implementation
-          cat > node_modules/@react-native-community/cli-platform-android/native_modules.gradle << 'EOF'
-          // This is a placeholder file for the build process
-          def applyNativeModulesSettingsGradle = { settings ->
-              // No-op function for CI builds
-              println "Using placeholder applyNativeModulesSettingsGradle implementation"
-          }
-          def applyNativeModulesAppBuildGradle = { project ->
-              // No-op function for CI builds
-              println "Using placeholder applyNativeModulesAppBuildGradle implementation"
-          }
-
-          ext {
-              applyNativeModulesSettingsGradle = this.&applyNativeModulesSettingsGradle
-              applyNativeModulesAppBuildGradle = this.&applyNativeModulesAppBuildGradle
-          }
-          EOF
-          
-          # Verify the file was created
-          ls -la node_modules/@react-native-community/cli-platform-android/
-
-      - name: Ensure gradle.properties has correct AndroidX settings
-        run: |
-          # Ensure android.useAndroidX is set to true
-          if ! grep -q "android.useAndroidX=true" android/gradle.properties; then
-            echo "android.useAndroidX=true" >> android/gradle.properties
-          fi
-          if ! grep -q "android.enableJetifier=true" android/gradle.properties; then
-            echo "android.enableJetifier=true" >> android/gradle.properties
-          fi
-          
-          # Print gradle.properties for debugging
-          echo "Contents of gradle.properties:"
-          cat android/gradle.properties
-
-      - name: Create index.js if needed
-        run: |
-          # Check if index.js exists, and create a placeholder if it doesn't
-          if [ ! -f index.js ]; then
-            echo "Creating placeholder index.js file..."
-            cat > index.js << 'EOF'
-            import { AppRegistry } from 'react-native';
-            import App from './src/App';
-            import { name as appName } from './app.json';
-
-            // Register the app
-            AppRegistry.registerComponent(appName, () => App);
-            EOF
-            
-            # Create minimal app.json if it doesn't exist
-            if [ ! -f app.json ]; then
-              echo "Creating minimal app.json..."
-              cat > app.json << 'EOF'
-              {
-                "name": "QuizoraAI",
-                "displayName": "Quizora AI"
-              }
-              EOF
-            fi
-          fi
-
-      - name: Bundle React Native JavaScript
-        run: |
-          # Create directory structure for assets
-          mkdir -p android/app/src/main/assets
-          
-          # Try multiple approaches to create the bundle file
-          echo "Attempting to create bundle with react-native CLI..."
-          npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res || true
-          
-          if [ ! -f android/app/src/main/assets/index.android.bundle ]; then
-            echo "Attempting to create bundle with metro..."
-            npx metro-bundler --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res || true
-          fi
-          
-          if [ ! -f android/app/src/main/assets/index.android.bundle ]; then
-            echo "Attempting to create bundle with metro CLI..."
-            npx metro bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res || true
-          fi
-          
-          # Create placeholder bundle if all attempts failed
-          if [ ! -f android/app/src/main/assets/index.android.bundle ]; then
-            echo "All bundling attempts failed. Creating placeholder bundle file..."
-            echo "// Placeholder bundle file created by build process" > android/app/src/main/assets/index.android.bundle
-          fi
-          
-          # Verify the bundle file
-          echo "Bundle file status:"
-          ls -la android/app/src/main/assets/
-          echo "Bundle file size: $(wc -c < android/app/src/main/assets/index.android.bundle) bytes"
+      - uses: actions/checkout@v3
 
       - name: Set up JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: 17
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
+      - name: Install Node.js
+        uses: actions/setup-node@v3
         with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          node-version: 18
 
-      - name: Make gradlew executable
-        run: chmod +x ./android/gradlew
-
-      - name: Decode keystore
-        run: echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
-
-      - name: Create gradle.properties with signing configs
+      - name: Install dependencies
         run: |
-          echo "MYAPP_UPLOAD_STORE_FILE=release.keystore" >> android/gradle.properties
-          echo "MYAPP_UPLOAD_KEY_ALIAS=${{ secrets.SIGNING_KEY_ALIAS }}" >> android/gradle.properties
-          echo "MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.SIGNING_STORE_PASSWORD }}" >> android/gradle.properties
-          echo "MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.SIGNING_KEY_PASSWORD }}" >> android/gradle.properties
+          npm install
+          cd android
+          ./gradlew dependencies
 
-      - name: List available Gradle tasks
+      - name: Build AAB
         run: |
           cd android
-          ./gradlew tasks --all
+          ./gradlew bundleRelease
 
-      - name: Debug build task
-        run: |
-          cd android
-          ./gradlew projects --info
-          
-      - name: Clean project
-        run: |
-          cd android
-          ./gradlew clean --info
-
-      - name: Build release AAB
-        run: |
-          cd android
-          ./gradlew bundleRelease --no-daemon --stacktrace --info
-
-      - name: Upload AAB artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload AAB
+        uses: actions/upload-artifact@v3
         with:
           name: app-bundle
           path: android/app/build/outputs/bundle/release/app-release.aab
-          retention-days: 7
-
-      - name: Generate APK for testing
-        run: |
-          cd android
-          ./gradlew assembleRelease --no-daemon --stacktrace
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-apk
-          path: android/app/build/outputs/apk/release/*.apk
-          retention-days: 7
-
-      - name: Clean up keystore
-        run: rm -f android/app/release.keystore
