@@ -1,9 +1,8 @@
+# .github/workflows/android-build.yml
 name: Android Build
 
 on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+  workflow_dispatch:  # Allows you to manually trigger from GitHub UI
 
 jobs:
   build:
@@ -12,30 +11,34 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up JDK
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: 17
-
-      - name: Install Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
       - name: Install dependencies
-        run: |
-          npm install
-          cd android
-          ./gradlew dependencies
+        run: npm install
 
-      - name: Build AAB
-        run: |
-          cd android
-          ./gradlew bundleRelease
+      - name: Set up JDK for Android
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: 17
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: EAS Login (Optional if using EAS Submit)
+        run: eas whoami || echo "Not logged in"
+
+      - name: Run Prebuild
+        run: npx expo prebuild --platform android
+
+      - name: EAS Build (Android AAB)
+        run: eas build --platform android --profile production --non-interactive
 
       - name: Upload AAB
         uses: actions/upload-artifact@v3
         with:
           name: app-bundle
-          path: android/app/build/outputs/bundle/release/app-release.aab
+          path: ./dist/*.aab
