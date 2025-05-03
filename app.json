@@ -47,6 +47,12 @@
       "eas": {
         "projectId": "your-expo-project-id"
       }
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
     }
   }
 }
