@@ -1,3 +1,4 @@
+
 #!/usr/bin/env node
 
 console.log('Running EAS Build pre-install script...');

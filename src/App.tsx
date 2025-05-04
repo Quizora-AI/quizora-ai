@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-// Simplified app component for testing builds
+// Simplified app component for building with EAS
 export default function MainApp() {
   return (
     <View style={styles.container}>
