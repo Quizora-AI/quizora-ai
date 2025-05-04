@@ -1,0 +1,25 @@
+
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Restrict cleartext traffic in release builds -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">secure.example.com</domain>
+    </domain-config>
+    
+    <!-- Debug configuration -->
+    <debug-overrides>
+        <trust-anchors>
+            <!-- Trust system CAs in debug builds -->
+            <certificates src="system" />
+            <!-- Optionally trust user added CAs in debug builds -->
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
+    
+    <!-- Base config uses only system CAs -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

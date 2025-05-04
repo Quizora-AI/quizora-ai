@@ -6,9 +6,12 @@ const defaultConfig = getDefaultConfig(__dirname);
 module.exports = {
   resolver: {
     assetExts: [...defaultConfig.resolver.assetExts, 'db'],
-    sourceExts: [...defaultConfig.resolver.sourceExts, 'mjs'],
+    sourceExts: [...defaultConfig.resolver.sourceExts, 'mjs', 'js', 'jsx', 'ts', 'tsx', 'json', 'svg', 'png', 'jpg', 'webp'],
     extraNodeModules: {
-      stream: require.resolve('readable-stream'),
+      'react-native': require.resolve('react-native-web'),
+      'react': require.resolve('react'),
+      'react-dom': require.resolve('react-dom'),
+      'stream': require.resolve('readable-stream'),
     }
   },
   transformer: {
@@ -20,11 +23,6 @@ module.exports = {
     }),
     assetPlugins: ['expo-asset/tools/hashAssetFiles'],
   },
-  // Optimize for Termux environment
-  maxWorkers: 2,
-  resetCache: true,
-  watchFolders: [__dirname],
-  projectRoot: __dirname,
   server: {
     port: 8081,
     enhanceMiddleware: (middleware) => {
