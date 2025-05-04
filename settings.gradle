@@ -35,6 +35,3 @@ def safelyApplyNativeModulesSettingsGradle = { settingsObj ->
 safelyApplyNativeModulesSettingsGradle(settings)
 
 include ':app'
-
-// If using React Native, ensure this line is present:
-applyNativeModulesSettingsGradle()
