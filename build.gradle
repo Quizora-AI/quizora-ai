@@ -19,7 +19,7 @@ buildscript {
     }
     
     allprojects {
-    repositories {
+      repositories {
         // This MUST come first so Gradle can find React Native locally
         maven {
             url("$rootDir/../node_modules/react-native/android")
@@ -35,7 +35,7 @@ buildscript {
         google()
         mavenCentral()
     }
-    }
+}
     
     dependencies {
         classpath("com.facebook.react:react-native-gradle-plugin")
