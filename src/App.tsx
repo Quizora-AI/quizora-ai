@@ -1,148 +1,31 @@
 
-import * as React from 'react';
-import { Toaster as ToastUIToaster } from "@/components/ui/toaster";
-import { Toaster as SonnerToaster } from "@/components/ui/sonner";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import LandingPage from "./pages/LandingPage";
-import QuizReview from "./pages/QuizReview";
-import AuthPage from "./pages/AuthPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import Settings from "./pages/Settings";
-import { useEffect, useState } from "react";
-import { initializeAdMob } from "./components/GoogleAds";
-import { supabase } from "./integrations/supabase/client";
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-      staleTime: 30000, // 30 seconds
-      meta: {
-        errorHandler: (error: Error) => {
-          console.error("Query error:", error);
-        }
-      },
-    },
+// Simplified app component for testing builds
+export default function MainApp() {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.heading}>Quizora AI</Text>
+      <Text style={styles.text}>Welcome to the mobile app</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  heading: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  text: {
+    fontSize: 16,
+    color: '#333',
   },
 });
-
-const AuthRoute = ({ element }) => {
-  const [session, setSession] = React.useState(null);
-  const [loading, setLoading] = React.useState(true);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  if (loading) return null;
-
-  return session ? (
-    <>{element}</>
-  ) : (
-    <Navigate to="/auth" replace />
-  );
-};
-
-const ToastCleaner = () => {
-  const { dismissAll } = useToast();
-  
-  React.useEffect(() => {
-    dismissAll();
-    
-    const interval = setInterval(() => {
-      dismissAll();
-    }, 10000);
-    
-    return () => clearInterval(interval);
-  }, [dismissAll]);
-  
-  return null;
-};
-
-function resetAppData() {
-  localStorage.clear();
-  console.log("App data has been reset. Fresh start!");
-}
-
-function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  
-  useEffect(() => {
-    // Enhanced initialization for both AdMob and Play Billing
-    const initializePlugins = () => {
-      console.log("Checking for Cordova and initializing plugins");
-      
-      if ('cordova' in window) {
-        console.log("Cordova detected, setting up event listeners");
-        document.addEventListener('deviceready', onDeviceReady, false);
-      } else {
-        console.log("Running in web environment - showing AdMob banner placeholder");
-        initializeAdMob();
-      }
-    };
-    
-    const onDeviceReady = () => {
-      console.log("Device ready event fired - initializing mobile plugins");
-      initializeAdMob();
-    };
-    
-    initializePlugins();
-    
-    // Check if user is authenticated
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsAuthenticated(!!session);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  // Show loading until auth state is determined
-  if (isAuthenticated === null) {
-    return <div>Loading...</div>;
-  }
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={isAuthenticated ? <LandingPage /> : <Navigate to="/auth" replace />} />
-          <Route path="/auth" element={isAuthenticated ? <Navigate to="/" replace /> : <AuthPage />} />
-          <Route path="/quiz" element={<AuthRoute element={<Index />} />} />
-          <Route path="/quiz/review" element={<AuthRoute element={<QuizReview />} />} />
-          <Route path="/settings" element={<AuthRoute element={<Settings />} />} />
-          <Route path="/history" element={<AuthRoute element={<Index initialTab="history" />} />} />
-          <Route path="/flashcards" element={<AuthRoute element={<Index initialTab="flashcards" />} />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <ToastUIToaster />
-        <SonnerToaster />
-        <ToastCleaner />
-      </BrowserRouter>
-    </QueryClientProvider>
-  );
-}
-
-export default App;
