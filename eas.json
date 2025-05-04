@@ -1,9 +1,29 @@
+
 {
   "cli": {
     "version": ">= 3.13.0",
     "requireCommit": false
   },
   "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api-dev.example.com"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api-staging.example.com"
+      }
+    },
     "production": {
       "android": {
         "buildType": "app-bundle"
@@ -12,7 +32,7 @@
         "EXPO_PUBLIC_API_URL": "https://api.example.com"
       },
       "cache": {
-        "disabled": true
+        "disabled": false
       }
     }
   }
