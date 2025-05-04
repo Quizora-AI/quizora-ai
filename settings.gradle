@@ -1,9 +1,6 @@
 
 rootProject.name = 'QuizoraAI'
 
-// If using React Native, ensure this line is present:
-applyNativeModulesSettingsGradle()
-
 // Custom function to safely apply native modules
 def safelyApplyNativeModulesSettingsGradle = { settingsObj ->
     try {
@@ -38,3 +35,6 @@ def safelyApplyNativeModulesSettingsGradle = { settingsObj ->
 safelyApplyNativeModulesSettingsGradle(settings)
 
 include ':app'
+
+// If using React Native, ensure this line is present:
+applyNativeModulesSettingsGradle()
