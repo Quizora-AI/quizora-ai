@@ -1,4 +1,3 @@
-
 #!/usr/bin/env node
 
 // This script runs after the npm install command in EAS Build

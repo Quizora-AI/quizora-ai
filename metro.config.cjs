@@ -23,8 +23,6 @@ module.exports = {
   // Optimize for Termux environment
   maxWorkers: 2,
   resetCache: true,
-  watchFolders: [__dirname],
-  projectRoot: __dirname,
   server: {
     port: 8081,
     enhanceMiddleware: (middleware) => {
