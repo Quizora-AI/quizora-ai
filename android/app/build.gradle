@@ -1,107 +1,98 @@
 apply plugin: "com.android.application"
-apply plugin: "kotlin-android" // Add Kotlin plugin explicitly
+apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "com.facebook.react"
 
-import com.android.build.OutputFile
+def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
 
 /**
- * The react.gradle file registers a task for each build variant (e.g. bundleDebugJsAndAssets
- * and bundleReleaseJsAndAssets).
- * These basically call `react-native bundle` with the correct arguments during the Android build
- * cycle. By default, bundleDebugJsAndAssets is skipped, as in debug/dev mode we prefer to load the
- * bundle directly from the development server. Below you can see all the possible configurations
- * and their defaults. If you decide to add a configuration block, make sure to add it before the
- * `apply from: "../../node_modules/react-native/react.gradle"` line.
+ * This is the configuration block to customize your React Native Android app.
+ * By default you don't need to apply any configuration, just uncomment the lines you need.
  */
+react {
+    entryFile = file(["node", "-e", "require('expo/scripts/resolveAppEntry')", projectRoot, "android", "absolute"].execute(null, rootDir).text.trim())
+    reactNativeDir = new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
+    hermesCommand = new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsolutePath() + "/sdks/hermesc/%OS-BIN%/hermesc"
+    codegenDir = new File(["node", "--print", "require.resolve('@react-native/codegen/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
 
-project.ext.react = [
-    enableHermes: false,  // clean and rebuild if changing
-]
+    // Use Expo CLI to bundle the app, this ensures the Metro config
+    // works correctly with Expo projects.
+    cliFile = new File(["node", "--print", "require.resolve('@expo/cli', { paths: [require.resolve('expo/package.json')] })"].execute(null, rootDir).text.trim())
+    bundleCommand = "export:embed"
 
-// Safe apply from for react.gradle to handle the file not existing in CI
-def reactGradlePath = new File("../../node_modules/react-native/react.gradle")
-if (reactGradlePath.exists()) {
-    println "Found react.gradle, applying..."
-    apply from: reactGradlePath
-} else {
-    println "react.gradle not found, skipping..."
-    // Check if expo-modules-core exists and try to apply its react.gradle
-    def expoReactGradlePath = new File("../../node_modules/expo-modules-core/android/react.gradle")
-    if (expoReactGradlePath.exists()) {
-        println "Found expo react.gradle, applying..."
-        apply from: expoReactGradlePath
-    } else {
-        println "No react.gradle found, using placeholder task"
-        // Create a minimal placeholder for react.gradle functionality
-        task bundleReleaseJsAndAssets(type: Exec) {
-            // This is a placeholder task that would normally be provided by react.gradle
-            commandLine 'echo', 'Using placeholder bundleReleaseJsAndAssets task'
-            doLast {
-                println "Placeholder for bundleReleaseJsAndAssets completed"
-                // Create the assets directory if it doesn't exist
-                def assetsDir = new File("${projectDir}/src/main/assets")
-                if (!assetsDir.exists()) {
-                    assetsDir.mkdirs()
-                    
-                    // Create a placeholder bundle file
-                    def bundleFile = new File(assetsDir, "index.android.bundle")
-                    if (!bundleFile.exists()) {
-                        bundleFile.text = "// Placeholder bundle file created by build process"
-                    }
-                }
-            }
-        }
-    }
+    /* Folders */
+    //   The root of your project, i.e. where "package.json" lives. Default is '..'
+    // root = file("../")
+    //   The folder where the react-native NPM package is. Default is ../node_modules/react-native
+    // reactNativeDir = file("../node_modules/react-native")
+    //   The folder where the react-native Codegen package is. Default is ../node_modules/@react-native/codegen
+    // codegenDir = file("../node_modules/@react-native/codegen")
+
+    /* Variants */
+    //   The list of variants to that are debuggable. For those we're going to
+    //   skip the bundling of the JS bundle and the assets. By default is just 'debug'.
+    //   If you add flavors like lite, prod, etc. you'll have to list your debuggableVariants.
+    // debuggableVariants = ["liteDebug", "prodDebug"]
+
+    /* Bundling */
+    //   A list containing the node command and its flags. Default is just 'node'.
+    // nodeExecutableAndArgs = ["node"]
+
+    //
+    //   The path to the CLI configuration file. Default is empty.
+    // bundleConfig = file(../rn-cli.config.js)
+    //
+    //   The name of the generated asset file containing your JS bundle
+    // bundleAssetName = "MyApplication.android.bundle"
+    //
+    //   The entry file for bundle generation. Default is 'index.android.js' or 'index.js'
+    // entryFile = file("../js/MyApplication.android.js")
+    //
+    //   A list of extra flags to pass to the 'bundle' commands.
+    //   See https://github.com/react-native-community/cli/blob/main/docs/commands.md#bundle
+    // extraPackagerArgs = []
+
+    /* Hermes Commands */
+    //   The hermes compiler command to run. By default it is 'hermesc'
+    // hermesCommand = "$rootDir/my-custom-hermesc/bin/hermesc"
+    //
+    //   The list of flags to pass to the Hermes compiler. By default is "-O", "-output-source-map"
+    // hermesFlags = ["-O", "-output-source-map"]
 }
 
 /**
- * Set this to true to create two separate APKs instead of one:
- *   - An APK that only works on ARM devices
- *   - An APK that only works on x86 devices
- * The advantage is the size of the APK is reduced by about 4MB.
- * Upload all the APKs to the Play Store and people will download
- * the correct one based on the CPU architecture of their device.
+ * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
  */
-def enableSeparateBuildPerCPUArchitecture = true
+def enableProguardInReleaseBuilds = (findProperty('android.enableProguardInReleaseBuilds') ?: false).toBoolean()
 
 /**
- * Run Proguard to shrink the Java bytecode in release builds.
- */
-def enableProguardInReleaseBuilds = true
-
-/**
- * The preferred build flavor of JavaScriptCore.
+ * The preferred build flavor of JavaScriptCore (JSC)
+ *
+ * For example, to use the international variant, you can use:
+ * `def jscFlavor = 'org.webkit:android-jsc-intl:+'`
+ *
+ * The international variant includes ICU i18n library and necessary data
+ * allowing to use e.g. `Date.toLocaleString` and `String.localeCompare` that
+ * give correct results when using with locales other than en-US. Note that
+ * this variant is about 6MiB larger per architecture than default.
  */
 def jscFlavor = 'org.webkit:android-jsc:+'
 
-/**
- * Whether to enable the Hermes VM.
- */
-def enableHermes = project.ext.react.get("enableHermes", false);
-
 android {
-    namespace "com.quizora.com"
-    compileSdkVersion rootProject.ext.compileSdkVersion
+    ndkVersion rootProject.ext.ndkVersion
+
     buildToolsVersion rootProject.ext.buildToolsVersion
-    
+    compileSdk rootProject.ext.compileSdkVersion
+
+    namespace 'com.quizora.com'
     defaultConfig {
-        applicationId "com.quizora.com"
+        applicationId 'com.quizora.com'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0.0"
-        resConfigs "en" // Include only English resources to reduce APK size
-        vectorDrawables.useSupportLibrary = true
-    }
-    
-    splits {
-        abi {
-            reset()
-            enable enableSeparateBuildPerCPUArchitecture
-            universalApk true  // Also generate a universal APK for devices that can't install split APKs
-            include "armeabi-v7a", "x86", "arm64-v8a", "x86_64"
-        }
-    }
 
+        buildConfigField("boolean", "REACT_NATIVE_UNSTABLE_USE_RUNTIME_SCHEDULER_ALWAYS", (findProperty("reactNative.unstable_useRuntimeSchedulerAlways") ?: true).toString())
+    }
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -109,24 +100,7 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
-        release {
-            // For EAS Build compatibility - check environment variables first
-            if (System.getenv("EAS_BUILD") == "true") {
-                storeFile file(System.getenv("ANDROID_KEYSTORE_PATH") ?: "release.keystore")
-                storePassword System.getenv("MYAPP_UPLOAD_STORE_PASSWORD")
-                keyAlias System.getenv("MYAPP_UPLOAD_KEY_ALIAS")
-                keyPassword System.getenv("MYAPP_UPLOAD_KEY_PASSWORD")
-            }
-            // Fall back to gradle.properties values when not in EAS Build
-            else if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
-                storeFile file(MYAPP_UPLOAD_STORE_FILE)
-                storePassword MYAPP_UPLOAD_STORE_PASSWORD
-                keyAlias MYAPP_UPLOAD_KEY_ALIAS
-                keyPassword MYAPP_UPLOAD_KEY_PASSWORD
-            }
-        }
     }
-    
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
@@ -134,136 +108,69 @@ android {
         release {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.release
+            signingConfig signingConfigs.debug
+            shrinkResources (findProperty('android.enableShrinkResourcesInReleaseBuilds')?.toBoolean() ?: false)
             minifyEnabled enableProguardInReleaseBuilds
-            shrinkResources enableProguardInReleaseBuilds
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
-
-    // applicationVariants are e.g. debug, release
-    applicationVariants.all { variant ->
-        variant.outputs.each { output ->
-            // For each separate APK per architecture, set a unique version code as described here:
-            // https://developer.android.com/studio/build/configure-apk-splits.html
-            def versionCodes = ["armeabi-v7a": 1, "x86": 2, "arm64-v8a": 3, "x86_64": 4]
-            def abi = output.getFilter(OutputFile.ABI)
-            if (abi != null) {  // null for the universal-debug, universal-release variants
-                output.versionCodeOverride =
-                        defaultConfig.versionCode * 1000 + versionCodes.get(abi)
-            }
-        }
-    }
-    
-    // Needed for R8/D8 compatibility
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-    
-    // Fix: Replace the kotlin {} block with kotlinOptions
-    kotlinOptions {
-        jvmTarget = '17'
-    }
-    
     packagingOptions {
-        // Exclude unnecessary files from the AAB
-        resources {
-            excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE', 'META-INF/LICENSE.txt', 
-                        'META-INF/license.txt', 'META-INF/NOTICE', 'META-INF/NOTICE.txt', 
-                        'META-INF/notice.txt', 'META-INF/ASL2.0', 
-                        'META-INF/*.kotlin_module']
+        jniLibs {
+            useLegacyPackaging (findProperty('expo.useLegacyPackaging')?.toBoolean() ?: false)
         }
     }
-    
-    // Add support for EAS Build's NDK
-    ndkVersion "25.1.8937393"
+}
+
+// Apply static values from `gradle.properties` to the `android.packagingOptions`
+// Accepts values in comma delimited lists, example:
+// android.packagingOptions.pickFirsts=/LICENSE,**/picasa.ini
+["pickFirsts", "excludes", "merges", "doNotStrip"].each { prop ->
+    // Split option: 'foo,bar' -> ['foo', 'bar']
+    def options = (findProperty("android.packagingOptions.$prop") ?: "").split(",");
+    // Trim all elements in place.
+    for (i in 0..<options.size()) options[i] = options[i].trim();
+    // `[] - ""` is essentially `[""].filter(Boolean)` removing all empty strings.
+    options -= ""
+
+    if (options.length > 0) {
+        println "android.packagingOptions.$prop += $options ($options.length)"
+        // Ex: android.packagingOptions.pickFirsts += '**/SCCS/**'
+        options.each {
+            android.packagingOptions[prop] += it
+        }
+    }
 }
 
 dependencies {
-    implementation fileTree(dir: "libs", include: ["*.jar"])
-    implementation "com.facebook.react:react-native:+"
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:${rootProject.ext.kotlinVersion}" // Add Kotlin standard library explicitly
+    // The version of react-native is set by the React Native Gradle Plugin
+    implementation("com.facebook.react:react-android")
 
-    implementation "androidx.swiperefreshlayout:swiperefreshlayout:${rootProject.ext.androidxSwipeRefreshLayoutVersion}"
+    def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
+    def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";
+    def isWebpAnimatedEnabled = (findProperty('expo.webp.animated') ?: "") == "true";
 
-    // Update AdMob dependency to latest stable version
-    implementation "com.google.android.gms:play-services-ads:${rootProject.ext.googlePlayServicesAdsVersion}"
-    
-    // Update Play Billing library dependencies
-    implementation "com.android.billingclient:billing:${rootProject.ext.billingVersion}"
-    implementation "com.android.billingclient:billing-ktx:${rootProject.ext.billingVersion}"
+    if (isGifEnabled) {
+        // For animated gif support
+        implementation("com.facebook.fresco:animated-gif:${reactAndroidLibs.versions.fresco.get()}")
+    }
 
-    // Add AndroidX dependencies
-    implementation "androidx.appcompat:appcompat:${rootProject.ext.androidxAppCompatVersion}"
-    implementation "androidx.core:core-ktx:${rootProject.ext.androidxCoreKtxVersion}"
+    if (isWebpEnabled) {
+        // For webp support
+        implementation("com.facebook.fresco:webpsupport:${reactAndroidLibs.versions.fresco.get()}")
+        if (isWebpAnimatedEnabled) {
+            // Animated webp support
+            implementation("com.facebook.fresco:animated-webp:${reactAndroidLibs.versions.fresco.get()}")
+        }
+    }
 
-    // Removed Flipper dependencies as they're causing issues and not required
-    // for production builds
-    
-    if (enableHermes) {
-        def hermesPath = "../../node_modules/hermes-engine/android/";
-        debugImplementation files(hermesPath + "hermes-debug.aar")
-        releaseImplementation files(hermesPath + "hermes-release.aar")
+    implementation("com.facebook.react:flipper-integration")
+
+    if (hermesEnabled.toBoolean()) {
+        implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
     }
 }
 
-// Run this once to be able to run the application with BUCK
-// puts all compile dependencies into folder libs for BUCK to use
-task copyDownloadableDepsToLibs(type: Copy) {
-    from configurations.implementation
-    into 'libs'
-}
-
-// Safe apply from for native_modules.gradle
-def nativeModulesGradlePath = new File("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle")
-if (nativeModulesGradlePath.exists()) {
-    println "Found native_modules.gradle, applying..."
-    apply from: nativeModulesGradlePath
-    applyNativeModulesAppBuildGradle(project)
-} else {
-    println "Checking Expo native modules..."
-    def expoModulesGradlePath = new File("../../node_modules/expo/android/native_modules.gradle")
-    if (expoModulesGradlePath.exists()) {
-        println "Found Expo native_modules.gradle, applying..."
-        apply from: expoModulesGradlePath
-        // Expo uses a different function name
-        applyExpoModulesAppBuildGradle(project)
-    } else {
-        println "Warning: native_modules.gradle not found. Creating placeholder..."
-        
-        // Create a placeholder if it doesn't exist
-        def placeholderDir = new File("$rootDir/../node_modules/@react-native-community/cli-platform-android")
-        placeholderDir.mkdirs()
-        
-        def placeholderFile = new File(placeholderDir, "native_modules.gradle")
-        if (!placeholderFile.exists()) {
-            placeholderFile.text = """
-            // Placeholder file created by app/build.gradle
-            def applyNativeModulesAppBuildGradle = { project ->
-                // No-op implementation for builds
-                println "Using placeholder applyNativeModulesAppBuildGradle implementation"
-            }
-            
-            def applyNativeModulesSettingsGradle = { settings ->
-                // No-op implementation for builds
-                println "Using placeholder applyNativeModulesSettingsGradle implementation"
-            }
-            
-            ext {
-                applyNativeModulesAppBuildGradle = this.&applyNativeModulesAppBuildGradle
-                applyNativeModulesSettingsGradle = this.&applyNativeModulesSettingsGradle
-            }
-            """
-        }
-        
-        // Apply the newly created placeholder
-        try {
-            apply from: placeholderFile.absolutePath
-        } catch (Exception e) {
-            println "Could not apply placeholder file: ${e.message}"
-        }
-    }
-}
+apply from: new File(["node", "--print", "require.resolve('@react-native-community/cli-platform-android/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim(), "../native_modules.gradle");
+applyNativeModulesAppBuildGradle(project)

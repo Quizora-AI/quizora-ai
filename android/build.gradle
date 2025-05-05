@@ -1,104 +1,40 @@
-
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
+
 buildscript {
     ext {
-        buildToolsVersion = "34.0.0"
-        minSdkVersion = 21
-        compileSdkVersion = 34
-        targetSdkVersion = 34
-        kotlinVersion = "1.9.0"
-        
-        // Billing version for consistent use across modules
-        billingVersion = "7.1.1"
-        
-        // Add versions for other dependencies
-        androidxAppCompatVersion = "1.6.1"
-        androidxCoreKtxVersion = "1.12.0"
-        androidxSwipeRefreshLayoutVersion = "1.1.0"
-        googlePlayServicesAdsVersion = "23.0.0"
+        buildToolsVersion = findProperty('android.buildToolsVersion') ?: '34.0.0'
+        minSdkVersion = Integer.parseInt(findProperty('android.minSdkVersion') ?: '23')
+        compileSdkVersion = Integer.parseInt(findProperty('android.compileSdkVersion') ?: '34')
+        targetSdkVersion = Integer.parseInt(findProperty('android.targetSdkVersion') ?: '34')
+        kotlinVersion = findProperty('android.kotlinVersion') ?: '1.8.10'
+
+        ndkVersion = "25.1.8937393"
     }
-    
     repositories {
         google()
         mavenCentral()
-        maven { url("$rootDir/../node_modules/react-native/android") 
     }
-}
-    
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.0'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
-        
-        // NOTE: Do not place your application dependencies here; they belong
-        // in the individual module build.gradle files
+        classpath('com.android.tools.build:gradle')
+        classpath('com.facebook.react:react-native-gradle-plugin')
     }
 }
+
+apply plugin: "com.facebook.react.rootproject"
 
 allprojects {
     repositories {
-        google()
-        mavenCentral()
         maven {
             // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
-            url "$rootDir/../node_modules/react-native/android"
+            url(new File(['node', '--print', "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim(), '../android'))
         }
         maven {
             // Android JSC is installed from npm
-            url("$rootDir/../node_modules/jsc-android/dist")
+            url(new File(['node', '--print', "require.resolve('jsc-android/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim(), '../dist'))
         }
-    }
-}
 
-// Add custom task to create necessary placeholder files for CI builds
-task ensureReactNativeModules {
-    doLast {
-        println "Ensuring React Native module placeholders exist..."
-        def rnModulesDir = new File("$rootDir/../node_modules/@react-native-community/cli-platform-android")
-        if (!rnModulesDir.exists()) {
-            println "Creating React Native modules directory..."
-            rnModulesDir.mkdirs()
-            
-            def nativeModulesFile = new File(rnModulesDir, "native_modules.gradle")
-            if (!nativeModulesFile.exists()) {
-                println "Creating native_modules.gradle placeholder..."
-                nativeModulesFile.text = """
-                // This is a placeholder file created by the build process
-                def applyNativeModulesSettingsGradle = { settings ->
-                    // No-op implementation for CI
-                    println "Using placeholder applyNativeModulesSettingsGradle implementation"
-                }
-                
-                def applyNativeModulesAppBuildGradle = { project ->
-                    // No-op implementation for CI
-                    println "Using placeholder applyNativeModulesAppBuildGradle implementation"
-                }
-                
-                ext {
-                    applyNativeModulesSettingsGradle = this.&applyNativeModulesSettingsGradle
-                    applyNativeModulesAppBuildGradle = this.&applyNativeModulesAppBuildGradle
-                }
-                """
-            }
-        }
-        
-        // Create assets directory and bundle file if needed
-        def assetsDir = new File("$rootDir/app/src/main/assets")
-        if (!assetsDir.exists()) {
-            println "Creating assets directory..."
-            assetsDir.mkdirs()
-        }
-        
-        def bundleFile = new File(assetsDir, "index.android.bundle")
-        if (!bundleFile.exists()) {
-            println "Creating placeholder bundle file..."
-            bundleFile.text = "// Placeholder bundle file created by build process"
-        }
-    }
-}
-
-// Make sure the ensureReactNativeModules task runs before any other tasks
-gradle.projectsEvaluated {
-    tasks.withType(JavaCompile) {
-        it.dependsOn(ensureReactNativeModules)
+        google()
+        mavenCentral()
+        maven { url 'https://www.jitpack.io' }
     }
 }

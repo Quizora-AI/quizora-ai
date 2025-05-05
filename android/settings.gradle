@@ -1,78 +1,18 @@
+rootProject.name = 'Quizora AI'
 
-rootProject.name = 'QuizoraAI'
-
-// Custom function to safely apply native modules
-def safelyApplyNativeModulesSettingsGradle = { settingsObj ->
-    try {
-        def nativeModulesSettingsGradlePath = new File("$rootDir/../node_modules/@react-native-community/cli-platform-android/native_modules.gradle")
-        if (nativeModulesSettingsGradlePath.exists()) {
-            println "Found native_modules.gradle, applying..."
-            apply from: nativeModulesSettingsGradlePath
-            applyNativeModulesSettingsGradle(settingsObj)
-        } else {
-            println "Native modules settings gradle not found. Creating placeholder..."
-            def placeholderDir = new File("$rootDir/../node_modules/@react-native-community/cli-platform-android")
-            placeholderDir.mkdirs()
-            
-            def placeholderFile = new File(placeholderDir, "native_modules.gradle")
-            placeholderFile.text = """
-            // Placeholder file created by settings.gradle
-            def applyNativeModulesSettingsGradle = { settings ->
-                // No-op implementation for builds
-                println "Using placeholder applyNativeModulesSettingsGradle implementation"
-            }
-            
-            def applyNativeModulesAppBuildGradle = { project ->
-                // No-op implementation for builds
-                println "Using placeholder applyNativeModulesAppBuildGradle implementation"
-            }
-            
-            ext {
-                applyNativeModulesSettingsGradle = this.&applyNativeModulesSettingsGradle
-                applyNativeModulesAppBuildGradle = this.&applyNativeModulesAppBuildGradle
-            }
-            """
-            
-            // Apply the newly created placeholder
-            apply from: placeholderFile.absolutePath
-        }
-    } catch (Exception e) {
-        println "Error applying native modules settings: ${e.message}"
-        e.printStackTrace()
-        
-        // Create placeholder even when error occurs
-        def placeholderDir = new File("$rootDir/../node_modules/@react-native-community/cli-platform-android")
-        placeholderDir.mkdirs()
-        
-        def placeholderFile = new File(placeholderDir, "native_modules.gradle")
-        placeholderFile.text = """
-        // Placeholder file created by settings.gradle after error
-        def applyNativeModulesSettingsGradle = { settings ->
-            // No-op implementation for builds
-            println "Using placeholder applyNativeModulesSettingsGradle implementation"
-        }
-        
-        def applyNativeModulesAppBuildGradle = { project ->
-            // No-op implementation for builds
-            println "Using placeholder applyNativeModulesAppBuildGradle implementation"
-        }
-        
-        ext {
-            applyNativeModulesSettingsGradle = this.&applyNativeModulesSettingsGradle
-            applyNativeModulesAppBuildGradle = this.&applyNativeModulesAppBuildGradle
-        }
-        """
-        
-        // Try to apply the placeholder we just created
-        try {
-            apply from: placeholderFile.absolutePath
-        } catch (Exception e2) {
-            println "Could not apply placeholder file: ${e2.message}"
-        }
+dependencyResolutionManagement {
+  versionCatalogs {
+    reactAndroidLibs {
+      from(files(new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim(), "../gradle/libs.versions.toml")))
     }
+  }
 }
 
-// Apply native modules settings safely
-safelyApplyNativeModulesSettingsGradle(settings)
+apply from: new File(["node", "--print", "require.resolve('expo/package.json')"].execute(null, rootDir).text.trim(), "../scripts/autolinking.gradle");
+useExpoModules()
+
+apply from: new File(["node", "--print", "require.resolve('@react-native-community/cli-platform-android/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim(), "../native_modules.gradle");
+applyNativeModulesSettingsGradle(settings)
 
 include ':app'
+includeBuild(new File(["node", "--print", "require.resolve('@react-native/gradle-plugin/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim()).getParentFile())
