@@ -151,7 +151,7 @@ android {
 
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
-    implementation "com.facebook.react:react-native:0.73.6"
+    implementation project(":react-native")
     implementation "org.jetbrains.kotlin:kotlin-stdlib:${rootProject.ext.kotlinVersion}" // Add Kotlin standard library explicitly
 
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:${rootProject.ext.androidxSwipeRefreshLayoutVersion}"
