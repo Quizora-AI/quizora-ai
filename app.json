@@ -1,4 +1,3 @@
-
 {
   "expo": {
     "name": "Quizora AI",
@@ -61,6 +60,9 @@
           "config": {}
         }
       ]
+    },
+    "ios": {
+      "bundleIdentifier": "com.quizora.ai"
     }
   }
 }
