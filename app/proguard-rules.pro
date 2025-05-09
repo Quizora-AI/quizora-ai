@@ -19,3 +19,20 @@
 -keepclassmembers class * {
     native <methods>;
 }
+
+# Google Play Billing
+-keep class com.android.billingclient.** { *; }
+-keep class com.android.vending.billing.** { *; }
+
+# Google Mobile Ads (AdMob)
+-keep class com.google.android.gms.ads.** { *; }
+
+# Keep JavaScript interfaces
+-keepattributes JavascriptInterface
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# Keep Cordova related classes
+-keep class org.apache.cordova.** { *; }
+-keep class com.quizora.ai.** { *; }
