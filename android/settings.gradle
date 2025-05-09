@@ -11,5 +11,4 @@ rootProject.name = 'quizora-ai'
 
 include ':app'
 
-// Ensures the React Native Gradle plugin is applied correctly
-apply from: file("../node_modules/react-native-gradle-plugin/settings.gradle.kts")
+includeBuild('../node_modules/react-native-gradle-plugin')
