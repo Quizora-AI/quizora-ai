@@ -7,6 +7,9 @@ pluginManagement {
     }
 }
 
-rootProject.name = 'QuizoraAI'
+rootProject.name = 'quizora-ai'
+
 include ':app'
-includeBuild("../node_modules/react-native-gradle-plugin")
+
+// Ensures the React Native Gradle plugin is applied correctly
+apply from: file("../node_modules/react-native-gradle-plugin/settings.gradle.kts")
