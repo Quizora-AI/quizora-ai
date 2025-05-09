@@ -5,7 +5,7 @@ import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import Index from "./pages/Index";
+import Index from "./src/pages/Index";
 import NotFound from "./pages/NotFound";
 import LandingPage from "./pages/LandingPage";
 import QuizReview from "./pages/QuizReview";
