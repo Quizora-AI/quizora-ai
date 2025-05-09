@@ -36,16 +36,17 @@ const config = {
   },
 
   transformer: {
-    ...defaultConfig.transformer,
-    getTransformOptions: async () => ({
-      transform: {
-        experimentalImportSupport: false,
-        inlineRequires: true,
-      },
-    }),
-    assetPlugins: ['expo-asset/tools/hashAssetFiles'],
-  },
-
+  ...defaultConfig.transformer,
+  getTransformOptions: async () => ({
+    transform: {
+      experimentalImportSupport: false,
+      inlineRequires: true,
+    },
+  }),
+  assetPlugins: ['expo-asset/tools/hashAssetFiles'],
+  routerRoot: path.resolve(__dirname, 'app'), // Add this line
+},
+  
   server: {
     ...defaultConfig.server,
     port: 8081,
