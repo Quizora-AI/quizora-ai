@@ -13,8 +13,8 @@ import AuthPage from "./src/pages/AuthPage";
 import ResetPasswordPage from "./src/pages/ResetPasswordPage";
 import Settings from "./src/pages/Settings";
 import { useEffect, useState } from "react";
-import { initializeAdMob } from "./components/GoogleAds";
-import { supabase } from "./integrations/supabase/client";
+import { initializeAdMob } from "@/components/GoogleAds";
+import { supabase } from "@/integrations/supabase/client";
 
 const queryClient = new QueryClient({
   defaultOptions: {
