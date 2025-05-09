@@ -22,8 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-/android
-/ios
+#/android
+#/ios
 
 .gradle/
 .expo/
