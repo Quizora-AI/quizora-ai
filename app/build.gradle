@@ -1,17 +1,14 @@
-
-apply plugin: "com.android.application"
-apply plugin: "kotlin-android"
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'com.facebook.react'
+}
 
 import com.android.build.OutputFile
 
-/**
- * This is the configuration block for React Native
- */
 project.ext.react = [
-    enableHermes: false,  // clean and rebuild if changing
+    enableHermes: false  // clean and rebuild if changing
 ]
-
-apply from: "../../node_modules/react-native/react.gradle"
 
 android {
     namespace "com.quizora.ai"
@@ -48,8 +45,6 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
             signingConfig signingConfigs.release
             minifyEnabled true
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
@@ -64,8 +59,7 @@ android {
     kotlinOptions {
         jvmTarget = '17'
     }
-    
-    // Add bundling support for AAB
+
     bundle {
         language {
             enableSplit = true
@@ -83,19 +77,16 @@ dependencies {
     implementation "com.facebook.react:react-android"
     implementation "androidx.appcompat:appcompat:$rootProject.ext.androidxAppCompatVersion"
     implementation "androidx.core:core-ktx:$rootProject.ext.androidxCoreKtxVersion"
-    
-    // Google Play Billing Library
+
     implementation 'com.android.billingclient:billing:7.1.1'
     implementation 'com.android.billingclient:billing-ktx:7.1.1'
-    
-    // Google Mobile Ads (AdMob)
     implementation 'com.google.android.gms:play-services-ads:23.0.0'
-    
+
     debugImplementation("com.facebook.flipper:flipper:${FLIPPER_VERSION}")
     debugImplementation("com.facebook.flipper:flipper-network-plugin:${FLIPPER_VERSION}") {
         exclude group:'com.squareup.okhttp3', module:'okhttp'
     }
-    
+
     if (enableHermes) {
         implementation("com.facebook.react:hermes-android")
     } else {
