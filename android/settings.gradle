@@ -9,4 +9,4 @@ pluginManagement {
 
 rootProject.name = 'QuizoraAI'
 include ':app'
-includeBuild('../node_modules/react-native')
+includeBuild("../node_modules/react-native-gradle-plugin")
