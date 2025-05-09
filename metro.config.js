@@ -1,57 +1,60 @@
-// metro.config.js
-const { getDefaultConfig } = require('@expo/metro-config');
+const { getDefaultConfig } = require("@react-native/metro-config");
 const path = require('path');
 
-const config = getDefaultConfig(__dirname);
+const defaultConfig = getDefaultConfig(__dirname);
 
-// Extend asset extensions
-config.resolver.assetExts = [...config.resolver.assetExts, 'db'];
+// Your customizations
+const config = {
+  ...defaultConfig,
 
-// Extend source extensions
-config.resolver.sourceExts = [
-  ...new Set([
-    ...config.resolver.sourceExts,
-    'mjs',
-    'js',
-    'jsx',
-    'ts',
-    'tsx',
-    'json',
-    'svg',
-    'png',
-    'jpg',
-    'webp',
-  ]),
-];
-
-// Extra Node.js modules mapping
-config.resolver.extraNodeModules = {
-  ...(config.resolver.extraNodeModules || {}),
-  'react-native': require.resolve('react-native-web'),
-  'react': require.resolve('react'),
-  'react-dom': require.resolve('react-dom'),
-  'stream': require.resolve('readable-stream'),
-};
-
-// Transformer config
-config.transformer.getTransformOptions = async () => ({
-  transform: {
-    experimentalImportSupport: false,
-    inlineRequires: true,
+  // Extend asset extensions
+  resolver: {
+    ...defaultConfig.resolver,
+    assetExts: [...defaultConfig.resolver.assetExts, 'db'],
+    sourceExts: [
+      ...new Set([
+        ...defaultConfig.resolver.sourceExts,
+        'mjs',
+        'js',
+        'jsx',
+        'ts',
+        'tsx',
+        'json',
+        'svg',
+        'png',
+        'jpg',
+        'webp',
+      ]),
+    ],
+    extraNodeModules: {
+      ...(defaultConfig.resolver.extraNodeModules || {}),
+      'react-native': require.resolve('react-native-web'),
+      'react': require.resolve('react'),
+      'react-dom': require.resolve('react-dom'),
+      'stream': require.resolve('readable-stream'),
+    },
   },
-});
 
-config.transformer.assetPlugins = ['expo-asset/tools/hashAssetFiles'];
+  transformer: {
+    ...defaultConfig.transformer,
+    getTransformOptions: async () => ({
+      transform: {
+        experimentalImportSupport: false,
+        inlineRequires: true,
+      },
+    }),
+    assetPlugins: ['expo-asset/tools/hashAssetFiles'],
+  },
 
-// Dev server middleware customization
-config.server = {
-  ...config.server,
-  port: 8081,
-  enhanceMiddleware: (middleware) => {
-    return (req, res, next) => {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      return middleware(req, res, next);
-    };
+  server: {
+    ...defaultConfig.server,
+    port: 8081,
+    enhanceMiddleware: (middleware) => {
+      return (req, res, next) => {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        return middleware(req, res, next);
+      };
+    },
   },
 };
 
