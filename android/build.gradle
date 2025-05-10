@@ -6,7 +6,7 @@ buildscript {
         minSdkVersion = 21
         compileSdkVersion = 34
         targetSdkVersion = 34
-        kotlinVersion = "1.8.20"
+        kotlinVersion = "1.6.0"
         
         // Add versions for other dependencies
         androidxAppCompatVersion = "1.6.1"
@@ -44,7 +44,7 @@ allprojects {
     configurations.all {
         resolutionStrategy.eachDependency { details ->
             if (details.requested.group == 'org.jetbrains.kotlin') {
-                details.useVersion '1.8.20'
+                details.useVersion '1.6.0'
                 details.because 'Align Kotlin versions to avoid incompatibility'
             }
         }
