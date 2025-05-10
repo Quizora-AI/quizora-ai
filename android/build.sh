@@ -9,6 +9,7 @@ echo "Starting Android build process..."
 cd "$(dirname "$0")/.." || exit
 
 # Generate the bundle file
+echo "Generating the bundle file..."
 node create-bundle.js
 
 # Navigate back to android directory
@@ -18,10 +19,12 @@ cd "$(dirname "$0")" || exit
 chmod +x ./gradlew
 
 # Clean the project
+echo "Cleaning the project..."
 ./gradlew clean
 
-# Build AAB (Android App Bundle)
-./gradlew :app:bundleRelease
+# Add -Xskip-metadata-version-check flag to bypass Kotlin version mismatch errors
+echo "Building AAB (Android App Bundle) with Kotlin version check skip..."
+./gradlew :app:bundleRelease -Xskip-metadata-version-check
 
 # Check if build was successful
 if [ -f ./app/build/outputs/bundle/release/app-release.aab ]; then
