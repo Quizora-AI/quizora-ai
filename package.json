@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "android": "expo run:android",
-    "ios": "expo run:ios"
+    "ios": "expo run:ios",
+    "postinstall": "patch-package"
   
   },
   "dependencies": {
