@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "postinstall": "patch-package"
+    "postinstall": "if [ \"$NODE_ENV\" != \"production\" ]; then patch-package; fi"
   
   },
   "dependencies": {
