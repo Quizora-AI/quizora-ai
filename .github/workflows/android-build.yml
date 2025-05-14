@@ -26,6 +26,9 @@ jobs:
           npm ci
           npm install -g react-native-cli
 
+      - name: Apply patch-package fixes           # <-- ADDED
+        run: npm run postinstall                  # <-- ADDED
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
