@@ -6,7 +6,7 @@ buildscript {
         minSdkVersion = 21
         compileSdkVersion = 34
         targetSdkVersion = 34
-        kotlinVersion = "1.8.10"
+        kotlinVersion = "1.9.10"
         
         // Add versions for other dependencies
         androidxAppCompatVersion = "1.6.1"
@@ -21,7 +21,7 @@ buildscript {
     }
     
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.0.2'
+        classpath 'com.android.tools.build:gradle:8.1.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         classpath("com.facebook.react:react-native-gradle-plugin:0.73.6")
     }
