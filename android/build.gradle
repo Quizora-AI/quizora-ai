@@ -45,11 +45,11 @@ allprojects {
 // Force all Kotlin dependencies to use the same version
 allprojects {
     configurations.all {
-        resolutionStrategy.eachDependency { details ->
-            if (details.requested.group == 'org.jetbrains.kotlin') {
-                details.useVersion kotlinVersion
-                details.because 'Align Kotlin versions to avoid incompatibility'
-            }
+        resolutionStrategy {
+            force "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+            force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+            force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+            force "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
         }
     }
 }
