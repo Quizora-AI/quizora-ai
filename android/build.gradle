@@ -57,7 +57,8 @@ allprojects {
 allprojects {
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         kotlinOptions {
-            freeCompilerArgs += "-Xopt-in=kotlin.ExperimentalStdlibApi"
+          jvmTarget = "1.8"
+          freeCompilerArgs += ["-Xskip-metadata-version-check"]
         }
     }
 }
