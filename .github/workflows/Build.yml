@@ -1,0 +1,42 @@
+name: Android Release Build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build .AAB for Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: |
+          npm install --legacy-peer-deps
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build AAB
+        run: cd android && ./gradlew bundleRelease --no-daemon
+
+      - name: Upload AAB Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-release.aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
