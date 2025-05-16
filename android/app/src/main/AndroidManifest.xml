@@ -1,4 +1,3 @@
-
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.quizora.ai">
@@ -28,7 +27,7 @@
             android:value="7.1.1" />
 
         <!-- Main Activity -->
-        <activity 
+        <activity
             android:name=".MainActivity"
             android:exported="true"
             android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|uiMode|screenSize|smallestScreenSize">
@@ -39,10 +38,9 @@
         </activity>
 
         <!-- Billing Activity -->
-        <activity 
+        <activity
             android:name=".billing.BillingActivity"
             android:exported="false" />
-
     </application>
 
 </manifest>
