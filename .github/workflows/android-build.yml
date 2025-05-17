@@ -26,10 +26,10 @@ jobs:
           npm ci
           npm install -g react-native-cli
 
-      - name: Apply patch-package fixes           # <-- ADDED
-        run: npm run postinstall                  # <-- ADDED
+      - name: Apply patch-package fixes
+        run: npm run postinstall
 
-      - name: Set up JDK
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
